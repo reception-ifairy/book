@@ -1,0 +1,159 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Orbitron", ui-sans-serif, sans-serif;
+}
+
+@layer base {
+  :root {
+    --paper-color: #090910;
+    --ink-color: #00f0ff;
+    --accent-color: #ff0055;
+    --panel-border: rgba(0, 240, 255, 0.2);
+  }
+
+  body {
+    background-color: #030305;
+    background-image: 
+      linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: var(--ink-color);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .cyber-shadow {
+    box-shadow: 0 0 40px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(255, 0, 85, 0.05);
+    border: 1px solid var(--panel-border);
+  }
+  
+  .cyber-spine {
+    background: linear-gradient(to right, 
+      rgba(0,240,255,0.0) 0%, 
+      rgba(0,240,255,0.3) 40%, 
+      rgba(255,255,255,0.8) 50%, 
+      rgba(0,240,255,0.3) 60%, 
+      rgba(0,240,255,0.0) 100%);
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+  }
+
+  .page-texture {
+    background-color: var(--paper-color);
+    background-image: radial-gradient(circle at top right, rgba(255,0,85,0.05), transparent 40%),
+                      radial-gradient(circle at bottom left, rgba(0,240,255,0.05), transparent 40%);
+  }
+
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 240, 255, 0.3);
+    border-radius: 10px;
+  }
+
+  .markdown-body p { margin-bottom: 1em; }
+  .markdown-body strong { color: var(--accent-color); text-shadow: 0 0 8px var(--accent-color); }
+  .markdown-body ul { list-style-type: square; margin-left: 1.5em; margin-bottom: 1em; }
+  .markdown-body code { 
+    background: rgba(0,240,255,0.1); 
+    color: #fff; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-family: var(--font-mono); 
+    border: 1px solid rgba(0,240,255,0.2);
+  }
+}
+
+/* Animations */
+@keyframes blinkEye {
+  0%, 96%, 100% { transform: scaleY(1); }
+  98% { transform: scaleY(0.1); }
+}
+
+.blinking .eye {
+  animation: blinkEye 4s infinite;
+  transform-origin: center;
+}
+
+@keyframes scanEye {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.talking .eye {
+  animation: scanEye 2s infinite ease-in-out;
+}
+
+@keyframes talkMouth {
+  0% { transform: scaleY(1); }
+  50% { transform: scaleY(2); }
+  100% { transform: scaleY(0.5); }
+}
+
+.talking .mouth {
+  animation: talkMouth 0.15s alternate infinite;
+  transform-origin: center;
+}
+
+@keyframes cartoonMouthTalk {
+  0% { d: path('M 75 115 Q 100 115 125 115'); }
+  50% { d: path('M 75 115 Q 100 145 125 115'); }
+  100% { d: path('M 75 115 Q 100 115 125 115'); }
+}
+
+.talking .cartoon-mouth {
+  animation: cartoonMouthTalk 0.2s infinite alternate;
+}
+
+@keyframes floatObj {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-10px) rotate(1deg); }
+  66% { transform: translateY(5px) rotate(-1deg); }
+}
+
+.floating {
+  animation: floatObj 6s ease-in-out infinite;
+}
+
+@keyframes glitchFlicker {
+  0%, 100% { opacity: 1; transform: translate(0, 0) skew(0deg); }
+  5% { opacity: 0.8; transform: translate(-2px, 1px) skew(-5deg); }
+  10% { opacity: 1; transform: translate(0, 0) skew(0deg); }
+  15% { opacity: 0.9; transform: translate(2px, -1px) skew(5deg); }
+  20% { opacity: 1; transform: translate(0, 0) skew(0deg); }
+}
+
+.glitch-effect {
+  animation: glitchFlicker 3s infinite;
+}
+
+.typing-cursor::after {
+  content: '█';
+  animation: blinkCursor 1s step-end infinite;
+  margin-left: 4px;
+  color: var(--accent-color);
+  text-shadow: 0 0 8px var(--accent-color);
+}
+@keyframes blinkCursor { 50% { opacity: 0; } }
+
+.cyber-node {
+  position: absolute;
+  color: var(--ink-color);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+  text-shadow: 0 0 5px var(--ink-color);
+}

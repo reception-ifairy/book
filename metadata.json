@@ -1,0 +1,6 @@
+{
+  "name": "Ignis - The Living Book",
+  "description": "An interactive, magical living book for kids featuring talking illustrations, storytelling, and drawing generation capabilities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
