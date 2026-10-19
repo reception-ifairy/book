@@ -1,8 +1,21 @@
 import { memo } from 'react';
+import type { Mood } from '../../shared/types';
 
-export const SVGCharacter = memo(({ isTalking }: { isTalking: boolean }) => {
+/** Resting mouth and brows per mood; the talking animation takes over while IGNIS speaks. */
+const FACES: Record<Mood, { mouth: string; leftBrow: string; rightBrow: string }> = {
+  // A perfectly flat path has a zero-height box, which makes the neon filter render nothing.
+  neutral: { mouth: 'M 75 115 Q 100 119 125 115', leftBrow: 'M 50 60 Q 65 50 80 65', rightBrow: 'M 150 60 Q 135 35 115 65' },
+  smug: { mouth: 'M 75 112 Q 105 128 128 106', leftBrow: 'M 50 62 Q 65 58 80 62', rightBrow: 'M 150 50 Q 135 30 115 58' },
+  annoyed: { mouth: 'M 78 120 Q 100 112 122 120', leftBrow: 'M 50 56 Q 65 60 82 68', rightBrow: 'M 150 56 Q 135 60 118 68' },
+  panic: { mouth: 'M 85 118 Q 100 150 115 118 Q 100 108 85 118', leftBrow: 'M 50 52 Q 65 38 80 52', rightBrow: 'M 150 52 Q 135 30 115 52' },
+  sincere: { mouth: 'M 80 114 Q 100 124 120 114', leftBrow: 'M 50 58 Q 65 54 80 60', rightBrow: 'M 150 58 Q 135 50 115 60' },
+  hyped: { mouth: 'M 72 110 Q 100 145 128 110', leftBrow: 'M 50 50 Q 65 36 80 50', rightBrow: 'M 150 48 Q 135 26 115 50' },
+};
+
+export const SVGCharacter = memo(({ isTalking, mood = 'neutral' }: { isTalking: boolean; mood?: Mood }) => {
+  const face = FACES[mood];
   return (
-    <div className={`floating mb-6 relative ${isTalking ? 'glitch-effect' : ''}`}>
+    <div className={`floating mb-6 relative ${isTalking || mood === 'panic' ? 'glitch-effect' : ''}`}>
       <svg
         id="magic-book-svg"
         className={`w-48 h-48 transition-all duration-300 ${isTalking ? 'talking' : ''}`}
@@ -110,7 +123,7 @@ export const SVGCharacter = memo(({ isTalking }: { isTalking: boolean }) => {
           {/* Goofy Mouth */}
           <path
             className="cartoon-mouth"
-            d="M 75 115 Q 100 115 125 115"
+            d={face.mouth}
             fill="none"
             stroke="#ff0055"
             strokeWidth="6"
@@ -131,7 +144,7 @@ export const SVGCharacter = memo(({ isTalking }: { isTalking: boolean }) => {
 
           {/* Goofy Eyebrows */}
           <path
-            d="M 50 60 Q 65 50 80 65"
+            d={face.leftBrow}
             fill="none"
             stroke="#00f0ff"
             strokeWidth="4"
@@ -142,7 +155,7 @@ export const SVGCharacter = memo(({ isTalking }: { isTalking: boolean }) => {
           </path>
           
           <path
-            d="M 150 60 Q 135 35 115 65"
+            d={face.rightBrow}
             fill="none"
             stroke="#00f0ff"
             strokeWidth="4"
