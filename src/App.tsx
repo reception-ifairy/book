@@ -3,6 +3,8 @@ import { Home } from './screens/Home';
 import { StoryScreen } from './screens/Story';
 import { Admin } from './screens/Admin';
 import { ToastProvider } from './ui';
+import { Snow } from './components/Effects';
+import { useSnow } from './prefs';
 
 const readRoute = () => window.location.hash.replace(/^#\/?/, '').split('/');
 
@@ -22,8 +24,10 @@ export default function App() {
   }, []);
 
   const [screen, id] = route;
+  const snow = useSnow();
   return (
     <ToastProvider>
+      {snow && <Snow />}
       {screen === 'admin' ? <Admin /> : screen === 'story' && id ? <StoryScreen key={id} storyId={id} /> : <Home />}
     </ToastProvider>
   );

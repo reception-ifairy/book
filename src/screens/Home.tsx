@@ -4,7 +4,8 @@ import { ArrowRight, ChevronRight, Loader2, Settings2 } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
 import { api, loadRuns, rememberRun, type TaleCard } from '../api';
 import { navigate } from '../App';
-import { Badge, Logo, Segmented, StatusDot, useToast } from '../ui';
+import { Badge, Logo, Segmented, SnowToggle, StatusDot, useToast } from '../ui';
+import { StringLights } from '../components/Effects';
 import type { Lang, PublicConfig } from '../../shared/types';
 import { ago, coverStyle } from '../meta';
 
@@ -71,18 +72,23 @@ export function Home() {
   const taleById = (id: string) => tales.find((t) => t.id === id);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <>
+    <StringLights count={28} className="h-10 z-10" />
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6">
       <header className="flex items-center justify-between h-16">
         <Logo />
-        <a href="#/admin" className="group inline-flex items-center gap-2 text-sm text-muted hover:text-ember transition-colors">
+        <div className="flex items-center gap-3">
+        <SnowToggle />
+        <a href="#/admin" className="group inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold transition-colors">
           <Settings2 size={16} className="glow-icon transition-transform duration-500 group-hover:rotate-90" /> Sysadmin
         </a>
+        </div>
       </header>
 
       <section className="grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center pt-8 pb-14 sm:pt-14">
         <div>
-          <p className="eyebrow mb-4">Interactive fiction · cyber-magic · 16+</p>
-          <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[0.95] tracking-tight">
+          <p className="eyebrow mb-5 text-gold">★ Interactive fiction · cyber-magic · 16+</p>
+          <h1 className="toon-title text-5xl sm:text-6xl lg:text-7xl leading-[1.02] text-ink">
             {['Fairy', 'tales,'].map((w, i) => (
               <motion.span
                 key={w}
@@ -96,7 +102,7 @@ export function Home() {
             ))}
             <br />
             <motion.em
-              className="glitch-text inline-block text-ember"
+              className="glitch-text inline-block text-ember not-italic"
               data-text="unpatched."
               initial={{ opacity: 0, y: 24, filter: 'blur(14px)', letterSpacing: '0.2em' }}
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)', letterSpacing: '0em' }}
@@ -105,11 +111,11 @@ export function Home() {
               unpatched.
             </motion.em>
           </h1>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="mt-6 text-lg text-muted max-w-xl">
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="mt-7 text-lg text-muted max-w-xl font-semibold">
             Classic stories run on cursed legacy code. Pick one, make terrible decisions and fork reality. IGNIS narrates, and judges you for it.
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }} className="spotlight card mt-8 p-4 sm:p-5 max-w-xl">
+          <motion.div initial={{ opacity: 0, y: 16, rotate: -1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ delay: 0.85, type: 'spring', stiffness: 200, damping: 16 }} className="snowcap spotlight card mt-9 p-4 sm:p-5 max-w-xl">
             <label htmlFor="hero" className="eyebrow">Your debugger handle</label>
             <div className="mt-2 flex flex-col sm:flex-row gap-3">
               <input
@@ -136,13 +142,13 @@ export function Home() {
         </div>
 
         <div className="relative hidden sm:flex flex-col items-center">
-          <div className="card relative max-w-xs px-5 py-4 mb-4 text-sm text-muted min-h-[4.5rem]">
+          <div className="card relative max-w-xs px-5 py-4 mb-6 text-[15px] font-semibold min-h-[4.5rem]">
             <AnimatePresence mode="wait">
               <motion.p key={quip} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }}>
                 “{QUIPS[quip]}”
               </motion.p>
             </AnimatePresence>
-            <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-surface border-r border-b border-line" />
+            <span className="absolute -bottom-[11px] left-1/2 -translate-x-1/2 w-5 h-5 rotate-45 bg-surface border-r-[3px] border-b-[3px] border-outline" />
           </div>
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 120, damping: 12, delay: 0.3 }}>
             <SVGCharacter isTalking={!!booting} mood={booting ? 'hyped' : 'smug'} size={220} />
@@ -152,7 +158,7 @@ export function Home() {
 
       <section className="pb-14">
         <div className="flex items-baseline justify-between mb-5">
-          <h2 className="font-serif text-2xl sm:text-3xl">Choose a corrupted tale</h2>
+          <h2 className="toon-title text-3xl sm:text-4xl text-ink">Choose a corrupted tale</h2>
           <span className="eyebrow hidden sm:block">{tales.length} tales installed</span>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -165,15 +171,15 @@ export function Home() {
 
       {runs.length > 0 && (
         <section className="pb-14">
-          <h2 className="font-serif text-2xl mb-4">Continue a timeline</h2>
-          <div className="card divide-y divide-line overflow-hidden">
+          <h2 className="toon-title text-3xl mb-5 text-ink">Continue a timeline</h2>
+          <div className="card divide-y-2 divide-line overflow-hidden">
             {runs.slice(0, 6).map((r) => {
               const t = taleById(r.taleId);
               return (
                 <a key={r.id} href={`#/story/${r.id}`} className="spotlight flex items-center gap-4 px-4 py-3 hover:bg-raised transition-colors group">
-                  <span className="grid place-items-center w-10 h-10 rounded-lg text-xl shrink-0" style={t ? coverStyle(t.hue) : undefined}>{t?.emoji}</span>
+                  <span className="grid place-items-center w-11 h-11 rounded-xl text-xl shrink-0 border-[2.5px] border-outline" style={t ? coverStyle(t.hue) : undefined}>{t?.emoji}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-medium truncate">{t?.title[lang] ?? r.taleId}</span>
+                    <span className="block font-serif font-semibold truncate">{t?.title[lang] ?? r.taleId}</span>
                     <span className="block text-xs text-faint truncate">
                       {r.heroName} · {r.pages ?? 1} pages · {r.ending ? `ended: ${r.ending}` : 'in progress'} · {ago(r.updatedAt)}
                     </span>
@@ -186,11 +192,12 @@ export function Home() {
         </section>
       )}
 
-      <footer className="py-8 border-t border-line text-xs text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
+      <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>Claude writes the story · Gemini / OpenAI paint and speak</span>
-        <span className="font-mono">IGNIS // OS v3.1</span>
+        <span className="font-pixel">IGNIS // OS v4.0 · cozy workshop</span>
       </footer>
     </div>
+    </>
   );
 }
 
@@ -219,12 +226,12 @@ function TaleCover({ tale: t, lang, index, booting, onStart }: { tale: TaleCard;
         }}
         whileTap={{ scale: 0.98 }}
         style={{ rotateX, rotateY, transformStyle: 'preserve-3d', ['--spot' as string]: color }}
-        className="spotlight group card w-full h-full overflow-hidden text-left flex flex-col transition-shadow hover:shadow-[0_30px_60px_-30px_var(--spot)] disabled:opacity-50"
+        className="spotlight group card snowcap w-full h-full text-left flex flex-col transition-shadow hover:shadow-[6px_9px_0_var(--color-outline),0_0_40px_-6px_var(--spot)] disabled:opacity-50"
       >
-        <div className="relative h-36 flex items-center justify-center overflow-hidden" style={coverStyle(t.hue)}>
+        <div className="relative h-40 flex items-center justify-center overflow-hidden rounded-t-[17px] border-b-[3px] border-outline" style={coverStyle(t.hue)}>
           <motion.span className="inline-block" style={{ x: emblemX, y: emblemY }}>
             <motion.span
-              className="inline-block text-6xl transition-[filter] duration-300 group-hover:drop-shadow-[0_0_24px_var(--spot)]"
+              className="inline-block text-7xl drop-shadow-[3px_4px_0_#241913] transition-[filter] duration-300 group-hover:drop-shadow-[0_0_24px_var(--spot)]"
               animate={{ y: [0, -5, 0] }}
               transition={{ duration: 4 + index * 0.4, repeat: Infinity, ease: 'easeInOut' }}
             >
@@ -247,10 +254,10 @@ function TaleCover({ tale: t, lang, index, booting, onStart }: { tale: TaleCard;
           </AnimatePresence>
         </div>
         <div className="p-5 flex-1 flex flex-col">
-          <h3 className="font-serif text-xl leading-tight">{t.title[lang]}</h3>
-          <p className="mt-2 text-sm text-muted flex-1">{t.tagline[lang]}</p>
-          <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-faint transition-colors group-hover:text-[var(--spot)]">
-            Run tale <ArrowRight size={15} className="glow-icon transition-transform group-hover:translate-x-1" />
+          <h3 className="font-serif font-bold text-xl leading-tight">{t.title[lang]}</h3>
+          <p className="mt-2 text-[15px] text-muted flex-1">{t.tagline[lang]}</p>
+          <span className="mt-4 self-start inline-flex items-center gap-1.5 rounded-xl border-[2.5px] border-outline bg-gold px-3 h-9 text-sm font-serif font-semibold text-outline shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-2 group-hover:scale-105">
+            Run tale <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
           </span>
         </div>
       </motion.button>

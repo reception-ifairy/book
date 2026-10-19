@@ -21,7 +21,7 @@ export const TALES: Tale[] = [
       'The sysadmin arrives (or does not)',
     ],
     cast: ['Red (courier)', 'Mother (paranoid security officer)', 'The Wolf (MITM attacker)', 'Grandma (legacy server, runs on Windows XP)', 'The Woodcutter (sysadmin)'],
-    art: 'dark neon forest made of fibre-optic trees, red hooded courier, glowing data packets',
+    art: 'a snowy forest of pine trees strung with fibre-optic fairy lights, a red-hooded courier carrying a glowing parcel, a sly wolf with a hacker headset',
   },
   {
     id: 'three-pigs',
@@ -43,7 +43,7 @@ export const TALES: Tale[] = [
       'The Wolf tries the chimney exploit',
     ],
     cast: ['Pig #1 (vibe coder)', 'Pig #2 (copy-pastes from forums)', 'Pig #3 (security paranoid)', 'Big Bad Wolf (botnet operator)'],
-    art: 'three cartoon pigs with glowing server-racks for houses, a wolf exhaling a storm of red packets',
+    art: 'three cartoon pigs in front of a straw hut, a stick shack and a brick server-house with blinking lights, a wolf blowing a gust full of red error icons',
   },
   {
     id: 'hansel-gretel',
@@ -65,7 +65,7 @@ export const TALES: Tale[] = [
       'Gretel and the oven',
     ],
     cast: ['Hansel', 'Gretel (the actually competent one)', 'The Witch (data broker)', 'The ad-blocking bird'],
-    art: 'neon gingerbread house dripping holographic icing, cookie crumbs glowing like tracking pixels',
+    art: 'a gingerbread cottage with candy-cane antennas and blinking cookie lights in a snowy forest, a trail of glowing cookie crumbs',
   },
   {
     id: 'cinderella',
@@ -87,7 +87,7 @@ export const TALES: Tale[] = [
       'The Prince tries the 2FA key on every foot in the kingdom',
     ],
     cast: ['Cinderella (junior dev)', 'Stepmother (CEO)', 'Stepsisters (product managers)', 'Fairy Godmother (contractor)', 'The Prince (venture capitalist)'],
-    art: 'cyber palace ballroom with holographic chandeliers, a pumpkin-shaped hover car, a glowing glass slipper USB key',
+    art: 'a cozy candlelit palace ballroom with garlands and a giant clock near midnight, a pumpkin-shaped hover carriage, a glowing glass-slipper USB key',
   },
   {
     id: 'wawel-dragon',
@@ -109,7 +109,7 @@ export const TALES: Tale[] = [
       'The dragon drinks the Vistula trying to cool its CPU',
     ],
     cast: ['Skuba (cobbler-pentester)', 'King Krak (non-technical founder)', 'The Princess (actually the best engineer)', 'The Wawel Dragon (rogue AI)'],
-    art: 'neon Kraków skyline and Wawel castle, a giant cybernetic dragon with server-fan wings, a sheep with glowing circuitry',
+    art: 'Wawel castle on a snowy hill above the Vistula, a big goofy robot dragon with server-fan wings and a pixel-screen face, a woolly sheep stitched with glowing circuitry',
   },
 ];
 

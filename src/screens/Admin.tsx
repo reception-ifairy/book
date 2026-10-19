@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { adminApi } from '../api';
-import { Badge, Button, Logo, StatusDot, cx, useToast } from '../ui';
+import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
+import { StringLights } from '../components/Effects';
 
 type Provider = 'anthropic' | 'gemini' | 'openai';
 type Model = { id: string; label?: string; tags: ('text' | 'image' | 'tts')[] };
@@ -61,21 +62,21 @@ export function Admin() {
   const [saving, setSaving] = useState(false);
   const [section, setSection] = useState('keys');
 
-  // Scroll-spy: the nav highlights whichever section sits under the sticky header.
+  // Scroll-spy: the active section is the last one whose heading has passed just under the sticky header.
   useEffect(() => {
     if (!cfg) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible) setSection(visible.target.id);
-      },
-      { rootMargin: '-80px 0px -60% 0px' },
-    );
-    NAV.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (el) obs.observe(el);
-    });
-    return () => obs.disconnect();
+    const onScroll = () => {
+      let current = NAV[0].id;
+      for (const { id } of NAV) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top < 160) current = id;
+      }
+      if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) current = NAV[NAV.length - 1].id;
+      setSection(current);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [!!cfg]);
 
   const apply = (c: any) => {
@@ -164,8 +165,8 @@ export function Admin() {
           }}
           className="card w-full max-w-sm p-6"
         >
-          <div className="grid place-items-center w-11 h-11 rounded-xl bg-ember-soft text-ember mb-4"><Lock size={20} /></div>
-          <h1 className="font-serif text-2xl">Sysadmin access</h1>
+          <div className="grid place-items-center w-12 h-12 rounded-xl bg-screen text-pixel border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] mb-4"><Lock size={22} /></div>
+          <h1 className="font-serif font-bold text-2xl">Sysadmin access</h1>
           <p className="text-sm text-muted mt-1 mb-5">{authError}</p>
           <input name="pw" type="password" placeholder="Admin password" className="field" autoFocus />
           <Button variant="primary" className="w-full mt-3">Unlock</Button>
@@ -209,18 +210,23 @@ export function Admin() {
 
   return (
     <div className="pb-28">
-      <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md border-b border-line">
-        <div className="mx-auto max-w-6xl h-14 px-4 sm:px-6 flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-[#3a2619] border-b-[3px] border-outline shadow-[0_6px_0_#00000033]">
+        <div className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center gap-4">
           <Logo />
           <span className="text-faint">/</span>
-          <span className="text-sm font-medium">Sysadmin</span>
-          <a href="#/" className="ml-auto inline-flex items-center gap-2 text-sm text-muted hover:text-ink"><ArrowLeft size={16} /> Back to tales</a>
+          <span className="font-serif font-semibold">Sysadmin</span>
+          <div className="ml-auto flex items-center gap-2">
+            <SnowToggle />
+            <a href="#/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold"><ArrowLeft size={16} /> Back to tales</a>
+          </div>
         </div>
       </header>
+      {/* Hung under the bar but scrolls away with the page, so it never covers what you're reading. */}
+      <div className="relative h-0 z-20"><StringLights count={24} /></div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8">
-        <h1 className="font-serif text-3xl sm:text-4xl">Console</h1>
-        <p className="text-muted mt-1">Wire up the models behind IGNIS. Claude writes the story; Gemini or OpenAI paint and speak.</p>
+        <h1 className="toon-title text-4xl sm:text-5xl text-ink">Console</h1>
+        <p className="text-muted mt-3">Wire up the models behind IGNIS. Claude writes the story; Gemini or OpenAI paint and speak.</p>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
           {overview.map((o) => (
@@ -229,14 +235,14 @@ export function Admin() {
                 <StatusDot tone={o.ok === null ? 'idle' : o.ok ? 'ok' : 'danger'} />
                 <span className="eyebrow">{o.label}</span>
               </div>
-              <div className="mt-2 text-sm truncate" title={o.value}>{o.value}</div>
+              <div className="mt-2 font-serif font-semibold truncate" title={o.value}>{o.value}</div>
             </motion.div>
           ))}
         </div>
 
         {!cfg.passwordProtected && (
-          <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#f2c35b33] bg-[#f2c35b0d] px-4 py-3 text-sm">
-            <ShieldAlert size={18} className="text-dumb shrink-0 mt-0.5" />
+          <div className="card mt-5 flex items-start gap-3 px-4 py-3 text-sm !bg-[#ffe9a8]">
+            <ShieldAlert size={18} className="text-[#6b4a00] shrink-0 mt-0.5" />
             <span className="text-muted"><span className="text-ink">ADMIN_PASSWORD is not set.</span> This console only answers from localhost until you set it on the server.</span>
           </div>
         )}
@@ -247,8 +253,8 @@ export function Admin() {
               {NAV.map(({ id, label, icon: Icon }) => (
                 <li key={id} className="relative">
                   {section === id && (
-                    <motion.span layoutId="admin-nav" className="absolute inset-0 rounded-lg bg-raised border border-line-strong" transition={{ type: 'spring', stiffness: 400, damping: 34 }}>
-                      <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-ember shadow-[0_0_8px_var(--color-ember)]" />
+                    <motion.span layoutId="admin-nav" className="absolute inset-0 rounded-xl bg-raised border-2 border-outline shadow-[0_3px_0_var(--color-outline)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }}>
+                      <span className="absolute left-1.5 top-2 bottom-2 w-1 rounded-full bg-gold shadow-[0_0_8px_var(--color-gold)]" />
                     </motion.span>
                   )}
                   <a
@@ -257,9 +263,9 @@ export function Admin() {
                       e.preventDefault();
                       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className={cx('group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors', section === id ? 'text-ink glow-on' : 'text-muted hover:text-ink')}
+                    className={cx('group relative flex items-center gap-2.5 rounded-xl px-4 py-2 text-sm font-semibold transition-colors', section === id ? 'text-ink glow-on' : 'text-muted hover:text-ink')}
                   >
-                    <Icon size={16} className={cx('glow-icon', section === id && 'text-ember')} /> {label}
+                    <Icon size={16} className={cx('glow-icon', section === id && 'text-gold')} /> {label}
                   </a>
                 </li>
               ))}
@@ -276,9 +282,9 @@ export function Admin() {
                   return (
                     <div key={p.id} className="spotlight card p-5" style={{ ['--spot' as string]: st.tone === 'ok' ? 'var(--color-ok)' : st.tone === 'danger' ? 'var(--color-danger)' : 'var(--color-ember)' }}>
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className={cx('grid place-items-center w-9 h-9 rounded-lg border font-serif font-semibold transition-all', st.tone === 'ok' ? 'bg-[#7fd4a914] border-[#7fd4a955] text-ok shadow-[0_0_18px_-4px_var(--color-ok)]' : 'bg-raised border-line')}>{p.initial}</span>
+                        <span className={cx('grid place-items-center w-10 h-10 rounded-xl border-[2.5px] border-outline font-pixel text-lg shadow-[0_3px_0_var(--color-outline)] transition-all', st.tone === 'ok' ? 'bg-screen text-pixel [text-shadow:0_0_6px_var(--color-pixel)]' : 'bg-raised text-ink')}>{p.initial}</span>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium">{p.name}</div>
+                          <div className="font-serif font-semibold text-lg leading-tight">{p.name}</div>
                           <div className="text-xs text-faint">{p.role}</div>
                         </div>
                         <motion.span key={st.text} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}>
@@ -341,7 +347,7 @@ export function Admin() {
               </div>
             </Section>
 
-            <Section id="image" title="Illustrations" desc="Each page gets an image from Claude's brief in a fixed cyber-grimoire style.">
+            <Section id="image" title="Illustrations" desc="Each page gets an image from Claude's brief, drawn in the cozy cartoon-workshop style.">
               <div className="card p-5 space-y-5">
                 <Field label="Provider">
                   <ProviderPicker value={cfg.image.provider} onChange={(v) => set('image', 'provider', v)} options={[['gemini', 'Gemini'], ['openai', 'OpenAI'], ['off', 'Off']]} />
@@ -405,10 +411,10 @@ export function Admin() {
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            className="fixed bottom-4 inset-x-4 z-40 mx-auto max-w-xl rounded-2xl border border-line-strong bg-raised/95 backdrop-blur px-4 py-3 flex items-center gap-3 shadow-2xl"
+            className="card fixed bottom-4 inset-x-4 z-40 mx-auto max-w-xl px-4 py-3 flex items-center gap-3"
           >
             <span className="w-2 h-2 rounded-full bg-ember" />
-            <span className="text-sm flex-1">Unsaved changes</span>
+            <span className="text-sm font-bold flex-1">Unsaved changes</span>
             <Button variant="ghost" size="sm" onClick={() => setCfg(saved)}>Discard</Button>
             <Button variant="primary" size="sm" onClick={saveRoles} disabled={saving}>
               {saving ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Save changes
@@ -423,8 +429,8 @@ export function Admin() {
 function Section({ id, title, desc, children }: { id: string; title: string; desc: string; children: ReactNode }) {
   return (
     <motion.section id={id} className="scroll-mt-24" initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.5 }}>
-      <h2 className="font-serif text-2xl">{title}</h2>
-      <p className="text-sm text-muted mt-1 mb-4">{desc}</p>
+      <h2 className="toon-title text-2xl sm:text-3xl text-ink">{title}</h2>
+      <p className="text-sm text-muted mt-2 mb-4">{desc}</p>
       {children}
     </motion.section>
   );
@@ -434,7 +440,7 @@ function Field({ label, help, children }: { label: string; help?: string; childr
   return (
     <div className="grid sm:grid-cols-[180px_minmax(0,1fr)] gap-2 sm:gap-6 items-start">
       <div className="pt-2">
-        <div className="text-sm font-medium">{label}</div>
+        <div className="text-sm font-bold">{label}</div>
         {help && <div className="text-xs text-faint mt-0.5">{help}</div>}
       </div>
       <div className="min-w-0">{children}</div>
@@ -444,9 +450,9 @@ function Field({ label, help, children }: { label: string; help?: string; childr
 
 function ProviderPicker({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
   return (
-    <div className="inline-flex p-1 rounded-xl bg-bg border border-line">
+    <div className="inline-flex p-1 rounded-xl bg-raised border-[2.5px] border-outline">
       {options.map(([v, label]) => (
-        <button key={v} onClick={() => onChange(v)} className={cx('h-8 px-4 text-sm rounded-lg transition-colors', value === v ? 'bg-raised text-ink border border-line-strong' : 'text-faint hover:text-muted border border-transparent')}>
+        <button key={v} onClick={() => onChange(v)} className={cx('h-8 px-4 text-sm font-serif font-semibold rounded-lg transition-all', value === v ? 'bg-gold text-outline border-2 border-outline shadow-[0_2px_0_var(--color-outline)]' : 'text-muted hover:text-ink border-2 border-transparent')}>
           {label}
         </button>
       ))}
@@ -468,7 +474,7 @@ function ModelInput({ value, onChange, models, id }: { value: string; onChange: 
 
 function Probe({ role, state, onRun, dirty }: { role: string; state: any; onRun: () => void; dirty: boolean }) {
   return (
-    <div className="group rounded-xl border border-dashed border-line-strong p-4">
+    <div className="group rounded-2xl border-[2.5px] border-dashed border-line-strong bg-raised/50 p-4">
       <div className="flex flex-wrap items-center gap-3">
         <Button size="sm" onClick={onRun} disabled={state?.loading || dirty}>
           {state?.loading ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} className="glow-icon" />} Run live test

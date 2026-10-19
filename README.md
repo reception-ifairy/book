@@ -26,9 +26,11 @@ Open `http://localhost:3000/#/admin` to paste keys, test them, fetch each provid
 - Keys saved in the panel live in `data/config.json` (mode 600, gitignored) and take precedence over environment variables.
 - Stories and generated media are stored under `data/` (`DATA_DIR` to move it).
 
-## Design: Ember Grimoire
+## Design: Cozy Workshop
 
-A warm, editorial dark theme: the story reads like a book (Fraunces serif, drop caps, 68-character lines), the interface behaves like a modern app (Geist / Geist Mono). IGNIS's ember orange is the only loud color; choice types have their own quiet accents (sane, chaos, dumb, sudo). Tokens live in `@theme` in `src/index.css`; shared components in `src/ui.tsx`.
+A cartoon cabin at night: dark plank walls lit by a flickering fireplace and twinkling fairy lights, gentle snow (toggle with the snowflake). Everything you read or press is cream "sticker" paper with a bold ink outline and a hard drop shadow; buttons sink into their shadow when pressed. IGNIS is a flying grimoire-robot with a CRT pixel face (its expression follows the story's mood), fairy wings and an ember antenna. Picks and endings land with comic impacts (ZAP!, BONK!, THE END!), stats pop as comic tags, and illustrations are prompted in the same cozy cartoon style.
+
+Fonts: Fredoka (headings), Nunito (story and UI), Pixelify Sans (labels, screens), Bangers (sound effects). Tokens live in `@theme` in `src/index.css`: the wood-wall context is the default and `.card` / `.paper` switch the same tokens to paper, so components read correctly on either.
 
 Keyboard: `1`–`4` choose, `/` write your own move, `M` timeline, `V` read aloud, `Space` skip the text animation.
 

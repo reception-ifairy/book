@@ -1,15 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Snowflake } from 'lucide-react';
+import { setSnow, useSnow } from './prefs';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
+/*
+ * Cartoon controls: a bold ink outline, a hard drop shadow, and a "press" that sinks the button
+ * into its shadow. Shared by every screen.
+ */
+const PRESS = 'border-[2.5px] border-outline shadow-[0_4px_0_var(--color-outline)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_var(--color-outline)] active:translate-y-[3px] active:shadow-[0_1px_0_var(--color-outline)]';
+
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const VARIANTS: Record<Variant, string> = {
-  primary: 'btn-shine bg-ember text-bg hover:brightness-110 shadow-[0_8px_24px_-12px_var(--color-ember)] hover:shadow-[0_10px_32px_-8px_var(--color-ember)]',
-  secondary: 'bg-raised text-ink border border-line hover:border-line-strong',
+  primary: `btn-shine bg-ember text-outline ${PRESS}`,
+  secondary: `bg-[#fff6e2] text-outline ${PRESS}`,
   ghost: 'text-muted hover:text-ink hover:bg-raised',
-  danger: 'text-danger border border-line hover:border-danger',
+  danger: `bg-[#ffe1db] text-candy ${PRESS}`,
 };
 
 export function Button({ variant = 'secondary', size = 'md', className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg' }) {
@@ -17,9 +24,9 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
     <button
       {...props}
       className={cx(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98]',
-        size === 'sm' && 'h-8 px-3 text-xs',
-        size === 'md' && 'h-10 px-4 text-sm',
+        'inline-flex items-center justify-center gap-2 rounded-xl font-serif font-semibold transition-all duration-150 disabled:opacity-45 disabled:pointer-events-none',
+        size === 'sm' && 'h-8 px-3 text-sm',
+        size === 'md' && 'h-10 px-4 text-[15px]',
         size === 'lg' && 'h-12 px-6 text-base',
         VARIANTS[variant],
         className,
@@ -36,8 +43,10 @@ export function IconButton({ label, active, className, children, ...props }: But
       title={label}
       aria-pressed={active}
       className={cx(
-        'group relative inline-flex items-center justify-center h-9 min-w-9 px-2 gap-1.5 rounded-lg text-sm transition-all disabled:opacity-40 active:scale-90',
-        active ? 'glow-on bg-ember-soft text-ember shadow-[inset_0_0_0_1px_#ff6b3d55,0_0_18px_-4px_var(--color-ember)]' : 'text-muted hover:text-ember hover:bg-raised',
+        'group relative inline-flex items-center justify-center h-9 min-w-9 px-2 gap-1.5 rounded-xl text-sm transition-all disabled:opacity-40 active:scale-90',
+        active
+          ? 'glow-on bg-gold text-outline border-2 border-outline shadow-[0_3px_0_var(--color-outline),0_0_22px_-2px_var(--color-gold)]'
+          : 'text-muted hover:text-gold hover:bg-raised border-2 border-transparent',
         className,
       )}
     >
@@ -50,16 +59,20 @@ export const Kbd = ({ children }: { children: ReactNode }) => <kbd className="kb
 
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'ok' | 'warn' | 'danger' | 'ember'; children: ReactNode }) {
   const tones = {
-    neutral: 'text-muted bg-raised border-line',
-    ok: 'text-ok bg-[#7fd4a914] border-[#7fd4a933]',
-    warn: 'text-dumb bg-[#f2c35b14] border-[#f2c35b33]',
-    danger: 'text-danger bg-[#ff5c6c14] border-[#ff5c6c33]',
-    ember: 'text-ember bg-ember-soft border-[#ff6b3d40]',
+    neutral: 'bg-[#fff6e2] text-[#2b211c]',
+    ok: 'bg-[#cdeccf] text-[#1f5a33]',
+    warn: 'bg-[#ffe9a8] text-[#6b4a00]',
+    danger: 'bg-[#ffd3cc] text-[#8a1f19]',
+    ember: 'bg-[#ffd2b3] text-[#7a2f08]',
   };
-  return <span className={cx('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium', tones[tone])}>{children}</span>;
+  return (
+    <span className={cx('inline-flex items-center gap-1.5 rounded-full border-2 border-outline px-2.5 py-0.5 text-xs font-bold shadow-[0_2px_0_var(--color-outline)]', tones[tone])}>
+      {children}
+    </span>
+  );
 }
 
-/** A labelled bar. `center` draws a diverging bar for values like karma. Changes float up as +N / −N. */
+/** A chunky "battery" bar. `center` draws a diverging bar for values like karma. Changes pop out as comic tags. */
 export function Meter({ label, value, min = 0, max = 100, color, center }: { label: string; value: number; min?: number; max?: number; color: string; center?: boolean }) {
   const pct = ((value - min) / (max - min)) * 100;
   const mid = center ? 50 : 0;
@@ -74,7 +87,7 @@ export function Meter({ label, value, min = 0, max = 100, color, center }: { lab
     const id = Date.now() + Math.random();
     setDeltas((x) => [...x, { id, d }]);
     // Each delta removes itself; not cleared on the next change so rapid changes all float away.
-    setTimeout(() => setDeltas((x) => x.filter((y) => y.id !== id)), 1600);
+    setTimeout(() => setDeltas((x) => x.filter((y) => y.id !== id)), 1700);
   }, [value]);
   const flashing = deltas.length > 0;
   return (
@@ -83,34 +96,34 @@ export function Meter({ label, value, min = 0, max = 100, color, center }: { lab
         <span className="eyebrow">{label}</span>
         <motion.span
           key={value}
-          initial={{ scale: flashing ? 1.5 : 1, color: flashing ? color : 'var(--color-ink)' }}
-          animate={{ scale: 1, color: 'var(--color-ink)' }}
-          transition={{ duration: 0.8 }}
-          className="font-mono text-xs tabular-nums"
+          initial={{ scale: flashing ? 1.6 : 1 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 12 }}
+          className="font-serif font-bold text-sm tabular-nums text-ink"
         >
           {value}
         </motion.span>
       </div>
-      <div className="relative h-1 mt-1.5 rounded-full bg-line overflow-hidden">
-        {center && <div className="absolute left-1/2 top-0 bottom-0 w-px bg-line-strong" />}
+      <div className="relative h-2.5 mt-1 rounded-full border-2 border-outline bg-[#00000040] overflow-hidden">
+        {center && <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-outline" />}
         <motion.div
-          className="absolute top-0 bottom-0 rounded-full"
-          style={{ background: color, boxShadow: `0 0 ${flashing ? 12 : 6}px ${color}` }}
+          className="absolute top-0 bottom-0"
+          style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${color} 70%, white), ${color})`, boxShadow: flashing ? `0 0 12px ${color}` : undefined }}
           initial={false}
           animate={{ left: `${left}%`, width: `${width}%` }}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+          transition={{ type: 'spring', stiffness: 140, damping: 16 }}
         />
       </div>
       <AnimatePresence>
         {deltas.map(({ id, d }) => (
           <motion.span
             key={id}
-            className="absolute right-8 top-0 font-mono text-xs font-medium pointer-events-none"
-            style={{ color, textShadow: `0 0 8px ${color}` }}
-            initial={{ opacity: 0, x: 10, scale: 0.7 }}
-            animate={{ opacity: 1, x: 0, scale: 1.1 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+            className="comic absolute right-6 -top-2 text-base pointer-events-none z-10"
+            style={{ color }}
+            initial={{ opacity: 0, scale: 0.3, rotate: -20 }}
+            animate={{ opacity: 1, scale: 1.15, rotate: -6 }}
+            exit={{ opacity: 0, y: -10, scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 14 }}
           >
             {d > 0 ? `+${d}` : `−${Math.abs(d)}`}
           </motion.span>
@@ -127,16 +140,22 @@ export function StatusDot({ tone }: { tone: 'ok' | 'danger' | 'idle' }) {
 
 export function Segmented<T extends string>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex p-1 rounded-xl bg-bg border border-line">
+    <div role="radiogroup" aria-label={label} className="inline-flex p-1 rounded-xl bg-raised border-[2.5px] border-outline">
       {options.map((o) => (
         <button
           key={o.value}
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cx('relative h-8 px-3.5 text-sm rounded-lg transition-colors', value === o.value ? 'text-ink' : 'text-faint hover:text-muted')}
+          className={cx('relative h-8 px-3.5 text-sm font-serif font-semibold rounded-lg transition-colors', value === o.value ? 'text-outline' : 'text-muted hover:text-ink')}
         >
-          {value === o.value && <motion.span layoutId={`seg-${label}`} className="absolute inset-0 rounded-lg bg-raised border border-line-strong" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+          {value === o.value && (
+            <motion.span
+              layoutId={`seg-${label}`}
+              className="absolute inset-0 rounded-lg bg-gold border-2 border-outline shadow-[0_2px_0_var(--color-outline)]"
+              transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            />
+          )}
           <span className="relative">{o.label}</span>
         </button>
       ))}
@@ -156,19 +175,19 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div className="fixed inset-0 z-40 bg-[#1a100bcc] backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.aside
             role="dialog"
             aria-label={title}
-            className="fixed z-50 top-0 right-0 bottom-0 w-full sm:w-[420px] bg-surface border-l border-line flex flex-col"
+            className="paper fixed z-50 top-0 right-0 bottom-0 w-full sm:w-[440px] bg-surface border-l-[3px] border-outline flex flex-col"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 320, damping: 36 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 34 }}
           >
-            <header className="flex items-center justify-between px-5 h-14 border-b border-line">
-              <h2 className="font-medium">{title}</h2>
-              <IconButton label="Close" onClick={onClose}><X size={18} /></IconButton>
+            <header className="flex items-center justify-between px-5 h-16 border-b-[3px] border-outline bg-raised">
+              <h2 className="font-serif text-xl font-semibold">{title}</h2>
+              <IconButton label="Close" onClick={onClose}><X size={20} /></IconButton>
             </header>
             <div className="flex-1 overflow-y-auto scroll-thin p-5">{children}</div>
           </motion.aside>
@@ -192,18 +211,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div className="fixed z-[60] top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0 flex flex-col gap-2 w-[min(92vw,380px)]" aria-live="polite">
+      <div className="fixed z-[60] top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0 flex flex-col gap-3 w-[min(92vw,380px)]" aria-live="polite">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
               key={t.id}
               layout
-              initial={{ opacity: 0, y: -16, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="flex items-start gap-3 rounded-xl border border-line bg-raised px-4 py-3 text-sm shadow-2xl"
+              initial={{ opacity: 0, y: -20, scale: 0.8, rotate: -3 }}
+              animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, x: 40, rotate: 4 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+              className="card flex items-start gap-3 px-4 py-3 text-sm font-semibold"
             >
-              {t.tone === 'ok' ? <CheckCircle2 size={18} className="text-ok shrink-0 drop-shadow-[0_0_6px_var(--color-ok)]" /> : <AlertTriangle size={18} className="text-danger shrink-0 drop-shadow-[0_0_6px_var(--color-danger)]" />}
+              {t.tone === 'ok' ? <CheckCircle2 size={20} className="text-ok shrink-0" /> : <AlertTriangle size={20} className="text-candy shrink-0" />}
               <span className="min-w-0 break-words">{t.text}</span>
             </motion.div>
           ))}
@@ -213,16 +233,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** A tiny pixel-screen face, the same language as IGNIS. */
 export function Logo({ onClick }: { onClick?: () => void }) {
   return (
     <a href="#/" onClick={onClick} className="flex items-center gap-2.5 group">
-      <span className="relative grid place-items-center w-8 h-8 rounded-lg bg-ember-soft text-ember font-serif font-bold text-lg transition-all group-hover:bg-ember group-hover:text-bg group-hover:shadow-[0_0_24px_-2px_var(--color-ember)] group-hover:rotate-[-6deg]">I</span>
+      <span className="relative grid place-items-center w-10 h-9 rounded-lg bg-screen border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-6 group-hover:scale-105">
+        <span className="font-pixel text-pixel text-sm leading-none [text-shadow:0_0_6px_var(--color-pixel)] group-hover:hidden">^‿^</span>
+        <span className="font-pixel text-gold text-sm leading-none [text-shadow:0_0_6px_var(--color-gold)] hidden group-hover:inline">&gt;‿&lt;</span>
+      </span>
       <span className="leading-none">
-        <span className="block font-serif font-semibold tracking-tight">Grimm Protocol</span>
-        <span className="block font-mono text-[10px] text-faint mt-0.5">IGNIS // OS</span>
+        <span className="block font-serif font-bold text-lg tracking-tight">Grimm Protocol</span>
+        <span className="block font-pixel text-[11px] text-faint mt-0.5">IGNIS // OS</span>
       </span>
     </a>
   );
 }
 
 export { cx };
+
+export function SnowToggle() {
+  const on = useSnow();
+  return (
+    <IconButton label={on ? 'Stop the snow' : 'Let it snow'} active={on} onClick={() => setSnow(!on)}>
+      <Snowflake size={18} className={on ? 'spin-slow' : ''} />
+    </IconButton>
+  );
+}

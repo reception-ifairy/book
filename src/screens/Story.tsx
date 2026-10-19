@@ -4,10 +4,10 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, ArrowUp, GitFork, ImagePlus, Laugh, Mic, PenLine, Share2, ShieldCheck, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
 import { TimelineMap } from '../components/TimelineMap';
-import { Burst, Equalizer, RuneLoader } from '../components/Effects';
+import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
 import { coverStyle, ENDING, KIND } from '../meta';
-import { Badge, Button, IconButton, Kbd, Meter, Sheet, cx, useToast } from '../ui';
+import { Badge, Button, IconButton, Kbd, Meter, Sheet, SnowToggle, cx, useToast } from '../ui';
 import { SUDO_MANA_COST, type Choice, type ChoiceKind, type Page, type PublicConfig, type Story } from '../../shared/types';
 
 const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
@@ -17,6 +17,9 @@ const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
   sudo: SquareTerminal,
   custom: PenLine,
 };
+
+/** The sound effect each kind of choice makes when picked. */
+const SFX: Record<ChoiceKind | 'custom', string> = { sane: 'OK!', chaos: 'ZAP!', dumb: 'BONK!', sudo: 'SUDO!', custom: 'POOF!' };
 
 type Picked = { id: string; kind: ChoiceKind | 'custom'; label: string };
 
@@ -95,7 +98,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   const [imageState, setImageState] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [listening, setListening] = useState(false);
   const [picked, setPicked] = useState<Picked | null>(null);
-  const [burst, setBurst] = useState<{ key: number; target: string; x: number; y: number; color: string } | null>(null);
+  const [burst, setBurst] = useState<{ key: number; target: string; x: number; y: number; color: string; word: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -190,7 +193,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       const r = el.getBoundingClientRect();
       const x = e && e.clientX ? e.clientX - r.left : r.width / 2;
       const y = e && e.clientY ? e.clientY - r.top : r.height / 2;
-      setBurst({ key: Date.now(), target: c.id, x, y, color: KIND[c.kind].color });
+      setBurst({ key: Date.now(), target: c.id, x, y, color: KIND[c.kind].color, word: SFX[c.kind] });
     }
     send({ choiceId: c.id }, { id: c.id, kind: c.kind, label: c.label });
   };
@@ -277,6 +280,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
 
   const glitch = Math.max(0, (60 - page.canon) / 60);
+  // Getting garbage-collected leaves IGNIS seeing spirals, like the bonked robot in the workshop.
+  const ignisMood = busy || page.ending?.type === 'death' ? 'panic' : page.mood;
   const parent = page.parentId ? story.pages[page.parentId] : null;
   const canSend = !busy && (custom.trim().length > 0 || !!attachment);
   const forks = Object.values(story.pages).filter((p) => p.parentId && Object.values(story.pages).some((q) => q.parentId === p.parentId && q.id !== p.id)).length;
@@ -284,7 +289,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   const endingColor = ending ? { ok: 'var(--color-sane)', warn: 'var(--color-dumb)', danger: 'var(--color-danger)', ember: 'var(--color-ember)' }[ending.tone] : '';
 
   const illustration = config?.image ? (
-    <div className="relative aspect-square rounded-2xl overflow-hidden border border-line bg-surface shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9)]">
+    <div className="frame">
+    <div className="relative aspect-square overflow-hidden bg-screen">
       <AnimatePresence mode="wait">
         {page.imageUrl ? (
           <motion.div key={page.imageUrl} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -311,13 +317,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                 <div className="absolute inset-0 scanline" />
                 <div className="relative flex flex-col items-center gap-4 text-sm text-ink/80">
                   <RuneLoader />
-                  <span className="font-mono text-xs tracking-wider">rendering holographic projection…</span>
+                  <span className="font-pixel text-sm text-pixel [text-shadow:0_0_8px_var(--color-pixel)]">painting this page…</span>
                 </div>
               </>
             )}
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
     </div>
   ) : null;
 
@@ -335,14 +342,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   return (
     <div style={{ ['--glitch' as string]: glitch }}>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md border-b border-line">
-        <div className="mx-auto max-w-6xl h-14 px-4 sm:px-6 flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-[#3a2619] border-b-[3px] border-outline shadow-[0_6px_0_#00000033]">
+        <div className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center gap-3">
           <IconButton label="Back to tales" onClick={() => (location.hash = '/')}>
             <ArrowLeft size={18} />
           </IconButton>
-          <span className="grid place-items-center w-8 h-8 rounded-lg text-base shrink-0 shadow-[0_0_16px_-4px_var(--color-ember)]" style={tale ? coverStyle(tale.hue) : undefined}>{tale?.emoji}</span>
+          <span className="grid place-items-center w-10 h-10 rounded-xl text-lg shrink-0 border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)]" style={tale ? coverStyle(tale.hue) : undefined}>{tale?.emoji}</span>
           <div className="min-w-0">
-            <div className={cx('font-serif font-semibold truncate leading-tight', glitch > 0 && 'reality-tear')}>{tale?.title[story.lang] ?? '…'}</div>
+            <div className={cx('font-serif font-bold text-lg truncate leading-tight', glitch > 0 && 'reality-tear')}>{tale?.title[story.lang] ?? '…'}</div>
             <div className="font-mono text-[11px] text-faint">#{story.timeline} · {story.heroName}</div>
           </div>
           <div className="hidden lg:grid grid-cols-4 gap-5 w-[440px] ml-auto mr-4">{stats}</div>
@@ -357,25 +364,28 @@ export function StoryScreen({ storyId }: { storyId: string }) {
             <IconButton label="Copy timeline card" onClick={share}>
               <Share2 size={18} />
             </IconButton>
+            <SnowToggle />
           </div>
         </div>
       </header>
+      {/* Hung under the bar but scrolls away with the page, so it never covers what you're reading. */}
+      <div className="relative h-0 z-20"><StringLights count={24} /></div>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 lg:py-10 grid lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] gap-8 lg:gap-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-12 pb-10 lg:pt-14 grid lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] gap-8 lg:gap-12">
         {/* Visual column */}
         <aside className="order-last lg:order-none lg:sticky lg:top-24 self-start space-y-4">
           {illustration && <div className="hidden lg:block">{illustration}</div>}
 
-          <div className="spotlight card p-4 hidden lg:flex gap-4 items-start">
-            <div className="shrink-0 -my-1">
-              <SVGCharacter isTalking={busy || !done} mood={busy ? 'panic' : page.mood} size={config?.image ? 64 : 120} />
+          <div className="hidden lg:flex gap-5 items-start pt-2">
+            <div className="shrink-0 -my-2">
+              <SVGCharacter isTalking={busy || !done} mood={ignisMood} size={config?.image ? 96 : 130} />
             </div>
-            <div className="min-w-0">
-              <div className="eyebrow mb-1">IGNIS · {busy ? 'compiling' : page.mood}</div>
+            <div className="bubble min-w-0 flex-1 px-4 py-3 mt-2">
+              <div className="eyebrow mb-1 !text-[#9c7f62]">IGNIS · {busy ? 'compiling' : ignisMood}</div>
               <AnimatePresence mode="wait">
                 <motion.p
                   key={busy ? 'busy' : page.id}
-                  className="font-serif italic text-muted leading-snug"
+                  className="font-serif font-medium text-[15px] leading-snug"
                   initial={{ opacity: 0, y: 6, filter: 'blur(4px)' }}
                   animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                   exit={{ opacity: 0, y: -6 }}
@@ -389,7 +399,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
           <div className="card p-4 grid grid-cols-2 gap-4 lg:hidden">{stats}</div>
 
           <div className="card p-4">
-            <div className="eyebrow mb-2">Inventory</div>
+            <div className="eyebrow mb-2">🎒 Inventory</div>
             {page.inventory.length ? (
               <motion.div layout className="flex flex-wrap gap-1.5">
                 <AnimatePresence>
@@ -404,8 +414,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                         exit={{ opacity: 0, scale: 0.6 }}
                         transition={{ type: 'spring', stiffness: 400, damping: 22 }}
                         className={cx(
-                          'font-mono text-xs px-2 py-1 rounded-md border',
-                          fresh ? 'text-ember border-[#ff6b3d66] bg-ember-soft shadow-[0_0_14px_-4px_var(--color-ember)]' : 'bg-raised border-line text-muted',
+                          'font-pixel text-sm px-2 py-0.5 rounded-lg border-2 border-outline shadow-[0_2px_0_var(--color-outline)]',
+                          fresh ? 'bg-gold text-outline shadow-[0_2px_0_var(--color-outline),0_0_16px_-2px_var(--color-gold)]' : 'bg-raised text-ink',
                         )}
                       >
                         {fresh && <span className="mr-1">✦</span>}
@@ -438,13 +448,17 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               {/* An ember light sweeping across the fresh page. */}
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute -inset-y-4 w-32 -skew-x-12 bg-gradient-to-r from-transparent via-[#ff6b3d1f] to-transparent"
+                className="pointer-events-none absolute -inset-y-4 w-32 -skew-x-12 bg-gradient-to-r from-transparent via-[#ffd36b33] to-transparent"
                 initial={{ left: '-20%', opacity: 1 }}
                 animate={{ left: '110%', opacity: 0 }}
                 transition={{ duration: 1.1, ease: 'easeOut', delay: 0.2 }}
               />
 
-              <div className="flex flex-wrap items-center gap-2 mb-5">
+              <div className="card relative overflow-hidden p-6 sm:p-8">
+              {/* Ruled-paper hint and a folded corner. */}
+              <div aria-hidden className="pointer-events-none absolute inset-0 opacity-50 [background:repeating-linear-gradient(180deg,transparent_0_33px,#e8d6b4_33px_34px)]" />
+              <div aria-hidden className="absolute top-0 right-0 w-10 h-10 bg-[linear-gradient(225deg,var(--color-bg)_50%,#e9d4ac_50%)] border-l-[3px] border-b-[3px] border-outline rounded-bl-xl" />
+              <div className="relative flex flex-wrap items-center gap-2 mb-5">
                 <span className="eyebrow">Page {page.depth + 1}</span>
                 {page.action && (
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted max-w-full">
@@ -454,40 +468,42 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                 )}
               </div>
 
-              <div className={cx('prose-story', !done && 'caret cursor-pointer')} onClick={done ? undefined : skip}>
+              <div className={cx('relative prose-story', !done && 'caret cursor-pointer')} onClick={done ? undefined : skip}>
                 <Markdown>{shown}</Markdown>
               </div>
               {!done && (
-                <button onClick={skip} className="mt-2 text-xs text-faint hover:text-muted inline-flex items-center gap-2">
+                <button onClick={skip} className="relative mt-1 text-xs font-bold text-faint hover:text-muted inline-flex items-center gap-2">
                   Skip animation <Kbd>Space</Kbd>
                 </button>
               )}
+              </div>
 
-              <div className="lg:hidden mt-6 flex items-center gap-3 rounded-xl bg-surface border border-line px-3 py-2">
-                <SVGCharacter isTalking={busy || !done} mood={busy ? 'panic' : page.mood} size={44} />
-                <p className="font-serif italic text-sm text-muted leading-snug">{busy ? 'Compiling your next mistake…' : `“${page.quip}”`}</p>
+              <div className="lg:hidden mt-6 flex items-center gap-4">
+                <SVGCharacter isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
+                <p className="bubble flex-1 px-3 py-2 font-serif font-medium text-sm leading-snug">{busy ? 'Compiling your next mistake…' : `“${page.quip}”`}</p>
               </div>
 
               {/* What happens next */}
               <div className="mt-8">
                 {page.ending && ending ? (
+                  done && (
                   <motion.div
                     key={`end-${page.id}`}
                     initial={{ opacity: 0, y: 16, scale: 0.97 }}
                     animate={page.ending.type === 'death' ? { opacity: 1, y: 0, scale: 1, x: [0, -12, 10, -8, 6, -3, 0] } : { opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.7, delay: 0.3 }}
-                    className="card p-6 sm:p-8 text-center relative overflow-hidden"
+                    transition={{ duration: 0.7, delay: 0.1 }}
+                    className="card p-6 sm:p-8 text-center relative overflow-visible"
                     style={{ boxShadow: `0 0 60px -20px ${endingColor}` }}
                   >
-                    <div className="absolute inset-0 opacity-40" style={tale ? coverStyle(tale.hue) : undefined} />
-                    <motion.div className="absolute inset-0" style={{ background: endingColor }} initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 1.2, delay: 0.3 }} />
-                    <Burst key={page.id} x="50%" y="40%" color={endingColor} count={32} distance={190} />
+                    <div className="absolute inset-0 rounded-[17px] opacity-25" style={tale ? coverStyle(tale.hue) : undefined} />
+                    <motion.div className="absolute inset-0 rounded-[17px]" style={{ background: endingColor }} initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 1.2, delay: 0.3 }} />
+                    <ComicBurst key={page.id} x="50%" y="38%" color={endingColor} word={page.ending.type === 'death' ? 'BONK!' : 'THE END!'} size={190} delay={0.45} />
                     <div className="relative">
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.5 }}>
                         <Badge tone={ending.tone}>{ending.label}</Badge>
                       </motion.div>
                       <motion.h2
-                        className="font-serif text-3xl sm:text-4xl mt-4"
+                        className="toon-title text-4xl sm:text-5xl mt-4 text-[#fff6e2]"
                         style={{ textShadow: `0 0 28px ${endingColor}` }}
                         initial={{ opacity: 0, letterSpacing: '0.3em', filter: 'blur(8px)' }}
                         animate={{ opacity: 1, letterSpacing: '0em', filter: 'blur(0px)' }}
@@ -507,10 +523,11 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                       </div>
                     </div>
                   </motion.div>
+                  )
                 ) : (
                   (done || busy) && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-                      <div className="eyebrow mb-3">{busy ? 'Committed' : 'What do you do?'}</div>
+                      <div className="font-serif font-bold text-lg text-gold mb-3 mt-2">{busy ? 'Committed!' : 'What do you do?'}</div>
                       <ol className="space-y-2">
                         {picked?.kind === 'custom' && (
                           <motion.li initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -537,7 +554,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                 onPick={(e) => choose(c, e)}
                                 title={noMana ? `Needs ${SUDO_MANA_COST} mana` : undefined}
                               >
-                                {burst?.target === c.id && <Burst key={burst.key} x={burst.x} y={burst.y} color={burst.color} />}
+                                {burst?.target === c.id && <ComicBurst key={burst.key} x={burst.x} y={burst.y} color={burst.color} word={burst.word} size={96} />}
                               </ChoiceCard>
                             </motion.li>
                           );
@@ -549,10 +566,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                       ) : (
                         <>
                           {/* Composer */}
-                          <div className="ring-flow mt-4 rounded-2xl border border-line bg-surface transition-shadow">
+                          <div className="ring-flow card mt-5 transition-shadow">
                             {attachment && (
                               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex items-center gap-3 px-3 pt-3">
-                                <img src={attachment.preview} alt="Attached artifact" className="w-12 h-12 object-cover rounded-lg border border-ember shadow-[0_0_16px_-4px_var(--color-ember)]" />
+                                <img src={attachment.preview} alt="Attached artifact" className="w-12 h-12 object-cover rounded-lg border-[2.5px] border-outline rotate-[-4deg] shadow-[2px_3px_0_var(--color-outline)]" />
                                 <span className="text-xs text-muted flex-1">Artifact attached. IGNIS will weave it into the story.</span>
                                 <IconButton label="Remove artifact" onClick={() => setAttachment(null)}><X size={16} /></IconButton>
                               </motion.div>
@@ -569,7 +586,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                 } else if (e.key === 'Escape') inputRef.current?.blur();
                               }}
                               placeholder="Or write your own move…"
-                              className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
+                              className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] font-semibold placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
                             />
                             <div className="flex items-center gap-1 px-2 pb-2">
                               <IconButton label="Dictate your move" active={listening} onClick={listen}>
@@ -605,7 +622,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                               }}
                             />
                           </div>
-                          <p className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-faint">
+                          <p className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 text-xs font-semibold text-faint">
                             <span><Kbd>1</Kbd>–<Kbd>{page.choices.length}</Kbd> choose</span>
                             <span><Kbd>/</Kbd> write</span>
                             <span><Kbd>M</Kbd> timeline</span>
@@ -660,22 +677,21 @@ function ChoiceCard({
       onClick={committed ? undefined : onPick}
       title={title}
       className={cx(
-        'spotlight group relative w-full flex items-center gap-4 text-left rounded-xl border border-line bg-surface px-3.5 py-3 transition-all',
-        !disabled && 'hover:bg-raised hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-16px_var(--k)] active:scale-[0.99]',
+        'paper sticker spotlight group relative w-full flex items-center gap-4 text-left bg-surface px-3.5 py-3',
         disabled && !committed && 'opacity-40',
         committed && 'commit-glow cursor-default',
       )}
       style={{ ['--k' as string]: color, ['--spot' as string]: color }}
     >
       <span
-        className={cx('glow-icon grid place-items-center w-10 h-10 rounded-lg shrink-0 border transition-transform group-hover:scale-110 group-hover:-rotate-6', committed && 'glow-on')}
-        style={{ color, borderColor: `color-mix(in srgb, ${color} 30%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}
+        className={cx('grid place-items-center w-11 h-11 rounded-full shrink-0 border-[2.5px] border-outline text-white shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:scale-110 group-hover:-rotate-12', committed && 'animate-bounce')}
+        style={{ background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${color} 55%, white), ${color})` }}
       >
-        <Icon size={18} />
+        <Icon size={20} strokeWidth={2.5} className="drop-shadow-[1px_1px_0_#241913]" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] leading-snug">{label}</span>
-        <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs" style={{ color }}>
+        <span className="block text-[16px] font-bold leading-snug">{label}</span>
+        <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide" style={{ color }}>
           {kindLabel}
           {kind === 'sudo' && <span className="text-faint">· −{SUDO_MANA_COST} mana</span>}
         </span>

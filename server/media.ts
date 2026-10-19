@@ -12,7 +12,7 @@ function requireKey(provider: 'gemini' | 'openai') {
 }
 
 export const IMAGE_STYLE =
-  'Cyber-fantasy grimoire illustration: retro-futuristic woodcut meets neon glitch art, deep black background, cyan and magenta glow, dramatic lighting, darkly humorous adult-animation energy. No text, no letters, no watermark.';
+  'Cozy cartoon storybook illustration in a modern animated-series style: bold clean dark ink outlines, flat cel shading with soft gradients, warm palette of honey wood, cream, candy red, pine green and gold, glowing fairy lights and fireplace light, expressive slapstick poses, comic impact stars and motion lines when something goes wrong. Magic is technological: little robots with pixel-screen faces and fairy wings, glowing runes on gadgets. Square composition with a clear focal character. No text, no letters, no watermark.';
 
 export async function generateImage(prompt: string, refs: Media[] = []): Promise<Media> {
   const { image } = getConfig();
