@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { motion } from 'motion/react';
+import { EmberSparks } from './Effects';
 import type { Mood } from '../../shared/types';
 
 /** Resting mouth and brows per mood; the talking animation takes over while IGNIS speaks. */
@@ -17,80 +19,84 @@ const PAGE = 'var(--color-raised)';
 const INK = 'var(--color-ink)';
 
 /** IGNIS: a living grimoire with an ember flame for a bookmark. */
-export const SVGCharacter = memo(({ isTalking, mood = 'neutral', size = 160 }: { isTalking: boolean; mood?: Mood; size?: number }) => {
+export const SVGCharacter = memo(({ isTalking, mood = 'neutral', size = 160, sparks = size >= 100 }: { isTalking: boolean; mood?: Mood; size?: number; sparks?: boolean }) => {
   const face = FACES[mood];
   return (
-    <div className="floating" style={{ width: size, height: size }} role="img" aria-label={`IGNIS looks ${mood}`}>
-      <svg viewBox="0 0 200 200" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="ember-glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <radialGradient id="halo">
-            <stop offset="0%" stopColor="#ff6b3d" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#ff6b3d" stopOpacity="0" />
-          </radialGradient>
-        </defs>
+    <div className="relative floating" style={{ width: size, height: size }} role="img" aria-label={`IGNIS looks ${mood}`}>
+      {sparks && <EmberSparks key={isTalking ? 'busy' : 'calm'} count={isTalking ? 12 : 6} height={size * 0.75} />}
+      {/* A springy jolt whenever the mood changes. */}
+      <motion.div key={mood} initial={{ scale: 0.9, rotate: -5 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 11 }}>
+        <svg viewBox="0 0 200 200" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="ember-glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <radialGradient id="halo">
+              <stop offset="0%" stopColor="#ff6b3d" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#ff6b3d" stopOpacity="0" />
+            </radialGradient>
+          </defs>
 
-        <circle cx="100" cy="105" r="92" fill="url(#halo)">
-          {isTalking && <animate attributeName="r" values="88;96;88" dur="1.2s" repeatCount="indefinite" />}
-        </circle>
+          <circle cx="100" cy="105" r="92" fill="url(#halo)">
+            {isTalking && <animate attributeName="r" values="88;96;88" dur="1.2s" repeatCount="indefinite" />}
+          </circle>
 
-        {/* Flame bookmark */}
-        <path d="M 100 14 C 112 30, 114 40, 100 52 C 86 40, 90 28, 100 14 Z" style={{ fill: EMBER }} filter="url(#ember-glow)">
-          <animate attributeName="d" dur={isTalking ? '0.35s' : '1.6s'} repeatCount="indefinite" values="M 100 14 C 112 30, 114 40, 100 52 C 86 40, 90 28, 100 14 Z; M 102 10 C 116 28, 112 42, 100 52 C 88 42, 86 30, 102 10 Z; M 100 14 C 112 30, 114 40, 100 52 C 86 40, 90 28, 100 14 Z" />
-        </path>
-
-        {/* Covers */}
-        <path d="M 100 52 C 80 44, 52 44, 34 52 L 34 160 C 52 152, 80 152, 100 160 Z" style={{ fill: PAGE, stroke: EMBER }} strokeWidth="3" strokeLinejoin="round" />
-        <path d="M 100 52 C 120 44, 148 44, 166 52 L 166 160 C 148 152, 120 152, 100 160 Z" style={{ fill: PAGE, stroke: EMBER }} strokeWidth="3" strokeLinejoin="round" />
-        <path d="M 100 52 L 100 160" style={{ stroke: EMBER }} strokeWidth="2" opacity="0.6" />
-        {[136, 144].map((y) => (
-          <g key={y} opacity="0.25" style={{ stroke: INK }} strokeWidth="1.5" strokeLinecap="round">
-            <path d={`M 46 ${y} Q 70 ${y - 5} 90 ${y}`} fill="none" />
-            <path d={`M 110 ${y} Q 130 ${y - 5} 154 ${y}`} fill="none" />
-          </g>
-        ))}
-
-        {/* Eyes */}
-        <g>
-          <ellipse cx="70" cy="88" rx="15" ry="16" style={{ fill: INK }} />
-          <ellipse cx="130" cy="88" rx="15" ry="16" style={{ fill: INK }} />
-          <g>
-            <circle cx="72" cy="90" r="7" fill="#0c0b0a" />
-            <circle cx="128" cy="90" r="7" fill="#0c0b0a" />
-            <circle cx="74.5" cy="87" r="2.2" style={{ fill: EMBER }} />
-            <circle cx="130.5" cy="87" r="2.2" style={{ fill: EMBER }} />
-            {isTalking && <animateTransform attributeName="transform" type="translate" values="0,0; -3,-1; 3,1; 0,0" dur="0.5s" repeatCount="indefinite" />}
-          </g>
-          {/* Blink */}
-          <g style={{ fill: PAGE }}>
-            <rect x="54" y="70" width="32" height="0" >
-              <animate attributeName="height" values="0;0;34;0" keyTimes="0;0.94;0.97;1" dur="5s" repeatCount="indefinite" />
-            </rect>
-            <rect x="114" y="70" width="32" height="0">
-              <animate attributeName="height" values="0;0;34;0" keyTimes="0;0.94;0.97;1" dur="5s" repeatCount="indefinite" />
-            </rect>
-          </g>
-        </g>
-
-        {/* Brows */}
-        <path d={face.leftBrow} fill="none" style={{ stroke: INK }} strokeWidth="4" strokeLinecap="round" />
-        <path d={face.rightBrow} fill="none" style={{ stroke: INK }} strokeWidth="4" strokeLinecap="round" />
-
-        {/* Mouth */}
-        {isTalking ? (
-          <path style={{ fill: EMBER }} filter="url(#ember-glow)" d="M 84 116 Q 100 138 116 116 Z">
-            <animate attributeName="d" values="M 84 116 Q 100 138 116 116 Z; M 86 117 Q 100 122 114 117 Z; M 84 116 Q 100 138 116 116 Z" dur="0.22s" repeatCount="indefinite" />
+          {/* Flame bookmark */}
+          <path d="M 100 14 C 112 30, 114 40, 100 52 C 86 40, 90 28, 100 14 Z" style={{ fill: EMBER }} filter="url(#ember-glow)">
+            <animate attributeName="d" dur={isTalking ? '0.35s' : '1.6s'} repeatCount="indefinite" values="M 100 14 C 112 30, 114 40, 100 52 C 86 40, 90 28, 100 14 Z; M 102 10 C 116 28, 112 42, 100 52 C 88 42, 86 30, 102 10 Z; M 100 14 C 112 30, 114 40, 100 52 C 86 40, 90 28, 100 14 Z" />
           </path>
-        ) : (
-          <path d={face.mouth} fill="none" style={{ stroke: EMBER }} strokeWidth="5" strokeLinecap="round" filter="url(#ember-glow)" />
-        )}
-      </svg>
+
+          {/* Covers */}
+          <path d="M 100 52 C 80 44, 52 44, 34 52 L 34 160 C 52 152, 80 152, 100 160 Z" style={{ fill: PAGE, stroke: EMBER }} strokeWidth="3" strokeLinejoin="round" />
+          <path d="M 100 52 C 120 44, 148 44, 166 52 L 166 160 C 148 152, 120 152, 100 160 Z" style={{ fill: PAGE, stroke: EMBER }} strokeWidth="3" strokeLinejoin="round" />
+          <path d="M 100 52 L 100 160" style={{ stroke: EMBER }} strokeWidth="2" opacity="0.6" />
+          {[136, 144].map((y) => (
+            <g key={y} opacity="0.25" style={{ stroke: INK }} strokeWidth="1.5" strokeLinecap="round">
+              <path d={`M 46 ${y} Q 70 ${y - 5} 90 ${y}`} fill="none" />
+              <path d={`M 110 ${y} Q 130 ${y - 5} 154 ${y}`} fill="none" />
+            </g>
+          ))}
+
+          {/* Eyes */}
+          <g>
+            <ellipse cx="70" cy="88" rx="15" ry="16" style={{ fill: INK }} />
+            <ellipse cx="130" cy="88" rx="15" ry="16" style={{ fill: INK }} />
+            <g>
+              <circle cx="72" cy="90" r="7" fill="#0c0b0a" />
+              <circle cx="128" cy="90" r="7" fill="#0c0b0a" />
+              <circle cx="74.5" cy="87" r="2.2" style={{ fill: EMBER }} />
+              <circle cx="130.5" cy="87" r="2.2" style={{ fill: EMBER }} />
+              {isTalking && <animateTransform attributeName="transform" type="translate" values="0,0; -3,-1; 3,1; 0,0" dur="0.5s" repeatCount="indefinite" />}
+            </g>
+            {/* Blink */}
+            <g style={{ fill: PAGE }}>
+              <rect x="54" y="70" width="32" height="0" >
+                <animate attributeName="height" values="0;0;34;0" keyTimes="0;0.94;0.97;1" dur="5s" repeatCount="indefinite" />
+              </rect>
+              <rect x="114" y="70" width="32" height="0">
+                <animate attributeName="height" values="0;0;34;0" keyTimes="0;0.94;0.97;1" dur="5s" repeatCount="indefinite" />
+              </rect>
+            </g>
+          </g>
+
+          {/* Brows */}
+          <path d={face.leftBrow} fill="none" style={{ stroke: INK }} strokeWidth="4" strokeLinecap="round" />
+          <path d={face.rightBrow} fill="none" style={{ stroke: INK }} strokeWidth="4" strokeLinecap="round" />
+
+          {/* Mouth */}
+          {isTalking ? (
+            <path style={{ fill: EMBER }} filter="url(#ember-glow)" d="M 84 116 Q 100 138 116 116 Z">
+              <animate attributeName="d" values="M 84 116 Q 100 138 116 116 Z; M 86 117 Q 100 122 114 117 Z; M 84 116 Q 100 138 116 116 Z" dur="0.22s" repeatCount="indefinite" />
+            </path>
+          ) : (
+            <path d={face.mouth} fill="none" style={{ stroke: EMBER }} strokeWidth="5" strokeLinecap="round" filter="url(#ember-glow)" />
+          )}
+        </svg>
+      </motion.div>
     </div>
   );
 });

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, CheckCircle2, AlertTriangle } from 'lucide-react';
 
@@ -6,7 +6,7 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-ember text-bg hover:brightness-110 shadow-[0_8px_24px_-12px_var(--color-ember)]',
+  primary: 'btn-shine bg-ember text-bg hover:brightness-110 shadow-[0_8px_24px_-12px_var(--color-ember)] hover:shadow-[0_10px_32px_-8px_var(--color-ember)]',
   secondary: 'bg-raised text-ink border border-line hover:border-line-strong',
   ghost: 'text-muted hover:text-ink hover:bg-raised',
   danger: 'text-danger border border-line hover:border-danger',
@@ -36,12 +36,12 @@ export function IconButton({ label, active, className, children, ...props }: But
       title={label}
       aria-pressed={active}
       className={cx(
-        'inline-flex items-center justify-center h-9 min-w-9 px-2 gap-1.5 rounded-lg text-sm transition-colors disabled:opacity-40',
-        active ? 'bg-ember-soft text-ember' : 'text-muted hover:text-ink hover:bg-raised',
+        'group relative inline-flex items-center justify-center h-9 min-w-9 px-2 gap-1.5 rounded-lg text-sm transition-all disabled:opacity-40 active:scale-90',
+        active ? 'glow-on bg-ember-soft text-ember shadow-[inset_0_0_0_1px_#ff6b3d55,0_0_18px_-4px_var(--color-ember)]' : 'text-muted hover:text-ember hover:bg-raised',
         className,
       )}
     >
-      {children}
+      <span className="glow-icon inline-flex items-center gap-1.5">{children}</span>
     </button>
   );
 }
@@ -59,30 +59,70 @@ export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'ok' 
   return <span className={cx('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium', tones[tone])}>{children}</span>;
 }
 
-/** A labelled bar. `center` draws a diverging bar for values like karma. */
+/** A labelled bar. `center` draws a diverging bar for values like karma. Changes float up as +N / −N. */
 export function Meter({ label, value, min = 0, max = 100, color, center }: { label: string; value: number; min?: number; max?: number; color: string; center?: boolean }) {
   const pct = ((value - min) / (max - min)) * 100;
   const mid = center ? 50 : 0;
   const left = Math.min(pct, mid);
   const width = Math.abs(pct - mid);
+  const prev = useRef(value);
+  const [deltas, setDeltas] = useState<{ id: number; d: number }[]>([]);
+  useEffect(() => {
+    const d = value - prev.current;
+    prev.current = value;
+    if (!d) return;
+    const id = Date.now() + Math.random();
+    setDeltas((x) => [...x, { id, d }]);
+    // Each delta removes itself; not cleared on the next change so rapid changes all float away.
+    setTimeout(() => setDeltas((x) => x.filter((y) => y.id !== id)), 1600);
+  }, [value]);
+  const flashing = deltas.length > 0;
   return (
-    <div className="min-w-0">
+    <div className="relative min-w-0">
       <div className="flex items-baseline justify-between gap-2">
         <span className="eyebrow">{label}</span>
-        <span className="font-mono text-xs tabular-nums text-ink">{value}</span>
+        <motion.span
+          key={value}
+          initial={{ scale: flashing ? 1.5 : 1, color: flashing ? color : 'var(--color-ink)' }}
+          animate={{ scale: 1, color: 'var(--color-ink)' }}
+          transition={{ duration: 0.8 }}
+          className="font-mono text-xs tabular-nums"
+        >
+          {value}
+        </motion.span>
       </div>
       <div className="relative h-1 mt-1.5 rounded-full bg-line overflow-hidden">
         {center && <div className="absolute left-1/2 top-0 bottom-0 w-px bg-line-strong" />}
         <motion.div
           className="absolute top-0 bottom-0 rounded-full"
-          style={{ background: color }}
+          style={{ background: color, boxShadow: `0 0 ${flashing ? 12 : 6}px ${color}` }}
           initial={false}
           animate={{ left: `${left}%`, width: `${width}%` }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
         />
       </div>
+      <AnimatePresence>
+        {deltas.map(({ id, d }) => (
+          <motion.span
+            key={id}
+            className="absolute right-8 top-0 font-mono text-xs font-medium pointer-events-none"
+            style={{ color, textShadow: `0 0 8px ${color}` }}
+            initial={{ opacity: 0, x: 10, scale: 0.7 }}
+            animate={{ opacity: 1, x: 0, scale: 1.1 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+          >
+            {d > 0 ? `+${d}` : `−${Math.abs(d)}`}
+          </motion.span>
+        ))}
+      </AnimatePresence>
     </div>
   );
+}
+
+export function StatusDot({ tone }: { tone: 'ok' | 'danger' | 'idle' }) {
+  const bg = tone === 'ok' ? 'bg-ok shadow-[0_0_8px_var(--color-ok)]' : tone === 'danger' ? 'bg-danger shadow-[0_0_8px_var(--color-danger)]' : 'bg-faint';
+  return <span className={cx('inline-block w-2 h-2 rounded-full shrink-0', bg, tone !== 'idle' && 'dot-live')} />;
 }
 
 export function Segmented<T extends string>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
@@ -163,7 +203,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               exit={{ opacity: 0, y: -8 }}
               className="flex items-start gap-3 rounded-xl border border-line bg-raised px-4 py-3 text-sm shadow-2xl"
             >
-              {t.tone === 'ok' ? <CheckCircle2 size={18} className="text-ok shrink-0" /> : <AlertTriangle size={18} className="text-danger shrink-0" />}
+              {t.tone === 'ok' ? <CheckCircle2 size={18} className="text-ok shrink-0 drop-shadow-[0_0_6px_var(--color-ok)]" /> : <AlertTriangle size={18} className="text-danger shrink-0 drop-shadow-[0_0_6px_var(--color-danger)]" />}
               <span className="min-w-0 break-words">{t.text}</span>
             </motion.div>
           ))}
@@ -176,7 +216,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function Logo({ onClick }: { onClick?: () => void }) {
   return (
     <a href="#/" onClick={onClick} className="flex items-center gap-2.5 group">
-      <span className="relative grid place-items-center w-8 h-8 rounded-lg bg-ember-soft text-ember font-serif font-bold text-lg group-hover:bg-ember group-hover:text-bg transition-colors">I</span>
+      <span className="relative grid place-items-center w-8 h-8 rounded-lg bg-ember-soft text-ember font-serif font-bold text-lg transition-all group-hover:bg-ember group-hover:text-bg group-hover:shadow-[0_0_24px_-2px_var(--color-ember)] group-hover:rotate-[-6deg]">I</span>
       <span className="leading-none">
         <span className="block font-serif font-semibold tracking-tight">Grimm Protocol</span>
         <span className="block font-mono text-[10px] text-faint mt-0.5">IGNIS // OS</span>

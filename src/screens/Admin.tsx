@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { adminApi } from '../api';
-import { Badge, Button, Logo, cx, useToast } from '../ui';
+import { Badge, Button, Logo, StatusDot, cx, useToast } from '../ui';
 
 type Provider = 'anthropic' | 'gemini' | 'openai';
 type Model = { id: string; label?: string; tags: ('text' | 'image' | 'tts')[] };
@@ -59,6 +59,24 @@ export function Admin() {
   const [tests, setTests] = useState<Partial<Record<Provider, TestResult>>>({});
   const [probes, setProbes] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [section, setSection] = useState('keys');
+
+  // Scroll-spy: the nav highlights whichever section sits under the sticky header.
+  useEffect(() => {
+    if (!cfg) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setSection(visible.target.id);
+      },
+      { rootMargin: '-80px 0px -60% 0px' },
+    );
+    NAV.forEach(({ id }) => {
+      const el = document.getElementById(id);
+      if (el) obs.observe(el);
+    });
+    return () => obs.disconnect();
+  }, [!!cfg]);
 
   const apply = (c: any) => {
     setSaved(c);
@@ -206,13 +224,13 @@ export function Admin() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
           {overview.map((o) => (
-            <div key={o.label} className="card p-4">
+            <motion.div key={o.label} layout className="spotlight card p-4" style={{ ['--spot' as string]: o.ok === null ? 'var(--color-faint)' : o.ok ? 'var(--color-ok)' : 'var(--color-danger)' }}>
               <div className="flex items-center gap-2">
-                <span className={cx('w-2 h-2 rounded-full', o.ok === null ? 'bg-faint' : o.ok ? 'bg-ok' : 'bg-danger')} />
+                <StatusDot tone={o.ok === null ? 'idle' : o.ok ? 'ok' : 'danger'} />
                 <span className="eyebrow">{o.label}</span>
               </div>
               <div className="mt-2 text-sm truncate" title={o.value}>{o.value}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
@@ -227,9 +245,21 @@ export function Admin() {
           <nav className="hidden lg:block">
             <ul className="sticky top-24 space-y-1">
               {NAV.map(({ id, label, icon: Icon }) => (
-                <li key={id}>
-                  <a href={`#/admin`} onClick={(e) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted hover:text-ink hover:bg-raised">
-                    <Icon size={16} /> {label}
+                <li key={id} className="relative">
+                  {section === id && (
+                    <motion.span layoutId="admin-nav" className="absolute inset-0 rounded-lg bg-raised border border-line-strong" transition={{ type: 'spring', stiffness: 400, damping: 34 }}>
+                      <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-ember shadow-[0_0_8px_var(--color-ember)]" />
+                    </motion.span>
+                  )}
+                  <a
+                    href="#/admin"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className={cx('group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors', section === id ? 'text-ink glow-on' : 'text-muted hover:text-ink')}
+                  >
+                    <Icon size={16} className={cx('glow-icon', section === id && 'text-ember')} /> {label}
                   </a>
                 </li>
               ))}
@@ -244,14 +274,19 @@ export function Admin() {
                   const t = tests[p.id];
                   const src = cfg.providers[p.id];
                   return (
-                    <div key={p.id} className="card p-5">
+                    <div key={p.id} className="spotlight card p-5" style={{ ['--spot' as string]: st.tone === 'ok' ? 'var(--color-ok)' : st.tone === 'danger' ? 'var(--color-danger)' : 'var(--color-ember)' }}>
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="grid place-items-center w-9 h-9 rounded-lg bg-raised border border-line font-serif font-semibold">{p.initial}</span>
+                        <span className={cx('grid place-items-center w-9 h-9 rounded-lg border font-serif font-semibold transition-all', st.tone === 'ok' ? 'bg-[#7fd4a914] border-[#7fd4a955] text-ok shadow-[0_0_18px_-4px_var(--color-ok)]' : 'bg-raised border-line')}>{p.initial}</span>
                         <div className="min-w-0 flex-1">
                           <div className="font-medium">{p.name}</div>
                           <div className="text-xs text-faint">{p.role}</div>
                         </div>
-                        <Badge tone={st.tone}>{st.text}</Badge>
+                        <motion.span key={st.text} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}>
+                          <Badge tone={st.tone}>
+                            {st.tone !== 'neutral' && <StatusDot tone={st.tone === 'ok' ? 'ok' : 'danger'} />}
+                            {st.text}
+                          </Badge>
+                        </motion.span>
                       </div>
                       <div className="mt-4 text-xs text-faint flex flex-wrap gap-x-4 gap-y-1">
                         {src.source !== 'none' ? (
@@ -387,11 +422,11 @@ export function Admin() {
 
 function Section({ id, title, desc, children }: { id: string; title: string; desc: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24">
+    <motion.section id={id} className="scroll-mt-24" initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.5 }}>
       <h2 className="font-serif text-2xl">{title}</h2>
       <p className="text-sm text-muted mt-1 mb-4">{desc}</p>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
@@ -433,18 +468,18 @@ function ModelInput({ value, onChange, models, id }: { value: string; onChange: 
 
 function Probe({ role, state, onRun, dirty }: { role: string; state: any; onRun: () => void; dirty: boolean }) {
   return (
-    <div className="rounded-xl border border-dashed border-line-strong p-4">
+    <div className="group rounded-xl border border-dashed border-line-strong p-4">
       <div className="flex flex-wrap items-center gap-3">
         <Button size="sm" onClick={onRun} disabled={state?.loading || dirty}>
-          {state?.loading ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />} Run live test
+          {state?.loading ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} className="glow-icon" />} Run live test
         </Button>
         <span className="text-xs text-faint">{dirty ? 'Save your changes first: tests use the saved configuration.' : 'Makes a real call with the saved configuration.'}</span>
       </div>
       {state && !state.loading && (
-        <div className="mt-3 text-sm">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-3 text-sm">
           {state.ok ? (
             <>
-              <div className="text-ok">✓ Passed in {state.ms} ms{state.model ? ` · served by ${state.model}` : ''}</div>
+              <div className="text-ok [text-shadow:0_0_12px_var(--color-ok)]">✓ Passed in {state.ms} ms{state.model ? ` · served by ${state.model}` : ''}</div>
               {state.text && <p className="mt-2 font-serif italic text-muted">“{state.text}”</p>}
               {role === 'image' && state.dataUrl && <img src={state.dataUrl} alt="Test render" className="mt-3 w-56 rounded-xl border border-line" />}
               {role === 'tts' && (state.dataUrl ? <audio controls src={state.dataUrl} className="mt-3 w-full" /> : <p className="mt-2 text-muted">Browser voice selected: nothing to fetch.</p>)}
@@ -452,7 +487,7 @@ function Probe({ role, state, onRun, dirty }: { role: string; state: any; onRun:
           ) : (
             <div className="text-danger">✗ {state.error}</div>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

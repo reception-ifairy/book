@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import type { Page, Story } from '../../shared/types';
 import { KIND, ENDING } from '../meta';
 import { cx } from '../ui';
@@ -20,18 +21,18 @@ export function TimelineMap({ story, onJump, busy }: { story: Story; onJump: (pa
     const current = page.id === story.currentPageId;
     const color = page.action ? KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color : 'var(--color-ember)';
     return (
-      <li className="relative">
+      <motion.li className="relative" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(page.depth * 0.04, 0.5) }}>
         <button
           disabled={busy || current}
           onClick={() => onJump(page.id)}
           className={cx(
-            'w-full flex items-start gap-3 text-left rounded-lg px-2 py-2 transition-colors',
+            'group w-full flex items-start gap-3 text-left rounded-lg px-2 py-2 transition-colors',
             current ? 'bg-ember-soft' : 'hover:bg-raised',
           )}
         >
           <span
-            className={cx('mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 ring-4 ring-surface', !onPath.has(page.id) && 'opacity-40')}
-            style={{ background: color }}
+            className={cx('mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 ring-4 ring-surface transition-transform group-hover:scale-125', !onPath.has(page.id) && 'opacity-40', current && 'dot-live')}
+            style={{ background: color, boxShadow: onPath.has(page.id) ? `0 0 8px ${color}` : undefined }}
           />
           <span className="min-w-0 flex-1">
             <span className={cx('block text-sm leading-snug', current ? 'text-ember' : onPath.has(page.id) ? 'text-ink' : 'text-faint')}>
@@ -49,7 +50,7 @@ export function TimelineMap({ story, onJump, busy }: { story: Story; onJump: (pa
             {kids.map((k) => <Node key={k.id} page={k} />)}
           </ul>
         )}
-      </li>
+      </motion.li>
     );
   };
 
@@ -61,9 +62,9 @@ export function TimelineMap({ story, onJump, busy }: { story: Story; onJump: (pa
           ['Forks', forks],
           ['Endings', endings],
         ].map(([label, n]) => (
-          <div key={label} className="rounded-xl bg-raised border border-line px-3 py-2">
+          <div key={label} className="spotlight rounded-xl bg-raised border border-line px-3 py-2">
             <div className="eyebrow">{label}</div>
-            <div className="font-serif text-2xl">{n}</div>
+            <motion.div className="font-serif text-2xl" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>{n}</motion.div>
           </div>
         ))}
       </div>

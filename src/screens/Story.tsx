@@ -1,13 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, ArrowUp, GitFork, ImagePlus, Loader2, Mic, Share2, Undo2, Volume2, VolumeX, X, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowUp, GitFork, ImagePlus, Laugh, Mic, PenLine, Share2, ShieldCheck, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
 import { TimelineMap } from '../components/TimelineMap';
+import { Burst, Equalizer, RuneLoader } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
 import { coverStyle, ENDING, KIND } from '../meta';
 import { Badge, Button, IconButton, Kbd, Meter, Sheet, cx, useToast } from '../ui';
-import { SUDO_MANA_COST, type Page, type PublicConfig, type Story } from '../../shared/types';
+import { SUDO_MANA_COST, type Choice, type ChoiceKind, type Page, type PublicConfig, type Story } from '../../shared/types';
+
+const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
+  sane: ShieldCheck,
+  chaos: Zap,
+  dumb: Laugh,
+  sudo: SquareTerminal,
+  custom: PenLine,
+};
+
+type Picked = { id: string; kind: ChoiceKind | 'custom'; label: string };
+
+function WritingIndicator({ page }: { page: number }) {
+  return (
+    <div className="flex items-center gap-3 text-sm text-muted" aria-live="polite">
+      <span className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-ember shadow-[0_0_8px_var(--color-ember)]"
+            animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+          />
+        ))}
+      </span>
+      IGNIS is writing page {page}…
+    </div>
+  );
+}
 
 type Attachment = { mime: 'image/jpeg'; data: string; preview: string };
 
@@ -23,33 +52,31 @@ async function toAttachment(file: File): Promise<Attachment> {
   return { mime: 'image/jpeg', data: preview.split(',')[1], preview };
 }
 
+/**
+ * Reveals `text` a few characters per frame. Progress is tied to `key` (the page id), so a new page
+ * never inherits the previous page's "done" state for even a frame.
+ */
 function useTypewriter(text: string, key: string) {
-  const [shown, setShown] = useState('');
-  const [done, setDone] = useState(false);
+  const [state, setState] = useState({ key: '', shown: '', done: false });
   useEffect(() => {
+    if (!key) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setShown(text);
-      setDone(true);
+      setState({ key, shown: text, done: true });
       return;
     }
-    setShown('');
-    setDone(false);
+    setState({ key, shown: '', done: false });
     let i = 0;
     const timer = setInterval(() => {
       i += 4;
-      setShown(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(timer);
-        setDone(true);
-      }
+      const done = i >= text.length;
+      setState({ key, shown: text.slice(0, i), done });
+      if (done) clearInterval(timer);
     }, 16);
     return () => clearInterval(timer);
   }, [key, text]);
-  const skip = useCallback(() => {
-    setShown(text);
-    setDone(true);
-  }, [text]);
-  return { shown: done ? text : shown, done, skip };
+  const skip = useCallback(() => setState({ key, shown: text, done: true }), [key, text]);
+  const current = state.key === key;
+  return { shown: current ? (state.done ? text : state.shown) : '', done: current && state.done, skip };
 }
 
 const isTyping = (el: EventTarget | null) => el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
@@ -67,6 +94,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   const [voiceOn, setVoiceOn] = useState(false);
   const [imageState, setImageState] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [listening, setListening] = useState(false);
+  const [picked, setPicked] = useState<Picked | null>(null);
+  const [burst, setBurst] = useState<{ key: number; target: string; x: number; y: number; color: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -128,9 +157,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     };
   }, [voiceOn, page?.id]);
 
-  const send = async (input: { choiceId?: string; custom?: string }) => {
+  const send = async (input: { choiceId?: string; custom?: string }, chosen: Picked) => {
     if (!story || !page || busy) return;
     setBusy(true);
+    setPicked(chosen);
     try {
       const { story: next } = await api.act(story.id, {
         pageId: page.id,
@@ -147,8 +177,25 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       toast((e as Error).message, 'error');
     } finally {
       setBusy(false);
+      setPicked(null);
     }
   };
+
+  /** Fires the burst from the click point (or the card's center for keyboard picks), then sends. */
+  const choose = (c: Choice, e?: { clientX: number; clientY: number }) => {
+    if (!page || busy) return;
+    if (c.kind === 'sudo' && page.stats.mana < SUDO_MANA_COST) return toast('Not enough mana for sudo.', 'error');
+    const el = document.querySelector(`[data-choice="${c.id}"]`);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const x = e && e.clientX ? e.clientX - r.left : r.width / 2;
+      const y = e && e.clientY ? e.clientY - r.top : r.height / 2;
+      setBurst({ key: Date.now(), target: c.id, x, y, color: KIND[c.kind].color });
+    }
+    send({ choiceId: c.id }, { id: c.id, kind: c.kind, label: c.label });
+  };
+
+  const sendCustom = () => send({ custom }, { id: 'custom', kind: 'custom', label: custom.trim() || 'Shows the artifact' });
 
   const jump = async (pageId: string) => {
     if (!story) return;
@@ -197,9 +244,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       }
       const n = Number(e.key);
       if (n >= 1 && n <= page.choices.length && done && !busy) {
-        const c = page.choices[n - 1];
-        if (c.kind === 'sudo' && page.stats.mana < SUDO_MANA_COST) return toast('Not enough mana for sudo.', 'error');
-        return send({ choiceId: c.id });
+        return choose(page.choices[n - 1]);
       }
       if (e.key === '/') {
         e.preventDefault();
@@ -230,39 +275,46 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     );
   }
 
+
   const glitch = Math.max(0, (60 - page.canon) / 60);
   const parent = page.parentId ? story.pages[page.parentId] : null;
   const canSend = !busy && (custom.trim().length > 0 || !!attachment);
+  const forks = Object.values(story.pages).filter((p) => p.parentId && Object.values(story.pages).some((q) => q.parentId === p.parentId && q.id !== p.id)).length;
+  const ending = page.ending ? ENDING[page.ending.type] : null;
+  const endingColor = ending ? { ok: 'var(--color-sane)', warn: 'var(--color-dumb)', danger: 'var(--color-danger)', ember: 'var(--color-ember)' }[ending.tone] : '';
 
   const illustration = config?.image ? (
-    <div className="relative aspect-square rounded-2xl overflow-hidden border border-line bg-surface">
+    <div className="relative aspect-square rounded-2xl overflow-hidden border border-line bg-surface shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9)]">
       <AnimatePresence mode="wait">
         {page.imageUrl ? (
-          <motion.img
-            key={page.imageUrl}
-            src={page.imageUrl}
-            alt={page.imagePrompt}
-            className="absolute inset-0 w-full h-full object-cover"
-            initial={{ opacity: 0, scale: 1.04 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-          />
+          <motion.div key={page.imageUrl} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            {/* "Developing" reveal: blurred and desaturated, then sharp, then a slow drift. */}
+            <motion.img
+              src={page.imageUrl}
+              alt={page.imagePrompt}
+              className="absolute inset-0 w-full h-full object-cover kenburns"
+              initial={{ filter: 'blur(24px) saturate(0) brightness(1.4)', scale: 1.1 }}
+              animate={{ filter: 'blur(0px) saturate(1) brightness(1)', scale: 1 }}
+              transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+            />
+            <motion.div className="absolute inset-0 bg-ember mix-blend-overlay" initial={{ opacity: 0.7 }} animate={{ opacity: 0 }} transition={{ duration: 1.2 }} />
+          </motion.div>
         ) : (
           <motion.div key="placeholder" className="absolute inset-0 grid place-items-center" style={tale ? coverStyle(tale.hue) : undefined} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="flex flex-col items-center gap-3 text-sm text-ink/80">
-              {imageState === 'failed' ? (
-                <>
-                  <span className="text-5xl">{tale?.emoji}</span>
-                  <span>Illustration failed. Imagine harder.</span>
-                </>
-              ) : (
-                <>
-                  <Loader2 className="animate-spin" />
-                  <span>Painting this page…</span>
-                </>
-              )}
-            </div>
+            {imageState === 'failed' ? (
+              <div className="flex flex-col items-center gap-3 text-sm text-ink/80">
+                <motion.span className="text-6xl" animate={{ rotate: [0, -6, 6, 0] }} transition={{ duration: 2, repeat: Infinity }}>{tale?.emoji}</motion.span>
+                <span>Illustration failed. Imagine harder.</span>
+              </div>
+            ) : (
+              <>
+                <div className="absolute inset-0 scanline" />
+                <div className="relative flex flex-col items-center gap-4 text-sm text-ink/80">
+                  <RuneLoader />
+                  <span className="font-mono text-xs tracking-wider">rendering holographic projection…</span>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -278,15 +330,17 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     </>
   );
 
+  const parentInventory = new Set(parent?.inventory ?? []);
+
   return (
     <div style={{ ['--glitch' as string]: glitch }}>
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md border-b border-line">
         <div className="mx-auto max-w-6xl h-14 px-4 sm:px-6 flex items-center gap-3">
-          <a href="#/" aria-label="Back to tales" className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-muted hover:text-ink hover:bg-raised">
+          <IconButton label="Back to tales" onClick={() => (location.hash = '/')}>
             <ArrowLeft size={18} />
-          </a>
-          <span className="grid place-items-center w-8 h-8 rounded-lg text-base shrink-0" style={tale ? coverStyle(tale.hue) : undefined}>{tale?.emoji}</span>
+          </IconButton>
+          <span className="grid place-items-center w-8 h-8 rounded-lg text-base shrink-0 shadow-[0_0_16px_-4px_var(--color-ember)]" style={tale ? coverStyle(tale.hue) : undefined}>{tale?.emoji}</span>
           <div className="min-w-0">
             <div className={cx('font-serif font-semibold truncate leading-tight', glitch > 0 && 'reality-tear')}>{tale?.title[story.lang] ?? '…'}</div>
             <div className="font-mono text-[11px] text-faint">#{story.timeline} · {story.heroName}</div>
@@ -294,10 +348,11 @@ export function StoryScreen({ storyId }: { storyId: string }) {
           <div className="hidden lg:grid grid-cols-4 gap-5 w-[440px] ml-auto mr-4">{stats}</div>
           <div className="flex items-center gap-1 ml-auto lg:ml-0">
             <IconButton label={voiceOn ? 'Mute narration (V)' : 'Read aloud (V)'} active={voiceOn} onClick={() => setVoiceOn((v) => !v)}>
-              {voiceOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              {voiceOn ? <><Volume2 size={18} /><Equalizer /></> : <VolumeX size={18} />}
             </IconButton>
             <IconButton label="Timeline map (M)" active={showMap} onClick={() => setShowMap(true)}>
               <GitFork size={18} />
+              {forks > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-ember shadow-[0_0_6px_var(--color-ember)]" />}
             </IconButton>
             <IconButton label="Copy timeline card" onClick={share}>
               <Share2 size={18} />
@@ -311,13 +366,23 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         <aside className="order-last lg:order-none lg:sticky lg:top-24 self-start space-y-4">
           {illustration && <div className="hidden lg:block">{illustration}</div>}
 
-          <div className="card p-4 hidden lg:flex gap-4 items-start">
+          <div className="spotlight card p-4 hidden lg:flex gap-4 items-start">
             <div className="shrink-0 -my-1">
               <SVGCharacter isTalking={busy || !done} mood={busy ? 'panic' : page.mood} size={config?.image ? 64 : 120} />
             </div>
             <div className="min-w-0">
               <div className="eyebrow mb-1">IGNIS · {busy ? 'compiling' : page.mood}</div>
-              <p className="font-serif italic text-muted leading-snug">{busy ? 'Compiling your next mistake…' : `“${page.quip}”`}</p>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={busy ? 'busy' : page.id}
+                  className="font-serif italic text-muted leading-snug"
+                  initial={{ opacity: 0, y: 6, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -6 }}
+                >
+                  {busy ? 'Compiling your next mistake…' : `“${page.quip}”`}
+                </motion.p>
+              </AnimatePresence>
             </div>
           </div>
 
@@ -326,11 +391,30 @@ export function StoryScreen({ storyId }: { storyId: string }) {
           <div className="card p-4">
             <div className="eyebrow mb-2">Inventory</div>
             {page.inventory.length ? (
-              <div className="flex flex-wrap gap-1.5">
-                {page.inventory.map((i) => (
-                  <span key={i} className="font-mono text-xs px-2 py-1 rounded-md bg-raised border border-line text-muted">{i}</span>
-                ))}
-              </div>
+              <motion.div layout className="flex flex-wrap gap-1.5">
+                <AnimatePresence>
+                  {page.inventory.map((i) => {
+                    const fresh = !!parent && !parentInventory.has(i);
+                    return (
+                      <motion.span
+                        layout
+                        key={i}
+                        initial={{ opacity: 0, scale: 0.6, y: 6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.6 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                        className={cx(
+                          'font-mono text-xs px-2 py-1 rounded-md border',
+                          fresh ? 'text-ember border-[#ff6b3d66] bg-ember-soft shadow-[0_0_14px_-4px_var(--color-ember)]' : 'bg-raised border-line text-muted',
+                        )}
+                      >
+                        {fresh && <span className="mr-1">✦</span>}
+                        {i}
+                      </motion.span>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
             ) : (
               <p className="text-sm text-faint">Empty. Like your plan.</p>
             )}
@@ -338,15 +422,33 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         </aside>
 
         {/* Reading column */}
-        <article className="min-w-0 max-w-[68ch]">
+        <article className="min-w-0 max-w-[68ch]" style={{ perspective: 1600 }}>
           {illustration && <div className="lg:hidden mb-6">{illustration}</div>}
-          <AnimatePresence mode="wait">
-            <motion.div key={page.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={page.id}
+              className="relative"
+              style={{ transformOrigin: 'left center' }}
+              initial={{ opacity: 0, rotateY: 16, x: 48, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, rotateY: 0, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, rotateY: -18, x: -56, filter: 'blur(8px)' }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {/* An ember light sweeping across the fresh page. */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute -inset-y-4 w-32 -skew-x-12 bg-gradient-to-r from-transparent via-[#ff6b3d1f] to-transparent"
+                initial={{ left: '-20%', opacity: 1 }}
+                animate={{ left: '110%', opacity: 0 }}
+                transition={{ duration: 1.1, ease: 'easeOut', delay: 0.2 }}
+              />
+
               <div className="flex flex-wrap items-center gap-2 mb-5">
                 <span className="eyebrow">Page {page.depth + 1}</span>
                 {page.action && (
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted max-w-full">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color }} />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color, boxShadow: `0 0 6px ${KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color}` }} />
                     <span className="truncate">{page.action.label}</span>
                   </span>
                 )}
@@ -360,127 +462,163 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                   Skip animation <Kbd>Space</Kbd>
                 </button>
               )}
+
+              <div className="lg:hidden mt-6 flex items-center gap-3 rounded-xl bg-surface border border-line px-3 py-2">
+                <SVGCharacter isTalking={busy || !done} mood={busy ? 'panic' : page.mood} size={44} />
+                <p className="font-serif italic text-sm text-muted leading-snug">{busy ? 'Compiling your next mistake…' : `“${page.quip}”`}</p>
+              </div>
+
+              {/* What happens next */}
+              <div className="mt-8">
+                {page.ending && ending ? (
+                  <motion.div
+                    key={`end-${page.id}`}
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={page.ending.type === 'death' ? { opacity: 1, y: 0, scale: 1, x: [0, -12, 10, -8, 6, -3, 0] } : { opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.7, delay: 0.3 }}
+                    className="card p-6 sm:p-8 text-center relative overflow-hidden"
+                    style={{ boxShadow: `0 0 60px -20px ${endingColor}` }}
+                  >
+                    <div className="absolute inset-0 opacity-40" style={tale ? coverStyle(tale.hue) : undefined} />
+                    <motion.div className="absolute inset-0" style={{ background: endingColor }} initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 1.2, delay: 0.3 }} />
+                    <Burst key={page.id} x="50%" y="40%" color={endingColor} count={32} distance={190} />
+                    <div className="relative">
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.5 }}>
+                        <Badge tone={ending.tone}>{ending.label}</Badge>
+                      </motion.div>
+                      <motion.h2
+                        className="font-serif text-3xl sm:text-4xl mt-4"
+                        style={{ textShadow: `0 0 28px ${endingColor}` }}
+                        initial={{ opacity: 0, letterSpacing: '0.3em', filter: 'blur(8px)' }}
+                        animate={{ opacity: 1, letterSpacing: '0em', filter: 'blur(0px)' }}
+                        transition={{ duration: 1, delay: 0.6 }}
+                      >
+                        {page.ending.title}
+                      </motion.h2>
+                      <p className="text-sm text-muted mt-3">
+                        {Object.keys(story.pages).length} pages written in this timeline · canon {page.canon}% intact
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-2 mt-6">
+                        {parent && (
+                          <Button onClick={() => jump(parent.id)} disabled={busy}><Undo2 size={16} /> Roll back one page</Button>
+                        )}
+                        <Button onClick={() => setShowMap(true)}><GitFork size={16} /> Fork from the map</Button>
+                        <Button variant="primary" onClick={share}><Share2 size={16} /> Share ending</Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  (done || busy) && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+                      <div className="eyebrow mb-3">{busy ? 'Committed' : 'What do you do?'}</div>
+                      <ol className="space-y-2">
+                        {picked?.kind === 'custom' && (
+                          <motion.li initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                            <ChoiceCard index={null} kind="custom" label={picked.label} committed />
+                          </motion.li>
+                        )}
+                        {page.choices.map((c, i) => {
+                          const noMana = c.kind === 'sudo' && page.stats.mana < SUDO_MANA_COST;
+                          const isPicked = picked?.id === c.id;
+                          return (
+                            <motion.li
+                              key={c.id}
+                              initial={{ opacity: 0, x: -12 }}
+                              animate={busy && !isPicked ? { opacity: 0.22, x: 0, scale: 0.98, filter: 'grayscale(1)' } : { opacity: 1, x: 0, scale: isPicked ? 1.01 : 1, filter: 'grayscale(0)' }}
+                              transition={{ delay: busy ? 0 : i * 0.06, type: 'spring', stiffness: 300, damping: 26 }}
+                            >
+                              <ChoiceCard
+                                index={i + 1}
+                                id={c.id}
+                                kind={c.kind}
+                                label={c.label}
+                                disabled={noMana || busy}
+                                committed={isPicked}
+                                onPick={(e) => choose(c, e)}
+                                title={noMana ? `Needs ${SUDO_MANA_COST} mana` : undefined}
+                              >
+                                {burst?.target === c.id && <Burst key={burst.key} x={burst.x} y={burst.y} color={burst.color} />}
+                              </ChoiceCard>
+                            </motion.li>
+                          );
+                        })}
+                      </ol>
+
+                      {busy ? (
+                        <div className="mt-5"><WritingIndicator page={page.depth + 2} /></div>
+                      ) : (
+                        <>
+                          {/* Composer */}
+                          <div className="ring-flow mt-4 rounded-2xl border border-line bg-surface transition-shadow">
+                            {attachment && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex items-center gap-3 px-3 pt-3">
+                                <img src={attachment.preview} alt="Attached artifact" className="w-12 h-12 object-cover rounded-lg border border-ember shadow-[0_0_16px_-4px_var(--color-ember)]" />
+                                <span className="text-xs text-muted flex-1">Artifact attached. IGNIS will weave it into the story.</span>
+                                <IconButton label="Remove artifact" onClick={() => setAttachment(null)}><X size={16} /></IconButton>
+                              </motion.div>
+                            )}
+                            <textarea
+                              ref={inputRef}
+                              rows={1}
+                              value={custom}
+                              onChange={(e) => setCustom(e.target.value.slice(0, 280))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (canSend) sendCustom();
+                                } else if (e.key === 'Escape') inputRef.current?.blur();
+                              }}
+                              placeholder="Or write your own move…"
+                              className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
+                            />
+                            <div className="flex items-center gap-1 px-2 pb-2">
+                              <IconButton label="Dictate your move" active={listening} onClick={listen}>
+                                <Mic size={18} />
+                                {listening && <Equalizer />}
+                              </IconButton>
+                              {config?.vision && (
+                                <IconButton label="Attach an artifact image" active={!!attachment} onClick={() => fileRef.current?.click()}><ImagePlus size={18} /></IconButton>
+                              )}
+                              <span className="ml-auto mr-2 text-xs text-faint tabular-nums">{custom.length > 200 ? `${custom.length}/280` : ''}</span>
+                              <motion.div animate={canSend ? { scale: 1 } : { scale: 0.9 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  disabled={!canSend}
+                                  onClick={sendCustom}
+                                  aria-label="Send move"
+                                  className={cx('h-9 w-9 px-0', canSend && 'shadow-[0_0_22px_-2px_var(--color-ember)]')}
+                                >
+                                  <ArrowUp size={18} />
+                                </Button>
+                              </motion.div>
+                            </div>
+                            <input
+                              ref={fileRef}
+                              type="file"
+                              accept="image/*"
+                              hidden
+                              onChange={async (e) => {
+                                const f = e.target.files?.[0];
+                                e.target.value = '';
+                                if (f) setAttachment(await toAttachment(f).catch(() => null));
+                              }}
+                            />
+                          </div>
+                          <p className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-faint">
+                            <span><Kbd>1</Kbd>–<Kbd>{page.choices.length}</Kbd> choose</span>
+                            <span><Kbd>/</Kbd> write</span>
+                            <span><Kbd>M</Kbd> timeline</span>
+                            <span><Kbd>V</Kbd> voice</span>
+                          </p>
+                        </>
+                      )}
+                    </motion.div>
+                  )
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
-
-          <div className="lg:hidden mt-6 flex items-center gap-3 rounded-xl bg-surface border border-line px-3 py-2">
-            <SVGCharacter isTalking={busy || !done} mood={busy ? 'panic' : page.mood} size={44} />
-            <p className="font-serif italic text-sm text-muted leading-snug">{busy ? 'Compiling your next mistake…' : `“${page.quip}”`}</p>
-          </div>
-
-          {/* What happens next */}
-          <div className="mt-8">
-            {page.ending ? (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card p-6 sm:p-8 text-center relative overflow-hidden">
-                <div className="absolute inset-0 opacity-40" style={tale ? coverStyle(tale.hue) : undefined} />
-                <div className="relative">
-                  <Badge tone={ENDING[page.ending.type].tone}>{ENDING[page.ending.type].label}</Badge>
-                  <h2 className="font-serif text-3xl sm:text-4xl mt-4">{page.ending.title}</h2>
-                  <p className="text-sm text-muted mt-3">
-                    {Object.keys(story.pages).length} pages written in this timeline · canon {page.canon}% intact
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2 mt-6">
-                    {parent && (
-                      <Button onClick={() => jump(parent.id)} disabled={busy}><Undo2 size={16} /> Roll back one page</Button>
-                    )}
-                    <Button onClick={() => setShowMap(true)}><GitFork size={16} /> Fork from the map</Button>
-                    <Button variant="primary" onClick={share}><Share2 size={16} /> Share ending</Button>
-                  </div>
-                </div>
-              </motion.div>
-            ) : busy ? (
-              <div className="space-y-3" aria-live="polite">
-                <div className="flex items-center gap-2 text-sm text-muted"><Sparkles size={16} className="text-ember" /> IGNIS is writing page {page.depth + 2}…</div>
-                <div className="skeleton h-4 w-full" />
-                <div className="skeleton h-4 w-11/12" />
-                <div className="skeleton h-4 w-4/5" />
-              </div>
-            ) : (
-              done && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-                  <div className="eyebrow mb-3">What do you do?</div>
-                  <ol className="space-y-2">
-                    {page.choices.map((c, i) => {
-                      const noMana = c.kind === 'sudo' && page.stats.mana < SUDO_MANA_COST;
-                      return (
-                        <motion.li key={c.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
-                          <button
-                            disabled={noMana}
-                            onClick={() => send({ choiceId: c.id })}
-                            title={noMana ? `Needs ${SUDO_MANA_COST} mana` : undefined}
-                            className="group w-full flex items-start gap-4 text-left rounded-xl border border-line bg-surface px-4 py-3.5 transition-all hover:bg-raised hover:border-[var(--k)] hover:translate-x-1 disabled:opacity-40 disabled:hover:translate-x-0"
-                            style={{ ['--k' as string]: KIND[c.kind].color }}
-                          >
-                            <Kbd>{i + 1}</Kbd>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-[15px] leading-snug">{c.label}</span>
-                              <span className="mt-1 inline-flex items-center gap-1.5 text-xs" style={{ color: KIND[c.kind].color }}>
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: KIND[c.kind].color }} />
-                                {KIND[c.kind].label}
-                                {c.kind === 'sudo' && <span className="text-faint">· −{SUDO_MANA_COST} mana</span>}
-                              </span>
-                            </span>
-                          </button>
-                        </motion.li>
-                      );
-                    })}
-                  </ol>
-
-                  {/* Composer */}
-                  <div className="mt-4 rounded-2xl border border-line bg-surface focus-within:border-ember focus-within:shadow-[0_0_0_3px_var(--color-ember-soft)] transition-all">
-                    {attachment && (
-                      <div className="flex items-center gap-3 px-3 pt-3">
-                        <img src={attachment.preview} alt="Attached artifact" className="w-12 h-12 object-cover rounded-lg border border-line" />
-                        <span className="text-xs text-muted flex-1">Artifact attached. IGNIS will weave it into the story.</span>
-                        <IconButton label="Remove artifact" onClick={() => setAttachment(null)}><X size={16} /></IconButton>
-                      </div>
-                    )}
-                    <textarea
-                      ref={inputRef}
-                      rows={1}
-                      value={custom}
-                      onChange={(e) => setCustom(e.target.value.slice(0, 280))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          if (canSend) send({ custom });
-                        } else if (e.key === 'Escape') inputRef.current?.blur();
-                      }}
-                      placeholder="Or write your own move…"
-                      className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
-                    />
-                    <div className="flex items-center gap-1 px-2 pb-2">
-                      <IconButton label="Dictate your move" active={listening} onClick={listen}><Mic size={18} /></IconButton>
-                      {config?.vision && (
-                        <IconButton label="Attach an artifact image" onClick={() => fileRef.current?.click()}><ImagePlus size={18} /></IconButton>
-                      )}
-                      <span className="ml-auto mr-2 text-xs text-faint tabular-nums">{custom.length > 200 ? `${custom.length}/280` : ''}</span>
-                      <Button variant="primary" size="sm" disabled={!canSend} onClick={() => send({ custom })} aria-label="Send move" className="h-9 w-9 px-0">
-                        <ArrowUp size={18} />
-                      </Button>
-                    </div>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={async (e) => {
-                        const f = e.target.files?.[0];
-                        e.target.value = '';
-                        if (f) setAttachment(await toAttachment(f).catch(() => null));
-                      }}
-                    />
-                  </div>
-                  <p className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-faint">
-                    <span><Kbd>1</Kbd>–<Kbd>{page.choices.length}</Kbd> choose</span>
-                    <span><Kbd>/</Kbd> write</span>
-                    <span><Kbd>M</Kbd> timeline</span>
-                    <span><Kbd>V</Kbd> voice</span>
-                  </p>
-                </motion.div>
-              )
-            )}
-          </div>
         </article>
       </div>
 
@@ -488,5 +626,62 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         <TimelineMap story={story} onJump={jump} busy={busy} />
       </Sheet>
     </div>
+  );
+}
+
+/** One choice: glowing kind icon, label, and its number key. */
+function ChoiceCard({
+  index,
+  id,
+  kind,
+  label,
+  disabled,
+  committed,
+  onPick,
+  title,
+  children,
+}: {
+  index: number | null;
+  id?: string;
+  kind: ChoiceKind | 'custom';
+  label: string;
+  disabled?: boolean;
+  committed?: boolean;
+  onPick?: (e: React.MouseEvent) => void;
+  title?: string;
+  children?: React.ReactNode;
+}) {
+  const { color, label: kindLabel } = KIND[kind];
+  const Icon = KIND_ICON[kind];
+  return (
+    <button
+      data-choice={id}
+      disabled={disabled && !committed}
+      onClick={committed ? undefined : onPick}
+      title={title}
+      className={cx(
+        'spotlight group relative w-full flex items-center gap-4 text-left rounded-xl border border-line bg-surface px-3.5 py-3 transition-all',
+        !disabled && 'hover:bg-raised hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-16px_var(--k)] active:scale-[0.99]',
+        disabled && !committed && 'opacity-40',
+        committed && 'commit-glow cursor-default',
+      )}
+      style={{ ['--k' as string]: color, ['--spot' as string]: color }}
+    >
+      <span
+        className={cx('glow-icon grid place-items-center w-10 h-10 rounded-lg shrink-0 border transition-transform group-hover:scale-110 group-hover:-rotate-6', committed && 'glow-on')}
+        style={{ color, borderColor: `color-mix(in srgb, ${color} 30%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}
+      >
+        <Icon size={18} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] leading-snug">{label}</span>
+        <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs" style={{ color }}>
+          {kindLabel}
+          {kind === 'sudo' && <span className="text-faint">· −{SUDO_MANA_COST} mana</span>}
+        </span>
+      </span>
+      {index !== null && <Kbd>{index}</Kbd>}
+      {children}
+    </button>
   );
 }
