@@ -69,8 +69,13 @@ const listers: Record<ProviderId, (key: string) => Promise<ModelInfo[]>> = {
   openai: listOpenAIModels,
 };
 
-const describe = (p: ProviderId, e: unknown) =>
-  p === 'anthropic' ? describeAnthropicError(e) : e instanceof Error ? e.message : String(e);
+/** Gemini and OpenAI errors often embed a raw JSON body; surface just its human message. */
+function describe(p: ProviderId, e: unknown): string {
+  if (p === 'anthropic') return describeAnthropicError(e);
+  const raw = e instanceof Error ? e.message : String(e);
+  const msg = /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(raw)?.[1];
+  return (msg ?? raw).slice(0, 300);
+}
 
 /** Tests a key (the unsaved one from the form, or the saved one) by listing models. */
 admin.post('/providers/:provider/models', async (req, res) => {
@@ -106,6 +111,7 @@ admin.post('/probe/:role', async (req, res) => {
         return res.status(404).json({ ok: false, error: 'Unknown role.' });
     }
   } catch (e) {
-    res.status(502).json({ ok: false, ms: Date.now() - t0, error: e instanceof Error ? e.message : String(e) });
+    const provider = req.params.role === 'story' ? 'anthropic' : (req.params.role === 'image' ? getConfig().image.provider : getConfig().tts.provider);
+    res.status(502).json({ ok: false, ms: Date.now() - t0, error: describe(ProviderId.safeParse(provider).data ?? 'openai', e) });
   }
 });

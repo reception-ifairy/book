@@ -54,6 +54,10 @@ export interface Story {
 export interface Tale {
   id: string;
   emoji: string;
+  /** The tech concept the tale is built on, shown as a tag. */
+  tech: string;
+  /** Base hue (0-360) for the generated cover. */
+  hue: number;
   title: Record<Lang, string>;
   tagline: Record<Lang, string>;
   /** The cyber-magic twist, fed to the story model. */

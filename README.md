@@ -26,10 +26,17 @@ Open `http://localhost:3000/#/admin` to paste keys, test them, fetch each provid
 - Keys saved in the panel live in `data/config.json` (mode 600, gitignored) and take precedence over environment variables.
 - Stories and generated media are stored under `data/` (`DATA_DIR` to move it).
 
+## Design: Ember Grimoire
+
+A warm, editorial dark theme: the story reads like a book (Fraunces serif, drop caps, 68-character lines), the interface behaves like a modern app (Geist / Geist Mono). IGNIS's ember orange is the only loud color; choice types have their own quiet accents (sane, chaos, dumb, sudo). Tokens live in `@theme` in `src/index.css`; shared components in `src/ui.tsx`.
+
+Keyboard: `1`–`4` choose, `/` write your own move, `M` timeline, `V` read aloud, `Space` skip the text animation.
+
 ## Layout
 
 ```
 shared/        types and the fairy tale catalog (used by server and client)
 server/        config, admin and game routes, provider adapters, story engine
-src/screens/   Home (tale picker), Story (reader + timeline map), Admin
+src/screens/   Home (tale picker), Story (reader + timeline drawer), Admin console
+src/ui.tsx     design-system components (buttons, meters, drawer, toasts)
 ```

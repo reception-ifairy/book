@@ -1,6 +1,6 @@
 import type { Page, PublicConfig, Story, Tale } from '../shared/types';
 
-export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'title' | 'tagline'>;
+export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
 
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const res = await fetch(url, {
@@ -41,6 +41,8 @@ export interface SavedRun {
   taleId: string;
   heroName: string;
   updatedAt: number;
+  pages: number;
+  ending: string | null;
 }
 const RUNS_KEY = 'ignis.runs';
 export function loadRuns(): SavedRun[] {
@@ -53,7 +55,15 @@ export function loadRuns(): SavedRun[] {
 export function rememberRun(story: Story) {
   try {
     const runs = loadRuns().filter((r) => r.id !== story.id);
-    runs.unshift({ id: story.id, taleId: story.taleId, heroName: story.heroName, updatedAt: story.updatedAt });
+    const current = story.pages[story.currentPageId];
+    runs.unshift({
+      id: story.id,
+      taleId: story.taleId,
+      heroName: story.heroName,
+      updatedAt: story.updatedAt,
+      pages: Object.keys(story.pages).length,
+      ending: current?.ending?.title ?? null,
+    });
     localStorage.setItem(RUNS_KEY, JSON.stringify(runs.slice(0, 20)));
   } catch {
     /* storage unavailable: resuming is a convenience only */

@@ -1,191 +1,205 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/*
+ * Ember Grimoire: a warm, editorial dark theme. The story reads like a book (Fraunces),
+ * the interface behaves like an OS (Geist / Geist Mono), and IGNIS's ember is the only loud color.
+ */
 @theme {
-  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-display: "Orbitron", ui-sans-serif, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --color-bg: #0c0b0a;
+  --color-surface: #151311;
+  --color-raised: #1d1a17;
+  --color-line: #2b2723;
+  --color-line-strong: #3d3731;
+  --color-ink: #efe8dc;
+  --color-muted: #a39a8e;
+  --color-faint: #6f675e;
+
+  --color-ember: #ff6b3d;
+  --color-ember-soft: #ff6b3d26;
+  --color-sane: #7fd4a9;
+  --color-chaos: #b89cff;
+  --color-dumb: #f2c35b;
+  --color-mana: #6fb7ff;
+  --color-danger: #ff5c6c;
+  --color-ok: #7fd4a9;
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
 @layer base {
-  :root {
-    --paper-color: #090910;
-    --ink-color: #00f0ff;
-    --accent-color: #ff0055;
-    --panel-border: rgba(0, 240, 255, 0.2);
+  html {
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
   }
 
   body {
-    background-color: #030305;
-    background-image: 
-      linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    color: var(--ink-color);
     margin: 0;
-    padding: 0;
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
     overflow-x: hidden;
   }
 
+  /* Film grain + a faint ember glow at the top: depth without neon. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(1200px 500px at 50% -200px, #ff6b3d14, transparent 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
   #root {
-    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  ::selection {
+    background: var(--color-ember);
+    color: var(--color-bg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ember);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  input,
+  select {
+    color-scheme: dark;
   }
 }
 
 @layer components {
-  .cyber-shadow {
-    box-shadow: 0 0 40px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(255, 0, 85, 0.05);
-    border: 1px solid var(--panel-border);
-  }
-  
-  .cyber-spine {
-    background: linear-gradient(to right, 
-      rgba(0,240,255,0.0) 0%, 
-      rgba(0,240,255,0.3) 40%, 
-      rgba(255,255,255,0.8) 50%, 
-      rgba(0,240,255,0.3) 60%, 
-      rgba(0,240,255,0.0) 100%);
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-  }
-
-  .page-texture {
-    background-color: var(--paper-color);
-    background-image: radial-gradient(circle at top right, rgba(255,0,85,0.05), transparent 40%),
-                      radial-gradient(circle at bottom left, rgba(0,240,255,0.05), transparent 40%);
-  }
-
-  .chat-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .chat-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 240, 255, 0.3);
-    border-radius: 10px;
-  }
-
-  .cyber-input {
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--panel-border);
-    border-radius: 0.25rem;
-    padding: 0.6rem 0.75rem;
+  .eyebrow {
     font-family: var(--font-mono);
-    font-size: 0.875rem;
-    color: var(--ink-color);
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .cyber-input:focus {
-    outline: none;
-    border-color: var(--ink-color);
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-  }
-  .cyber-input::placeholder { color: rgba(0, 240, 255, 0.3); }
-
-  .cyber-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.9rem;
-    border: 1px solid var(--panel-border);
-    border-radius: 0.25rem;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-color);
-    background: rgba(0, 240, 255, 0.05);
-    transition: all 0.2s;
+    color: var(--color-faint);
   }
-  .cyber-btn:hover:not(:disabled) { border-color: var(--ink-color); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
-  .cyber-btn:disabled { opacity: 0.35; }
 
-  .icon-btn {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+  }
+
+  .field {
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.925rem;
+    color: var(--color-ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field::placeholder { color: var(--color-faint); }
+  .field:hover { border-color: var(--color-line-strong); }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-ember);
+    box-shadow: 0 0 0 3px var(--color-ember-soft);
+  }
+
+  .kbd {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.55rem;
-    border: 1px solid var(--panel-border);
-    border-radius: 0.25rem;
-    color: rgba(0, 240, 255, 0.6);
-    transition: all 0.2s;
-  }
-  .icon-btn:hover:not(:disabled) { color: var(--ink-color); border-color: var(--ink-color); }
-  .icon-btn:disabled { opacity: 0.35; }
-  .icon-btn-on {
-    color: var(--accent-color);
-    border-color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+    justify-content: center;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 0.3rem;
+    border: 1px solid var(--color-line-strong);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    background: var(--color-raised);
   }
 
-  .tale-card:hover:not(:disabled) { box-shadow: 0 0 20px rgba(0, 240, 255, 0.2); transform: translateY(-2px); }
-
-  .markdown-body p { margin-bottom: 1em; }
-  .markdown-body strong { color: var(--accent-color); text-shadow: 0 0 8px var(--accent-color); }
-  .markdown-body ul { list-style-type: square; margin-left: 1.5em; margin-bottom: 1em; }
-  .markdown-body code { 
-    background: rgba(0,240,255,0.1); 
-    color: #fff; 
-    padding: 2px 6px; 
-    border-radius: 4px; 
-    font-family: var(--font-mono); 
-    border: 1px solid rgba(0,240,255,0.2);
+  /* Story text: a real book page, not a chat log. */
+  .prose-story {
+    font-family: var(--font-serif);
+    font-size: clamp(1.08rem, 0.4vw + 1rem, 1.22rem);
+    line-height: 1.75;
+    color: var(--color-ink);
+    font-variation-settings: 'opsz' 20;
   }
+  .prose-story p { margin: 0 0 1.1em; }
+  .prose-story p:first-child::first-letter {
+    float: left;
+    font-size: 3.4em;
+    line-height: 0.85;
+    padding: 0.08em 0.1em 0 0;
+    color: var(--color-ember);
+    font-weight: 600;
+  }
+  .prose-story em { color: #ffd2bf; }
+  .prose-story strong { color: var(--color-ember); font-weight: 600; }
+  .prose-story code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--color-raised);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    padding: 0.05em 0.35em;
+  }
+
+  .caret::after {
+    content: '';
+    display: inline-block;
+    width: 0.5ch;
+    height: 1.1em;
+    margin-left: 2px;
+    vertical-align: -0.15em;
+    background: var(--color-ember);
+    animation: blink 1s step-end infinite;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-raised) 0%, var(--color-line) 50%, var(--color-raised) 100%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+    border-radius: 8px;
+  }
+
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
 }
 
-/* Animations */
-@keyframes cartoonMouthTalk {
-  0% { d: path('M 75 115 Q 100 115 125 115'); }
-  50% { d: path('M 75 115 Q 100 145 125 115'); }
-  100% { d: path('M 75 115 Q 100 115 125 115'); }
+/* The less canon is left, the more reality tears: chromatic split scales with --glitch (0..1). */
+.reality-tear {
+  animation: tear 5s infinite;
+}
+@keyframes tear {
+  0%, 94%, 100% { transform: none; text-shadow: none; }
+  95% { transform: translateX(calc(var(--glitch) * -3px)); text-shadow: calc(var(--glitch) * 3px) 0 #ff5c6c99, calc(var(--glitch) * -3px) 0 #6fb7ff99; }
+  97% { transform: translateX(calc(var(--glitch) * 2px)); }
 }
 
-.talking .cartoon-mouth {
-  animation: cartoonMouthTalk 0.2s infinite alternate;
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
+.floating { animation: float 6s ease-in-out infinite; }
 
-@keyframes floatObj {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-10px) rotate(1deg); }
-  66% { transform: translateY(5px) rotate(-1deg); }
-}
-
-.floating {
-  animation: floatObj 6s ease-in-out infinite;
-}
-
-@keyframes glitchFlicker {
-  0%, 100% { opacity: 1; transform: translate(0, 0) skew(0deg); }
-  5% { opacity: 0.8; transform: translate(-2px, 1px) skew(-5deg); }
-  10% { opacity: 1; transform: translate(0, 0) skew(0deg); }
-  15% { opacity: 0.9; transform: translate(2px, -1px) skew(5deg); }
-  20% { opacity: 1; transform: translate(0, 0) skew(0deg); }
-}
-
-.glitch-effect {
-  animation: glitchFlicker 3s infinite;
-}
-
-.typing-cursor::after {
-  content: '█';
-  animation: blinkCursor 1s step-end infinite;
-  margin-left: 4px;
-  color: var(--accent-color);
-  text-shadow: 0 0 8px var(--accent-color);
-}
-@keyframes blinkCursor { 50% { opacity: 0; } }
-
-/* The less canon is left, the harder reality shakes. --glitch runs 0..1. */
-@keyframes realityGlitch {
-  0%, 92%, 100% { transform: translate(0, 0); filter: none; }
-  93% { transform: translate(calc(var(--glitch) * -4px), calc(var(--glitch) * 2px)); filter: hue-rotate(calc(var(--glitch) * 90deg)); }
-  95% { transform: translate(calc(var(--glitch) * 5px), 0); filter: saturate(2); }
-  97% { transform: translate(0, calc(var(--glitch) * -3px)); filter: hue-rotate(calc(var(--glitch) * -60deg)); }
-}
-.reality-glitch {
-  animation: realityGlitch 4s infinite;
-}
 @media (prefers-reduced-motion: reduce) {
-  .reality-glitch, .floating, .glitch-effect { animation: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

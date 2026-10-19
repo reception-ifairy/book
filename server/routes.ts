@@ -53,7 +53,7 @@ api.get('/config', (_req, res) => {
   res.json(body);
 });
 
-api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, title, tagline }) => ({ id, emoji, title, tagline }))));
+api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, tech, hue, title, tagline }) => ({ id, emoji, tech, hue, title, tagline }))));
 
 const StartBody = z.object({
   taleId: z.string(),

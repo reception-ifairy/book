@@ -3,6 +3,8 @@ import type { Tale } from './types';
 export const TALES: Tale[] = [
   {
     id: 'red-hood',
+    tech: 'Man-in-the-middle',
+    hue: 8,
     emoji: '🐺',
     title: { en: 'Little Red Packet', pl: 'Czerwony Pakiecik' },
     tagline: {
@@ -23,6 +25,8 @@ export const TALES: Tale[] = [
   },
   {
     id: 'three-pigs',
+    tech: 'DDoS',
+    hue: 330,
     emoji: '🐷',
     title: { en: 'Three Little Firewalls', pl: 'Trzy Małe Firewalle' },
     tagline: {
@@ -43,6 +47,8 @@ export const TALES: Tale[] = [
   },
   {
     id: 'hansel-gretel',
+    tech: 'Tracking cookies',
+    hue: 32,
     emoji: '🍪',
     title: { en: 'Hansel & Gretel & Cookies', pl: 'Jaś, Małgosia i Ciasteczka' },
     tagline: {
@@ -63,6 +69,8 @@ export const TALES: Tale[] = [
   },
   {
     id: 'cinderella',
+    tech: 'Session expiry',
+    hue: 265,
     emoji: '👠',
     title: { en: 'Cinderella: Session Expired', pl: 'Kopciuszek: Sesja Wygasła' },
     tagline: {
@@ -83,6 +91,8 @@ export const TALES: Tale[] = [
   },
   {
     id: 'wawel-dragon',
+    tech: 'Trojan payload',
+    hue: 150,
     emoji: '🐉',
     title: { en: 'The Wawel Dragon Exploit', pl: 'Exploit Smoka Wawelskiego' },
     tagline: {

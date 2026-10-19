@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, KeyRound, PlugZap, Save, Trash2, FlaskConical, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { adminApi } from '../api';
+import { Badge, Button, Logo, cx, useToast } from '../ui';
 
 type Provider = 'anthropic' | 'gemini' | 'openai';
 type Model = { id: string; label?: string; tags: ('text' | 'image' | 'tts')[] };
-type TestResult = { ok: boolean; ms?: number; error?: string; count?: number };
+type TestResult = { ok: boolean; ms?: number; error?: string; count?: number; loading?: boolean };
 
-const PROVIDERS: { id: Provider; name: string; role: string }[] = [
-  { id: 'anthropic', name: 'Anthropic (Claude)', role: 'Story engine: structure, narration, choices, vision' },
-  { id: 'gemini', name: 'Google Gemini', role: 'Illustrations and/or voice' },
-  { id: 'openai', name: 'OpenAI', role: 'Illustrations and/or voice' },
+const PROVIDERS: { id: Provider; name: string; initial: string; role: string; hint: string }[] = [
+  { id: 'anthropic', name: 'Anthropic', initial: 'A', role: 'Story engine · narration, choices, vision', hint: 'console.anthropic.com → API keys' },
+  { id: 'gemini', name: 'Google Gemini', initial: 'G', role: 'Illustrations · voice', hint: 'aistudio.google.com → Get API key' },
+  { id: 'openai', name: 'OpenAI', initial: 'O', role: 'Illustrations · voice', hint: 'platform.openai.com → API keys' },
 ];
 
 const VOICES: Record<string, string[]> = {
@@ -17,78 +19,100 @@ const VOICES: Record<string, string[]> = {
   gemini: ['Charon', 'Kore', 'Puck', 'Fenrir', 'Aoede', 'Zephyr', 'Orus', 'Enceladus'],
 };
 
+const NAV = [
+  { id: 'keys', label: 'API keys', icon: KeyRound },
+  { id: 'story', label: 'Story engine', icon: BookOpen },
+  { id: 'image', label: 'Illustrations', icon: ImageIcon },
+  { id: 'tts', label: 'Voice', icon: Mic2 },
+  { id: 'limits', label: 'Limits', icon: Gauge },
+];
+
 const PW_KEY = 'ignis.adminPw';
-const readPw = () => {
-  try {
-    return sessionStorage.getItem(PW_KEY) || '';
-  } catch {
-    return '';
-  }
+const session = {
+  get: () => {
+    try {
+      return sessionStorage.getItem(PW_KEY) || '';
+    } catch {
+      return '';
+    }
+  },
+  set: (v: string) => {
+    try {
+      sessionStorage.setItem(PW_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  },
 };
 
+const rolesOf = (c: any) => c && JSON.stringify({ story: c.story, image: c.image, tts: c.tts, limits: c.limits });
+
 export function Admin() {
-  const [password, setPassword] = useState(readPw);
+  const toast = useToast();
+  const [password, setPassword] = useState(session.get);
   const client = useMemo(() => adminApi(password), [password]);
+  const [saved, setSaved] = useState<any>(null);
   const [cfg, setCfg] = useState<any>(null);
   const [authError, setAuthError] = useState('');
   const [keys, setKeys] = useState<Record<Provider, string>>({ anthropic: '', gemini: '', openai: '' });
   const [models, setModels] = useState<Partial<Record<Provider, Model[]>>>({});
-  const [tests, setTests] = useState<Partial<Record<Provider, TestResult & { loading?: boolean }>>>({});
+  const [tests, setTests] = useState<Partial<Record<Provider, TestResult>>>({});
   const [probes, setProbes] = useState<Record<string, any>>({});
-  const [saved, setSaved] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const load = () =>
-    client.get().then((c) => {
-      setCfg(c);
-      setAuthError('');
-    }).catch((e) => setAuthError(e.message));
-
-  useEffect(() => {
-    load();
-  }, [client]);
-
-  const login = (pw: string) => {
-    try {
-      sessionStorage.setItem(PW_KEY, pw);
-    } catch {
-      /* ignore */
-    }
-    setPassword(pw);
+  const apply = (c: any) => {
+    setSaved(c);
+    setCfg(c);
   };
 
-  const flash = (msg: string) => {
-    setSaved(msg);
-    setTimeout(() => setSaved(''), 2500);
-  };
-
-  const testProvider = async (p: Provider) => {
+  const testProvider = async (p: Provider, key?: string, quiet = false) => {
     setTests((t) => ({ ...t, [p]: { ok: false, loading: true } }));
     try {
-      const r = await client.models(p, keys[p] || undefined);
+      const r = await client.models(p, key || undefined);
       setModels((m) => ({ ...m, [p]: r.models }));
       setTests((t) => ({ ...t, [p]: { ok: true, ms: r.ms, count: r.models.length } }));
+      if (!quiet) toast(`${p}: key works, ${r.models.length} models fetched.`);
     } catch (e) {
       setTests((t) => ({ ...t, [p]: { ok: false, error: (e as Error).message } }));
+      if (!quiet) toast((e as Error).message, 'error');
     }
   };
+
+  useEffect(() => {
+    client.get()
+      .then((c) => {
+        apply(c);
+        setAuthError('');
+        // Verify every configured key straight away so the status cards are live.
+        for (const p of PROVIDERS) if (c.providers[p.id].source !== 'none') testProvider(p.id, undefined, true);
+      })
+      .catch((e) => setAuthError(e.message));
+  }, [client]);
 
   const saveKey = async (p: Provider, value: string | null) => {
     try {
-      setCfg(await client.save({ keys: { [p]: value } }));
+      const next = await client.save({ keys: { [p]: value } });
+      // Keep any unsaved role edits in the form; only the key status comes from the server.
+      setSaved(next);
+      setCfg((c: any) => ({ ...next, story: c.story, image: c.image, tts: c.tts, limits: c.limits }));
       setKeys((k) => ({ ...k, [p]: '' }));
-      flash(value ? `${p} key saved` : `${p} key removed`);
+      toast(value ? `${p} key saved.` : `${p} key removed.`);
+      if (value) testProvider(p, undefined, true);
     } catch (e) {
-      setAuthError((e as Error).message);
+      toast((e as Error).message, 'error');
     }
   };
 
   const saveRoles = async () => {
+    setSaving(true);
     try {
       const { story, image, tts, limits } = cfg;
-      setCfg(await client.save({ story, image, tts, limits }));
-      flash('configuration saved');
+      apply(await client.save({ story, image, tts, limits }));
+      toast('Configuration saved.');
     } catch (e) {
-      setAuthError((e as Error).message);
+      toast((e as Error).message, 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -108,193 +132,325 @@ export function Admin() {
     const tagged = list.filter((m) => m.tags.includes(tag));
     return tagged.length ? tagged : list;
   };
+  const dirty = !!cfg && rolesOf(cfg) !== rolesOf(saved);
+
+  if (authError && !cfg) {
+    return (
+      <div className="min-h-screen grid place-items-center px-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const pw = new FormData(e.currentTarget).get('pw') as string;
+            session.set(pw);
+            setPassword(pw);
+          }}
+          className="card w-full max-w-sm p-6"
+        >
+          <div className="grid place-items-center w-11 h-11 rounded-xl bg-ember-soft text-ember mb-4"><Lock size={20} /></div>
+          <h1 className="font-serif text-2xl">Sysadmin access</h1>
+          <p className="text-sm text-muted mt-1 mb-5">{authError}</p>
+          <input name="pw" type="password" placeholder="Admin password" className="field" autoFocus />
+          <Button variant="primary" className="w-full mt-3">Unlock</Button>
+          <a href="#/" className="block text-center text-sm text-faint hover:text-ink mt-4">Back to the tales</a>
+        </form>
+      </div>
+    );
+  }
+
+  if (!cfg) {
+    return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin text-muted" /></div>;
+  }
+
+  const keyStatus = (p: Provider) => {
+    const t = tests[p];
+    if (cfg.providers[p].source === 'none') return { tone: 'neutral' as const, text: 'Not configured' };
+    if (!t || t.loading) return { tone: 'neutral' as const, text: 'Checking…' };
+    return t.ok ? { tone: 'ok' as const, text: 'Connected' } : { tone: 'danger' as const, text: 'Key rejected' };
+  };
+  const ready = (p: Provider) => cfg.providers[p].source !== 'none' && tests[p]?.ok !== false;
+  const problem = (p: Provider) => (cfg.providers[p].source === 'none' ? `Needs a ${p} key` : `${p} key rejected`);
+
+  const overview = [
+    {
+      label: 'Story engine',
+      ok: ready('anthropic'),
+      value: ready('anthropic') ? cfg.story.model : problem('anthropic'),
+    },
+    {
+      label: 'Illustrations',
+      ok: cfg.image.provider === 'off' ? null : ready(cfg.image.provider),
+      value: cfg.image.provider === 'off' ? 'Off' : ready(cfg.image.provider) ? `${cfg.image.provider} · ${cfg.image.model || 'no model'}` : problem(cfg.image.provider),
+    },
+    {
+      label: 'Voice',
+      ok: cfg.tts.provider === 'browser' ? true : ready(cfg.tts.provider),
+      value: cfg.tts.provider === 'browser' ? 'Browser voice' : ready(cfg.tts.provider) ? `${cfg.tts.provider} · ${cfg.tts.model || 'no model'}` : problem(cfg.tts.provider),
+    },
+    { label: 'Admin access', ok: cfg.passwordProtected, value: cfg.passwordProtected ? 'Password protected' : 'Localhost only' },
+  ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 font-mono">
-      <div className="cyber-shadow page-texture rounded-xl p-6 md:p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <a href="#/" className="icon-btn"><ArrowLeft size={14} /></a>
-          <h1 className="font-display text-2xl font-black tracking-widest">SYSADMIN <span className="text-[var(--accent-color)]">//</span> CONSOLE</h1>
-          {saved && <span className="ml-auto text-xs text-[var(--accent-color)]">✓ {saved}</span>}
+    <div className="pb-28">
+      <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md border-b border-line">
+        <div className="mx-auto max-w-6xl h-14 px-4 sm:px-6 flex items-center gap-4">
+          <Logo />
+          <span className="text-faint">/</span>
+          <span className="text-sm font-medium">Sysadmin</span>
+          <a href="#/" className="ml-auto inline-flex items-center gap-2 text-sm text-muted hover:text-ink"><ArrowLeft size={16} /> Back to tales</a>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8">
+        <h1 className="font-serif text-3xl sm:text-4xl">Console</h1>
+        <p className="text-muted mt-1">Wire up the models behind IGNIS. Claude writes the story; Gemini or OpenAI paint and speak.</p>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+          {overview.map((o) => (
+            <div key={o.label} className="card p-4">
+              <div className="flex items-center gap-2">
+                <span className={cx('w-2 h-2 rounded-full', o.ok === null ? 'bg-faint' : o.ok ? 'bg-ok' : 'bg-danger')} />
+                <span className="eyebrow">{o.label}</span>
+              </div>
+              <div className="mt-2 text-sm truncate" title={o.value}>{o.value}</div>
+            </div>
+          ))}
         </div>
 
-        {authError && (
-          <div className="border border-[var(--accent-color)] rounded p-4 mb-6 text-sm">
-            <p className="text-[var(--accent-color)] mb-3">&gt; {authError}</p>
-            <form onSubmit={(e) => { e.preventDefault(); login(new FormData(e.currentTarget).get('pw') as string); }} className="flex gap-2">
-              <input name="pw" type="password" placeholder="admin password" className="cyber-input flex-1" autoFocus />
-              <button className="cyber-btn"><KeyRound size={14} /> unlock</button>
-            </form>
+        {!cfg.passwordProtected && (
+          <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#f2c35b33] bg-[#f2c35b0d] px-4 py-3 text-sm">
+            <ShieldAlert size={18} className="text-dumb shrink-0 mt-0.5" />
+            <span className="text-muted"><span className="text-ink">ADMIN_PASSWORD is not set.</span> This console only answers from localhost until you set it on the server.</span>
           </div>
         )}
 
-        {cfg && (
-          <>
-            {!cfg.passwordProtected && (
-              <p className="text-xs text-yellow-300/80 mb-6">
-                ⚠ ADMIN_PASSWORD is not set, so this console only answers from localhost. Set it on the server before deploying.
-              </p>
-            )}
+        <div className="grid lg:grid-cols-[200px_minmax(0,1fr)] gap-8 mt-10">
+          <nav className="hidden lg:block">
+            <ul className="sticky top-24 space-y-1">
+              {NAV.map(({ id, label, icon: Icon }) => (
+                <li key={id}>
+                  <a href={`#/admin`} onClick={(e) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted hover:text-ink hover:bg-raised">
+                    <Icon size={16} /> {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-            <Section title="1. API keys">
-              <div className="space-y-4">
-                {PROVIDERS.map(({ id, name, role }) => {
-                  const status = cfg.providers[id];
-                  const test = tests[id];
+          <div className="space-y-10 min-w-0">
+            <Section id="keys" title="API keys" desc="Keys are stored on the server, never sent back in full. A key saved here overrides the environment variable.">
+              <div className="space-y-3">
+                {PROVIDERS.map((p) => {
+                  const st = keyStatus(p.id);
+                  const t = tests[p.id];
+                  const src = cfg.providers[p.id];
                   return (
-                    <div key={id} className="rounded border border-[var(--panel-border)] p-4 bg-black/30">
-                      <div className="flex flex-wrap items-baseline gap-2 mb-1">
-                        <span className="text-[var(--ink-color)] font-bold">{name}</span>
-                        <span className="text-xs text-[var(--ink-color)]/50">{role}</span>
+                    <div key={p.id} className="card p-5">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="grid place-items-center w-9 h-9 rounded-lg bg-raised border border-line font-serif font-semibold">{p.initial}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium">{p.name}</div>
+                          <div className="text-xs text-faint">{p.role}</div>
+                        </div>
+                        <Badge tone={st.tone}>{st.text}</Badge>
                       </div>
-                      <p className="text-xs mb-3 text-[var(--ink-color)]/60">
-                        {status.source === 'none' ? 'no key' : `key ${status.masked} (from ${status.source === 'env' ? 'environment variable' : 'admin panel'})`}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="mt-4 text-xs text-faint flex flex-wrap gap-x-4 gap-y-1">
+                        {src.source !== 'none' ? (
+                          <span>Key <span className="font-mono text-muted">{src.masked}</span> · from {src.source === 'env' ? 'environment' : 'this console'}</span>
+                        ) : (
+                          <span>Get a key: {p.hint}</span>
+                        )}
+                        {t?.ok && <span>{t.count} models · {t.ms} ms</span>}
+                        {t && !t.ok && !t.loading && <span className="text-danger">{t.error}</span>}
+                      </div>
+                      <div className="mt-3 flex flex-col sm:flex-row gap-2">
                         <input
                           type="password"
                           autoComplete="off"
-                          value={keys[id]}
-                          onChange={(e) => setKeys((k) => ({ ...k, [id]: e.target.value }))}
-                          placeholder="paste new key"
-                          className="cyber-input flex-1 min-w-[200px]"
+                          value={keys[p.id]}
+                          onChange={(e) => setKeys((k) => ({ ...k, [p.id]: e.target.value }))}
+                          placeholder={src.source === 'none' ? 'Paste API key' : 'Paste a new key to replace it'}
+                          className="field flex-1 font-mono text-sm"
                         />
-                        <button onClick={() => testProvider(id)} className="cyber-btn" disabled={test?.loading}>
-                          {test?.loading ? <RefreshCw size={14} className="animate-spin" /> : <PlugZap size={14} />} test & fetch models
-                        </button>
-                        <button onClick={() => saveKey(id, keys[id])} className="cyber-btn" disabled={!keys[id].trim()}><Save size={14} /> save</button>
-                        {status.source === 'admin' && (
-                          <button onClick={() => saveKey(id, null)} className="cyber-btn" title="Remove the saved key"><Trash2 size={14} /></button>
-                        )}
+                        <div className="flex gap-2">
+                          <Button onClick={() => testProvider(p.id, keys[p.id])} disabled={t?.loading || (!keys[p.id] && src.source === 'none')}>
+                            {t?.loading ? <Loader2 size={16} className="animate-spin" /> : <PlugZap size={16} />} Test
+                          </Button>
+                          <Button variant="primary" onClick={() => saveKey(p.id, keys[p.id])} disabled={!keys[p.id].trim()}>Save</Button>
+                          {src.source === 'admin' && (
+                            <Button variant="danger" onClick={() => saveKey(p.id, null)} aria-label="Remove saved key" title="Remove saved key"><Trash2 size={16} /></Button>
+                          )}
+                        </div>
                       </div>
-                      {test && !test.loading && (
-                        <p className={`text-xs mt-2 ${test.ok ? 'text-emerald-400' : 'text-[var(--accent-color)]'}`}>
-                          {test.ok ? `✓ key works · ${test.count} models · ${test.ms} ms` : `✗ ${test.error}`}
-                        </p>
-                      )}
                     </div>
                   );
                 })}
               </div>
             </Section>
 
-            <Section title="2. Story engine (Anthropic)">
-              <Field label="Model">
-                <ModelInput value={cfg.story.model} onChange={(v) => set('story', 'model', v)} models={options('anthropic', 'text')} id="story-models" />
-              </Field>
-              <Field label="Effort (latency vs. quality)">
-                <select value={cfg.story.effort} onChange={(e) => set('story', 'effort', e.target.value)} className="cyber-input">
-                  <option value="low">low · fastest</option>
-                  <option value="medium">medium · balanced</option>
-                  <option value="high">high · smartest, slowest</option>
-                </select>
-              </Field>
-              <Field label="Max pages before an ending">
-                <input type="number" min={4} max={30} value={cfg.story.maxDepth} onChange={(e) => set('story', 'maxDepth', Number(e.target.value))} className="cyber-input w-24" />
-              </Field>
-              <Probe role="story" state={probes.story} onRun={() => probe('story')} />
-            </Section>
-
-            <Section title="3. Illustrations">
-              <Field label="Provider">
-                <select value={cfg.image.provider} onChange={(e) => set('image', 'provider', e.target.value)} className="cyber-input">
-                  <option value="gemini">Gemini</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="off">off</option>
-                </select>
-              </Field>
-              {cfg.image.provider !== 'off' && (
-                <Field label="Model">
-                  <ModelInput value={cfg.image.model} onChange={(v) => set('image', 'model', v)} models={options(cfg.image.provider, 'image')} id="image-models" />
+            <Section id="story" title="Story engine" desc="Claude writes every page as structured JSON: narration, choices, stats, endings and the illustration brief.">
+              <div className="card p-5 space-y-5">
+                <Field label="Model" help="Fetched from your Anthropic key. Type any model id to override.">
+                  <ModelInput value={cfg.story.model} onChange={(v) => set('story', 'model', v)} models={options('anthropic', 'text')} id="story-models" />
                 </Field>
-              )}
-              <Probe role="image" state={probes.image} onRun={() => probe('image')} />
+                <Field label="Effort" help="Lower is faster per page; higher writes smarter twists.">
+                  <select value={cfg.story.effort} onChange={(e) => set('story', 'effort', e.target.value)} className="field">
+                    <option value="low">Low · fastest pages</option>
+                    <option value="medium">Medium · balanced</option>
+                    <option value="high">High · smartest, slowest</option>
+                  </select>
+                </Field>
+                <Field label="Pages before an ending" help="The story wraps up by this depth.">
+                  <input type="number" min={4} max={30} value={cfg.story.maxDepth} onChange={(e) => set('story', 'maxDepth', Number(e.target.value))} className="field w-28" />
+                </Field>
+                <Probe role="story" state={probes.story} onRun={() => probe('story')} dirty={dirty} />
+              </div>
             </Section>
 
-            <Section title="4. Narration voice">
-              <Field label="Provider">
-                <select value={cfg.tts.provider} onChange={(e) => set('tts', 'provider', e.target.value)} className="cyber-input">
-                  <option value="browser">browser (free, built in)</option>
-                  <option value="openai">OpenAI TTS</option>
-                  <option value="gemini">Gemini TTS</option>
-                </select>
-              </Field>
-              {cfg.tts.provider !== 'browser' && (
-                <>
-                  <Field label="Model">
-                    <ModelInput value={cfg.tts.model} onChange={(v) => set('tts', 'model', v)} models={options(cfg.tts.provider, 'tts')} id="tts-models" />
+            <Section id="image" title="Illustrations" desc="Each page gets an image from Claude's brief in a fixed cyber-grimoire style.">
+              <div className="card p-5 space-y-5">
+                <Field label="Provider">
+                  <ProviderPicker value={cfg.image.provider} onChange={(v) => set('image', 'provider', v)} options={[['gemini', 'Gemini'], ['openai', 'OpenAI'], ['off', 'Off']]} />
+                </Field>
+                {cfg.image.provider !== 'off' && (
+                  <Field label="Model" help={`Image models from your ${cfg.image.provider} key.`}>
+                    <ModelInput value={cfg.image.model} onChange={(v) => set('image', 'model', v)} models={options(cfg.image.provider, 'image')} id="image-models" />
                   </Field>
-                  <Field label="Voice">
-                    <input list="voices" value={cfg.tts.voice} onChange={(e) => set('tts', 'voice', e.target.value)} className="cyber-input" />
-                    <datalist id="voices">{(VOICES[cfg.tts.provider] ?? []).map((v) => <option key={v} value={v} />)}</datalist>
-                  </Field>
-                </>
-              )}
-              <Probe role="tts" state={probes.tts} onRun={() => probe('tts')} />
+                )}
+                <Probe role="image" state={probes.image} onRun={() => probe('image')} dirty={dirty} />
+              </div>
             </Section>
 
-            <Section title="5. Limits">
-              <Field label="Actions per minute per visitor">
-                <input type="number" min={1} value={cfg.limits.actionsPerMinute} onChange={(e) => set('limits', 'actionsPerMinute', Number(e.target.value))} className="cyber-input w-24" />
-              </Field>
-              <Field label="Illustrations per day (all visitors)">
-                <input type="number" min={0} value={cfg.limits.imagesPerDay} onChange={(e) => set('limits', 'imagesPerDay', Number(e.target.value))} className="cyber-input w-28" />
-              </Field>
+            <Section id="tts" title="Narration voice" desc="Players toggle read-aloud per page. The browser voice is free and always available.">
+              <div className="card p-5 space-y-5">
+                <Field label="Provider">
+                  <ProviderPicker value={cfg.tts.provider} onChange={(v) => set('tts', 'provider', v)} options={[['browser', 'Browser'], ['openai', 'OpenAI'], ['gemini', 'Gemini']]} />
+                </Field>
+                {cfg.tts.provider !== 'browser' && (
+                  <>
+                    <Field label="Model">
+                      <ModelInput value={cfg.tts.model} onChange={(v) => set('tts', 'model', v)} models={options(cfg.tts.provider, 'tts')} id="tts-models" />
+                    </Field>
+                    <Field label="Voice">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(VOICES[cfg.tts.provider] ?? []).map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => set('tts', 'voice', v)}
+                            className={cx('h-8 px-3 rounded-lg text-sm border transition-colors', cfg.tts.voice === v ? 'border-ember text-ember bg-ember-soft' : 'border-line text-muted hover:text-ink')}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </>
+                )}
+                <Probe role="tts" state={probes.tts} onRun={() => probe('tts')} dirty={dirty} />
+              </div>
             </Section>
 
-            <button onClick={saveRoles} className="cyber-btn w-full justify-center py-3"><Save size={14} /> save configuration</button>
-            <p className="text-xs text-[var(--ink-color)]/40 mt-2">Model tests run with the saved configuration: save first, then test.</p>
-          </>
-        )}
+            <Section id="limits" title="Limits" desc="Protect your API bill from enthusiastic timeline-breakers.">
+              <div className="card p-5 space-y-5">
+                <Field label="Actions per minute" help="Per visitor: new pages, illustrations and voice.">
+                  <input type="number" min={1} value={cfg.limits.actionsPerMinute} onChange={(e) => set('limits', 'actionsPerMinute', Number(e.target.value))} className="field w-28" />
+                </Field>
+                <Field label="Illustrations per day" help="Shared across all visitors. Failed renders don't count.">
+                  <input type="number" min={0} value={cfg.limits.imagesPerDay} onChange={(e) => set('limits', 'imagesPerDay', Number(e.target.value))} className="field w-28" />
+                </Field>
+              </div>
+            </Section>
+          </div>
+        </div>
       </div>
+
+      {/* Unsaved changes bar */}
+      <AnimatePresence>
+        {dirty && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            className="fixed bottom-4 inset-x-4 z-40 mx-auto max-w-xl rounded-2xl border border-line-strong bg-raised/95 backdrop-blur px-4 py-3 flex items-center gap-3 shadow-2xl"
+          >
+            <span className="w-2 h-2 rounded-full bg-ember" />
+            <span className="text-sm flex-1">Unsaved changes</span>
+            <Button variant="ghost" size="sm" onClick={() => setCfg(saved)}>Discard</Button>
+            <Button variant="primary" size="sm" onClick={saveRoles} disabled={saving}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Save changes
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, desc, children }: { id: string; title: string; desc: string; children: ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="text-xs uppercase tracking-[0.3em] text-[var(--accent-color)] mb-3">{title}</h2>
-      <div className="space-y-3">{children}</div>
+    <section id={id} className="scroll-mt-24">
+      <h2 className="font-serif text-2xl">{title}</h2>
+      <p className="text-sm text-muted mt-1 mb-4">{desc}</p>
+      {children}
     </section>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
-      <span className="sm:w-56 text-[var(--ink-color)]/60 text-xs">{label}</span>
-      <div className="flex-1 flex gap-2">{children}</div>
-    </label>
+    <div className="grid sm:grid-cols-[180px_minmax(0,1fr)] gap-2 sm:gap-6 items-start">
+      <div className="pt-2">
+        <div className="text-sm font-medium">{label}</div>
+        {help && <div className="text-xs text-faint mt-0.5">{help}</div>}
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function ProviderPicker({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
+  return (
+    <div className="inline-flex p-1 rounded-xl bg-bg border border-line">
+      {options.map(([v, label]) => (
+        <button key={v} onClick={() => onChange(v)} className={cx('h-8 px-4 text-sm rounded-lg transition-colors', value === v ? 'bg-raised text-ink border border-line-strong' : 'text-faint hover:text-muted border border-transparent')}>
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 
 function ModelInput({ value, onChange, models, id }: { value: string; onChange: (v: string) => void; models: Model[]; id: string }) {
   return (
-    <>
-      <input list={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder={models.length ? 'pick or type a model id' : 'test the key above to fetch models'} className="cyber-input flex-1" />
+    <div>
+      <input list={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder="model id" className="field font-mono text-sm" />
       <datalist id={id}>{models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</datalist>
-    </>
+      <div className="text-xs text-faint mt-1.5">
+        {models.length ? `${models.length} models available, start typing to filter.` : 'Test the provider key above to load its models.'}
+      </div>
+    </div>
   );
 }
 
-function Probe({ role, state, onRun }: { role: string; state: any; onRun: () => void }) {
+function Probe({ role, state, onRun, dirty }: { role: string; state: any; onRun: () => void; dirty: boolean }) {
   return (
-    <div className="rounded border border-dashed border-[var(--panel-border)] p-3 text-xs">
-      <button onClick={onRun} disabled={state?.loading} className="cyber-btn">
-        {state?.loading ? <RefreshCw size={14} className="animate-spin" /> : <FlaskConical size={14} />} run live {role} test
-      </button>
+    <div className="rounded-xl border border-dashed border-line-strong p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button size="sm" onClick={onRun} disabled={state?.loading || dirty}>
+          {state?.loading ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />} Run live test
+        </Button>
+        <span className="text-xs text-faint">{dirty ? 'Save your changes first: tests use the saved configuration.' : 'Makes a real call with the saved configuration.'}</span>
+      </div>
       {state && !state.loading && (
-        <div className="mt-3">
+        <div className="mt-3 text-sm">
           {state.ok ? (
             <>
-              <p className="text-emerald-400">✓ {state.ms} ms{state.model ? ` · served by ${state.model}` : ''}</p>
-              {state.text && <p className="mt-2 text-[var(--ink-color)]">“{state.text}”</p>}
-              {role === 'image' && state.dataUrl && <img src={state.dataUrl} alt="test render" className="mt-2 w-48 rounded border border-[var(--panel-border)]" />}
-              {role === 'tts' && (state.dataUrl ? <audio controls src={state.dataUrl} className="mt-2" /> : <p className="mt-2">Browser voice selected: nothing to fetch.</p>)}
+              <div className="text-ok">✓ Passed in {state.ms} ms{state.model ? ` · served by ${state.model}` : ''}</div>
+              {state.text && <p className="mt-2 font-serif italic text-muted">“{state.text}”</p>}
+              {role === 'image' && state.dataUrl && <img src={state.dataUrl} alt="Test render" className="mt-3 w-56 rounded-xl border border-line" />}
+              {role === 'tts' && (state.dataUrl ? <audio controls src={state.dataUrl} className="mt-3 w-full" /> : <p className="mt-2 text-muted">Browser voice selected: nothing to fetch.</p>)}
             </>
           ) : (
-            <p className="text-[var(--accent-color)]">✗ {state.error}</p>
+            <div className="text-danger">✗ {state.error}</div>
           )}
         </div>
       )}
