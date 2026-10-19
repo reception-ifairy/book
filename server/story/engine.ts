@@ -15,7 +15,7 @@ const ENDINGS = ['canon', 'subverted', 'cursed', 'secret', 'death'] as const;
 const oneOf = (values: readonly string[]) => z.string().describe(`One of: ${values.join(', ')}`);
 
 /** Off-list values fall back instead of failing the whole page. */
-function pick<T extends readonly string[]>(values: T, value: string, fallback: T[number]): T[number] {
+export function pick<T extends readonly string[]>(values: T, value: string, fallback: T[number]): T[number] {
   const norm = value.trim().toLowerCase();
   return (values as readonly string[]).includes(norm) ? (norm as T[number]) : fallback;
 }
@@ -40,7 +40,7 @@ const PageOutput = z.object({
   story_summary: z.string(),
   artifact_description: z.string().nullable(),
 });
-type PageOutput = z.infer<typeof PageOutput>;
+export type PageOutput = z.infer<typeof PageOutput>;
 
 /** How many earlier pages are replayed verbatim; older ones survive only through the running summary. */
 const HISTORY_PAGES = 6;
@@ -88,7 +88,8 @@ function stateBlock(parent: Page | null, depth: number, maxDepth: number) {
   return `STATE before this page: depth ${depth}/${maxDepth}, chaos ${stats.chaos}, karma ${stats.karma}, mana ${stats.mana}, canon integrity ${parent?.canon ?? 100}%, inventory: ${parent?.inventory.length ? parent.inventory.join(', ') : 'empty'}.`;
 }
 
-function buildMessages(story: Story, parent: Page | null, action: PlayerAction, maxDepth: number): Anthropic.Beta.BetaMessageParam[] {
+/** The conversation sent to Claude: the last few pages verbatim, older ones folded into a summary. Exported for tests. */
+export function buildMessages(story: Story, parent: Page | null, action: PlayerAction, maxDepth: number): Anthropic.Beta.BetaMessageParam[] {
   const path = parent ? pathTo(story, parent.id) : [];
   const recent = path.slice(-HISTORY_PAGES);
   const dropped = path.length - recent.length;
@@ -145,7 +146,8 @@ async function callClaude(story: Story, parent: Page | null, action: PlayerActio
   return response.parsed_output;
 }
 
-function toPage(story: Story, parent: Page | null, action: PlayerAction, out: PageOutput): Page {
+/** Turns Claude's raw page into a stored Page: clamps stats, caps inventory, assigns ids. Exported for tests. */
+export function toPage(parent: Page | null, action: PlayerAction, out: PageOutput): Page {
   const base = parent?.stats ?? START_STATS;
   const sudoCost = action.kind === 'sudo' ? SUDO_MANA_COST : 0;
   const d = out.stat_changes;
@@ -196,7 +198,7 @@ export async function startStory(taleId: string, lang: Lang, heroName: string): 
     updatedAt: Date.now(),
   };
   const action: PlayerAction = { kind: 'boot', label: '' };
-  const page = toPage(story, null, action, await callClaude(story, null, action));
+  const page = toPage(null, action, await callClaude(story, null, action));
   story.pages[page.id] = page;
   story.rootPageId = story.currentPageId = page.id;
   return story;
@@ -224,7 +226,7 @@ export async function act(
     throw new StoryError('Pick a choice or type a move.', 400);
   }
 
-  const page = toPage(story, parent, action, await callClaude(story, parent, action));
+  const page = toPage(parent, action, await callClaude(story, parent, action));
   story.pages[page.id] = page;
   story.currentPageId = page.id;
   return page;

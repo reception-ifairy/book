@@ -7,7 +7,7 @@ import { getStory, readMedia, saveMedia, saveStory } from './story/store';
 import { extFor, mimeFromUrl, generateImage, generateSpeech, IMAGE_STYLE, ModalityUnavailable } from './media';
 import { getTale, TALES } from '../shared/tales';
 import type { PublicConfig } from '../shared/types';
-import type { Media } from './providers/types';
+import { ProviderError, type Media } from './providers/types';
 
 export const api = Router();
 
@@ -32,6 +32,7 @@ function fail(res: Response, e: unknown) {
   if (e instanceof z.ZodError) return res.status(400).json({ error: e.issues[0]?.message ?? 'Invalid request.' });
   if (e instanceof StoryError) return res.status(e.status).json({ error: e.message });
   if (e instanceof ModalityUnavailable) return res.status(503).json({ error: e.message });
+  if (e instanceof ProviderError) return res.status(502).json({ error: e.message });
   console.error(e);
   return res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown failure.' });
 }
@@ -90,15 +91,23 @@ const ActBody = z.object({
     .optional(),
 });
 
+/** Stories with a page being written right now; a second action waits its turn instead of double-spending. */
+const writing = new Set<string>();
+
 api.post('/story/:id/act', actionLimiter, async (req, res) => {
+  let locked = '';
   try {
     const story = loadStory(req);
     const { pageId, ...input } = ActBody.parse(req.body);
+    if (writing.has(story.id)) throw new StoryError('IGNIS is still writing the last page. Patience, meatbag.', 409);
+    writing.add((locked = story.id));
     const page = await act(story, pageId, input);
     saveStory(story);
     res.json({ page, story });
   } catch (e) {
     fail(res, e);
+  } finally {
+    if (locked) writing.delete(locked);
   }
 });
 

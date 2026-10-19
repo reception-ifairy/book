@@ -7,7 +7,7 @@ import { listGeminiModels } from './providers/gemini';
 import { listOpenAIModels } from './providers/openai';
 import { generateImage, generateSpeech, IMAGE_STYLE } from './media';
 import { probeStoryModel } from './story/engine';
-import type { ModelInfo } from './providers/types';
+import { cleanProviderMessage, type ModelInfo } from './providers/types';
 
 export const admin = Router();
 
@@ -69,13 +69,7 @@ const listers: Record<ProviderId, (key: string) => Promise<ModelInfo[]>> = {
   openai: listOpenAIModels,
 };
 
-/** Gemini and OpenAI errors often embed a raw JSON body; surface just its human message. */
-function describe(p: ProviderId, e: unknown): string {
-  if (p === 'anthropic') return describeAnthropicError(e);
-  const raw = e instanceof Error ? e.message : String(e);
-  const msg = /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(raw)?.[1];
-  return (msg ?? raw).slice(0, 300);
-}
+const describe = (p: ProviderId, e: unknown) => (p === 'anthropic' ? describeAnthropicError(e) : cleanProviderMessage(e));
 
 /** Tests a key (the unsaved one from the form, or the saved one) by listing models. */
 admin.post('/providers/:provider/models', async (req, res) => {

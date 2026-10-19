@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { motion } from 'motion/react';
 
 /** Embers drifting upward. Pseudo-random but stable per mount so they don't jump on re-render. */
 export function EmberSparks({ count = 8, height = 110, className = '' }: { count?: number; height?: number; className?: string }) {
@@ -24,40 +23,6 @@ export function EmberSparks({ count = 8, height = 110, className = '' }: { count
         />
       ))}
     </div>
-  );
-}
-
-/** A one-shot particle burst from a point. Re-key it to fire again. */
-export function Burst({ x, y, color, count = 14, distance = 70 }: { x: number | string; y: number | string; color: string; count?: number; distance?: number }) {
-  const parts = useMemo(
-    () =>
-      Array.from({ length: count }, (_, i) => {
-        const a = (i / count) * Math.PI * 2 + (i % 2) * 0.3;
-        const r = distance * (0.55 + ((i * 7) % 5) / 10);
-        return { dx: Math.cos(a) * r, dy: Math.sin(a) * r, size: 3 + (i % 3) * 2 };
-      }),
-    [count, distance],
-  );
-  return (
-    <span aria-hidden className="pointer-events-none absolute z-20" style={{ left: x, top: y }}>
-      {parts.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute rounded-full"
-          style={{ width: p.size, height: p.size, background: color, boxShadow: `0 0 8px 1px ${color}`, marginLeft: -p.size / 2, marginTop: -p.size / 2 }}
-          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-          animate={{ x: p.dx, y: p.dy, opacity: 0, scale: 0.3 }}
-          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-        />
-      ))}
-      <motion.span
-        className="absolute rounded-full border-2"
-        style={{ borderColor: color, width: 12, height: 12, marginLeft: -6, marginTop: -6 }}
-        initial={{ scale: 0.4, opacity: 0.9 }}
-        animate={{ scale: distance / 8, opacity: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-      />
-    </span>
   );
 }
 
