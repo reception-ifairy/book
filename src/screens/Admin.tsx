@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArtKitPanel } from './ArtKitPanel';
 import { adminApi } from '../api';
 import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
@@ -25,6 +26,7 @@ const NAV = [
   { id: 'story', label: 'Story engine', icon: BookOpen },
   { id: 'image', label: 'Illustrations', icon: ImageIcon },
   { id: 'tts', label: 'Voice', icon: Mic2 },
+  { id: 'artkit', label: 'Art kit', icon: Palette },
   { id: 'limits', label: 'Limits', icon: Gauge },
 ];
 
@@ -46,7 +48,7 @@ const session = {
   },
 };
 
-const rolesOf = (c: any) => c && JSON.stringify({ story: c.story, image: c.image, tts: c.tts, limits: c.limits });
+const rolesOf = (c: any) => c && JSON.stringify({ story: c.story, image: c.image, tts: c.tts, limits: c.limits, artkit: c.artkit });
 
 export function Admin() {
   const toast = useToast();
@@ -113,7 +115,7 @@ export function Admin() {
       const next = await client.save({ keys: { [p]: value } });
       // Keep any unsaved role edits in the form; only the key status comes from the server.
       setSaved(next);
-      setCfg((c: any) => ({ ...next, story: c.story, image: c.image, tts: c.tts, limits: c.limits }));
+      setCfg((c: any) => ({ ...next, story: c.story, image: c.image, tts: c.tts, limits: c.limits, artkit: c.artkit }));
       setKeys((k) => ({ ...k, [p]: '' }));
       toast(value ? `${p} key saved.` : `${p} key removed.`);
       if (value) testProvider(p, undefined, true);
@@ -125,8 +127,8 @@ export function Admin() {
   const saveRoles = async () => {
     setSaving(true);
     try {
-      const { story, image, tts, limits } = cfg;
-      apply(await client.save({ story, image, tts, limits }));
+      const { story, image, tts, limits, artkit } = cfg;
+      apply(await client.save({ story, image, tts, limits, artkit }));
       toast('Configuration saved.');
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -388,6 +390,16 @@ export function Admin() {
                 )}
                 <Probe role="tts" state={probes.tts} onRun={() => probe('tts')} dirty={dirty} />
               </div>
+            </Section>
+
+            <Section id="artkit" title="Art kit" desc="Claude art-directs the whole cyber-magic look, OpenAI paints it: backdrop, IGNIS, tale covers, choice icons, ending badges, logo and share card.">
+              <ArtKitPanel
+                client={client}
+                settings={cfg.artkit}
+                onSettings={(field, value) => set('artkit', field, value)}
+                imageModels={options('openai', 'image')}
+                dirty={dirty}
+              />
             </Section>
 
             <Section id="limits" title="Limits" desc="Protect your API bill from enthusiastic timeline-breakers.">

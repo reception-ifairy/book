@@ -7,6 +7,7 @@ import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
 import { coverStyle, ENDING, KIND } from '../meta';
+import { useArt } from '../artkit';
 import { Badge, Button, IconButton, Kbd, Meter, Sheet, SnowToggle, cx, useToast } from '../ui';
 import { SUDO_MANA_COST, type Choice, type ChoiceKind, type Page, type PublicConfig, type Story } from '../../shared/types';
 
@@ -86,6 +87,7 @@ const isTyping = (el: EventTarget | null) => el instanceof HTMLElement && (el.ta
 
 export function StoryScreen({ storyId }: { storyId: string }) {
   const toast = useToast();
+  const art = useArt();
   const [story, setStory] = useState<Story | null>(null);
   const [loadError, setLoadError] = useState('');
   const [config, setConfig] = useState<PublicConfig | null>(null);
@@ -307,6 +309,9 @@ export function StoryScreen({ storyId }: { storyId: string }) {
           </motion.div>
         ) : (
           <motion.div key="placeholder" className="absolute inset-0 grid place-items-center" style={tale ? coverStyle(tale.hue) : undefined} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            {tale && art.src(`cover-${tale.id}`) && (
+              <img src={art.src(`cover-${tale.id}`)} alt="" className="absolute inset-0 w-full h-full object-cover opacity-45 blur-[2px] scale-105" />
+            )}
             {imageState === 'failed' ? (
               <div className="flex flex-col items-center gap-3 text-sm text-ink/80">
                 <motion.span className="text-6xl" animate={{ rotate: [0, -6, 6, 0] }} transition={{ duration: 2, repeat: Infinity }}>{tale?.emoji}</motion.span>
@@ -316,7 +321,17 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               <>
                 <div className="absolute inset-0 scanline" />
                 <div className="relative flex flex-col items-center gap-4 text-sm text-ink/80">
-                  <RuneLoader />
+                  {art.src('ignis-painting') ? (
+                    <motion.img
+                      src={art.src('ignis-painting')}
+                      alt={art.alt('ignis-painting')}
+                      className="w-44 h-44 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                      animate={{ y: [0, -8, 0], rotate: [0, -2, 2, 0] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  ) : (
+                    <RuneLoader />
+                  )}
                   <span className="font-pixel text-sm text-pixel [text-shadow:0_0_8px_var(--color-pixel)]">painting this page…</span>
                 </div>
               </>
@@ -347,7 +362,12 @@ export function StoryScreen({ storyId }: { storyId: string }) {
           <IconButton label="Back to tales" onClick={() => (location.hash = '/')}>
             <ArrowLeft size={18} />
           </IconButton>
-          <span className="grid place-items-center w-10 h-10 rounded-xl text-lg shrink-0 border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)]" style={tale ? coverStyle(tale.hue) : undefined}>{tale?.emoji}</span>
+          <span
+            className="grid place-items-center w-10 h-10 rounded-xl text-lg shrink-0 border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] bg-cover bg-center"
+            style={tale ? (art.src(`cover-${tale.id}`) ? { backgroundImage: `url(${art.src(`cover-${tale.id}`)})` } : coverStyle(tale.hue)) : undefined}
+          >
+            {tale && !art.src(`cover-${tale.id}`) && tale.emoji}
+          </span>
           <div className="min-w-0">
             <div className={cx('font-serif font-bold text-lg truncate leading-tight', glitch > 0 && 'reality-tear')}>{tale?.title[story.lang] ?? '…'}</div>
             <div className="font-mono text-[11px] text-faint">#{story.timeline} · {story.heroName}</div>
@@ -499,6 +519,16 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                     <motion.div className="absolute inset-0 rounded-[17px]" style={{ background: endingColor }} initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 1.2, delay: 0.3 }} />
                     <ComicBurst key={page.id} x="50%" y="38%" color={endingColor} word={page.ending.type === 'death' ? 'BONK!' : 'THE END!'} size={190} delay={0.45} />
                     <div className="relative">
+                      {art.src(`ending-${page.ending.type}`) && (
+                        <motion.img
+                          src={art.src(`ending-${page.ending.type}`)}
+                          alt={art.alt(`ending-${page.ending.type}`)}
+                          className="mx-auto -mt-16 mb-2 w-32 h-32 object-contain drop-shadow-[4px_6px_0_var(--color-outline)]"
+                          initial={{ scale: 0, rotate: -30 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: 'spring', stiffness: 260, damping: 11, delay: 0.4 }}
+                        />
+                      )}
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.5 }}>
                         <Badge tone={ending.tone}>{ending.label}</Badge>
                       </motion.div>
@@ -670,6 +700,7 @@ function ChoiceCard({
 }) {
   const { color, label: kindLabel } = KIND[kind];
   const Icon = KIND_ICON[kind];
+  const iconArt = useArt().src(`icon-${kind}`);
   return (
     <button
       data-choice={id}
@@ -687,7 +718,11 @@ function ChoiceCard({
         className={cx('grid place-items-center w-11 h-11 rounded-full shrink-0 border-[2.5px] border-outline text-white shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:scale-110 group-hover:-rotate-12', committed && 'animate-bounce')}
         style={{ background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${color} 55%, white), ${color})` }}
       >
-        <Icon size={20} strokeWidth={2.5} className="drop-shadow-[1px_1px_0_#241913]" />
+        {iconArt ? (
+          <img src={iconArt} alt="" className="w-[130%] max-w-none h-[130%] object-contain drop-shadow-[1px_2px_0_#241913]" />
+        ) : (
+          <Icon size={20} strokeWidth={2.5} className="drop-shadow-[1px_1px_0_#241913]" />
+        )}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[16px] font-bold leading-snug">{label}</span>

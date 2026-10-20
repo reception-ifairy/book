@@ -5,6 +5,39 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 4.2.0 · Art Kit: szata graficzna z planu Claude i obrazów OpenAI
+
+Nowy moduł, który tworzy całą grafikę gry w stylu cyber-magii.
+
+- **Plan (Claude jako dyrektor artystyczny):**
+  - dostaje opis gry, palety interfejsu, kanonicznego wyglądu Ignisa i 19 slotów graficznych, z których aplikacja faktycznie korzysta;
+  - zwraca *style bible* (nazwa stylu, paleta z rolami, kreska i cieniowanie, światło, motywy, karta postaci Ignisa, czego unikać) oraz prompt i tekst alternatywny dla każdego slotu;
+  - działa na streamingu, z effort `high` i ustrukturyzowanym wyjściem;
+  - brakujące sloty uzupełnia się z briefu, a niepoprawne kolory hex są odrzucane.
+- **Render (OpenAI):**
+  - model GPT Image (domyślnie `gpt-image-1`) z jakością low/medium/high;
+  - przezroczyste tło dla postaci, ikon, odznak i znaku marki;
+  - poziome kadry 1536×1024 dla sceny, okładek i karty do udostępniania;
+  - kolejka w tle (3 obrazy naraz) z postępem;
+  - pojedynczy slot można wygenerować ponownie, a błąd jednego obrazu nie zatrzymuje reszty.
+- **Prompt obrazu** składa się z style bible, promptu slotu i ograniczeń technicznych. Karta postaci Ignisa trafia tylko do obrazów z Ignisem, a „bez napisów” do wszystkich poza kartą do udostępniania.
+- **Panel admina → „Art kit”:**
+  1. notatki dla Claude i plan;
+  2. podgląd style bible z próbkami kolorów;
+  3. siatka 19 kafelków z podglądem (szachownica dla przezroczystości), edycją promptu i ponownym renderem;
+  4. publikacja i powrót do wbudowanego wyglądu.
+- **Gdzie grafiki trafiają po publikacji:**
+  - tło warsztatu i Ignis na ekranie głównym;
+  - okładki na kartach baśni, w zapisanych rozgrywkach, nagłówku czytnika i tle ładowania ilustracji;
+  - „Ignis maluje” podczas generowania ilustracji;
+  - ikony typów wyboru i odznaki zakończeń;
+  - logo, favicon (`/favicon.png`) i karta do udostępniania (`/og.png` z metatagami Open Graph).
+  
+  Slot bez obrazu zachowuje wbudowany wygląd CSS/SVG.
+- **Pliki:** `DATA_DIR/artkit/` (stan w `kit.json`, obrazy w `files/` z unikalnymi nazwami i cache „immutable”). Nieużywane pliki są sprzątane.
+- **Testy:** 7 nowych, razem 35. Sztuczne API Anthropic obsługuje streaming (SSE) i listę modeli, a nowe sztuczne API OpenAI obsługuje obrazy.
+- **Poprawka:** tło sceny na ekranie głównym przykrywało zawartość.
+
 ## 4.1.0 · Utwardzenie, testy, CI, dokumentacja
 
 **Serwer**

@@ -44,3 +44,39 @@ export async function openaiTts(apiKey: string, model: string, voice: string, te
   });
   return { mime: 'audio/mpeg', data: Buffer.from(await res.arrayBuffer()) };
 }
+
+/**
+ * One Art Kit image. GPT image models get the exact size, quality and a real transparent background;
+ * legacy DALL·E 3 gets the nearest supported size and an opaque background.
+ */
+export async function openaiArt(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  opts: { size: '1024x1024' | '1536x1024' | '1024x1536'; transparent: boolean; quality: 'low' | 'medium' | 'high' },
+): Promise<Media> {
+  const legacy = model.startsWith('dall-e');
+  const res = await client(apiKey).images.generate(
+    legacy
+      ? {
+          model,
+          prompt: prompt.slice(0, 4000),
+          n: 1,
+          size: opts.size === '1536x1024' ? '1792x1024' : opts.size === '1024x1536' ? '1024x1792' : '1024x1024',
+          quality: opts.quality === 'high' ? 'hd' : 'standard',
+          response_format: 'b64_json',
+        }
+      : {
+          model,
+          prompt,
+          n: 1,
+          size: opts.size,
+          quality: opts.quality,
+          background: opts.transparent ? 'transparent' : 'opaque',
+          output_format: 'png',
+        },
+  );
+  const b64 = res.data?.[0]?.b64_json;
+  if (!b64) throw new Error('OpenAI returned no image.');
+  return { mime: 'image/png', data: Buffer.from(b64, 'base64') };
+}

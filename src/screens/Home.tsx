@@ -8,6 +8,7 @@ import { Badge, Logo, Segmented, SnowToggle, StatusDot, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
 import type { Lang, PublicConfig } from '../../shared/types';
 import { ago, coverStyle } from '../meta';
+import { useArt } from '../artkit';
 
 const prefs = {
   get: (k: string, d: string) => {
@@ -70,11 +71,29 @@ export function Home() {
   };
 
   const taleById = (id: string) => tales.find((t) => t.id === id);
+  const art = useArt();
+  const backdrop = art.src('scene-workshop');
+  const heroArt = art.src('ignis-hero');
 
   return (
     <>
+    {backdrop && (
+      // Generated workshop scene behind the hero, fading into the plank wall below and under the headline.
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[780px] overflow-hidden">
+        <motion.img
+          src={backdrop}
+          alt=""
+          className="w-full h-full object-cover"
+          initial={{ opacity: 0, scale: 1.06 }}
+          animate={{ opacity: 0.55, scale: 1 }}
+          transition={{ duration: 1.6, ease: 'easeOut' }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,#2a1c15ee_0%,#2a1c15aa_45%,transparent_80%),linear-gradient(180deg,transparent_55%,#2a1c15_100%)]" />
+      </div>
+    )}
     <StringLights count={28} className="h-10 z-10" />
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6">
+    {/* Positioned so it paints above the absolutely positioned backdrop. */}
+    <div className="relative z-[1] mx-auto max-w-6xl px-4 sm:px-6 pt-6">
       <header className="flex items-center justify-between h-16">
         <Logo />
         <div className="flex items-center gap-3">
@@ -151,7 +170,17 @@ export function Home() {
             <span className="absolute -bottom-[11px] left-1/2 -translate-x-1/2 w-5 h-5 rotate-45 bg-surface border-r-[3px] border-b-[3px] border-outline" />
           </div>
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 120, damping: 12, delay: 0.3 }}>
-            <SVGCharacter isTalking={!!booting} mood={booting ? 'hyped' : 'smug'} size={220} />
+            {heroArt ? (
+              <motion.img
+                src={heroArt}
+                alt={art.alt('ignis-hero')}
+                className="floating w-[260px] h-[260px] object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
+                animate={booting ? { rotate: [0, -6, 6, 0] } : { rotate: 0 }}
+                transition={booting ? { duration: 0.6, repeat: Infinity } : undefined}
+              />
+            ) : (
+              <SVGCharacter isTalking={!!booting} mood={booting ? 'hyped' : 'smug'} size={220} />
+            )}
           </motion.div>
         </div>
       </section>
@@ -177,7 +206,7 @@ export function Home() {
               const t = taleById(r.taleId);
               return (
                 <a key={r.id} href={`#/story/${r.id}`} className="spotlight flex items-center gap-4 px-4 py-3 hover:bg-raised transition-colors group">
-                  <span className="grid place-items-center w-11 h-11 rounded-xl text-xl shrink-0 border-[2.5px] border-outline" style={t ? coverStyle(t.hue) : undefined}>{t?.emoji}</span>
+                  <span className="grid place-items-center w-11 h-11 rounded-xl text-xl shrink-0 border-[2.5px] border-outline overflow-hidden bg-cover bg-center" style={t ? (art.src(`cover-${t.id}`) ? { backgroundImage: `url(${art.src(`cover-${t.id}`)})` } : coverStyle(t.hue)) : undefined}>{t && !art.src(`cover-${t.id}`) && t.emoji}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-serif font-semibold truncate">{t?.title[lang] ?? r.taleId}</span>
                     <span className="block text-xs text-faint truncate">
@@ -194,7 +223,7 @@ export function Home() {
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>Claude writes the story · Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // OS v4.1 · cozy workshop</span>
+        <span className="font-pixel">IGNIS // OS v4.2 · cozy workshop</span>
       </footer>
     </div>
     </>
@@ -210,6 +239,8 @@ function TaleCover({ tale: t, lang, index, booting, onStart }: { tale: TaleCard;
   const emblemX = useSpring(useTransform(px, [0, 1], [-10, 10]), { stiffness: 150, damping: 15 });
   const emblemY = useSpring(useTransform(py, [0, 1], [-8, 8]), { stiffness: 150, damping: 15 });
   const color = `hsl(${t.hue} 85% 62%)`;
+  const art = useArt();
+  const cover = art.src(`cover-${t.id}`);
   return (
     <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + index * 0.07, ease: [0.22, 1, 0.36, 1], duration: 0.6 }} style={{ perspective: 900 }}>
       <motion.button
@@ -229,7 +260,11 @@ function TaleCover({ tale: t, lang, index, booting, onStart }: { tale: TaleCard;
         className="spotlight group card snowcap w-full h-full text-left flex flex-col transition-shadow hover:shadow-[6px_9px_0_var(--color-outline),0_0_40px_-6px_var(--spot)] disabled:opacity-50"
       >
         <div className="relative h-40 flex items-center justify-center overflow-hidden rounded-t-[17px] border-b-[3px] border-outline" style={coverStyle(t.hue)}>
-          <motion.span className="inline-block" style={{ x: emblemX, y: emblemY }}>
+          {cover && (
+            // Painted cover drifts against the tilt for a little depth.
+            <motion.img src={cover} alt={art.alt(`cover-${t.id}`)} className="absolute -inset-3 w-[calc(100%+24px)] h-[calc(100%+24px)] max-w-none object-cover transition-transform duration-500 group-hover:scale-105" style={{ x: emblemX, y: emblemY }} />
+          )}
+          {!cover && <motion.span className="inline-block" style={{ x: emblemX, y: emblemY }}>
             <motion.span
               className="inline-block text-7xl drop-shadow-[3px_4px_0_#241913] transition-[filter] duration-300 group-hover:drop-shadow-[0_0_24px_var(--spot)]"
               animate={{ y: [0, -5, 0] }}
@@ -237,7 +272,7 @@ function TaleCover({ tale: t, lang, index, booting, onStart }: { tale: TaleCard;
             >
               {t.emoji}
             </motion.span>
-          </motion.span>
+          </motion.span>}
           <span className="absolute top-3 left-3">
             <Badge>
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />

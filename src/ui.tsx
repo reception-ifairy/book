@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { AnimatePresence, motion } from 'motion/react';
 import { X, CheckCircle2, AlertTriangle, Snowflake } from 'lucide-react';
 import { setSnow, useSnow } from './prefs';
+import { useArt } from './artkit';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -235,12 +236,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 /** A tiny pixel-screen face, the same language as IGNIS. */
 export function Logo({ onClick }: { onClick?: () => void }) {
+  const mark = useArt().src('brand-mark');
   return (
     <a href="#/" onClick={onClick} className="flex items-center gap-2.5 group">
+      {mark ? (
+        <img src={mark} alt="" className="w-11 h-11 object-contain drop-shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-6 group-hover:scale-110" />
+      ) : (
       <span className="relative grid place-items-center w-10 h-9 rounded-lg bg-screen border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-6 group-hover:scale-105">
         <span className="font-pixel text-pixel text-sm leading-none [text-shadow:0_0_6px_var(--color-pixel)] group-hover:hidden">^‿^</span>
         <span className="font-pixel text-gold text-sm leading-none [text-shadow:0_0_6px_var(--color-gold)] hidden group-hover:inline">&gt;‿&lt;</span>
       </span>
+      )}
       <span className="leading-none">
         <span className="block font-serif font-bold text-lg tracking-tight">Grimm Protocol</span>
         <span className="block font-pixel text-[11px] text-faint mt-0.5">IGNIS // OS</span>

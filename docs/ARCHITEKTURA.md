@@ -14,6 +14,10 @@ flowchart LR
   API --> MED[Media<br/>server/media.ts]
   MED -- ilustracje --> GI[(Gemini / OpenAI)]
   MED -- głos --> TT[(OpenAI TTS / Gemini TTS)]
+  S -- "Art kit" --> AK[Art Kit<br/>server/artkit/]
+  AK -- "plan (style bible + prompty)" --> CL
+  AK -- "19 grafik" --> OI[(OpenAI Images)]
+  AK -- "opublikowany zestaw" --> FE
   API --> FS[(DATA_DIR<br/>config, historie, media)]
   FE -. "głos i dyktowanie w przeglądarce" .- P
 ```
@@ -31,6 +35,11 @@ flowchart LR
 │   ├── admin.ts               API panelu admina: autoryzacja, konfiguracja, test kluczy i listy modeli, testy na żywo
 │   ├── config.ts              Konfiguracja (zod) w DATA_DIR/config.json, klucze (panel > zmienna środowiskowa), maskowanie
 │   ├── media.ts               Wybór dostawcy ilustracji i głosu, styl ilustracji, mapowanie błędów dostawców
+│   ├── artkit/
+│   │   ├── planner.ts         Claude jako dyrektor artystyczny: style bible + prompt na slot; składanie promptu obrazu
+│   │   ├── generator.ts       Kolejka renderów OpenAI (3 naraz), publikacja i cofnięcie publikacji
+│   │   ├── store.ts           Stan art kitu (DATA_DIR/artkit/kit.json) i pliki obrazów, sprzątanie
+│   │   └── routes.ts          Publiczne /api/artkit, /artkit/*, /favicon.png, /og.png; API panelu art kitu
 │   ├── providers/
 │   │   ├── anthropic.ts       Klient Claude, lista modeli, czytelne błędy SDK
 │   │   ├── gemini.ts          Lista modeli, ilustracje (z obrazem referencyjnym), TTS (PCM → WAV)
@@ -41,12 +50,14 @@ flowchart LR
 │       ├── prompts.ts         Prompt systemowy narratora (stały dla pary baśń + język, więc cache'owany)
 │       └── store.ts           Zapis historii (pamięć + JSON na dysku) i plików mediów, ochrona ścieżek
 ├── shared/
+│   ├── artkit.ts              Katalog 19 slotów graficznych (brief, miejsce użycia, rozmiar, przezroczystość) i typy art kitu
 │   ├── types.ts               Typy wspólne dla serwera i klienta: Story, Page, Choice, Stats, Tale, PublicConfig
 │   └── tales.ts               Katalog baśni: twist, kanoniczne momenty, obsada, scenografia ilustracji, kolor okładki
 ├── src/                       Frontend (React 19, Tailwind 4, motion)
 │   ├── main.tsx               Start: MotionConfig (ograniczenie ruchu), podświetlenie za kursorem
 │   ├── App.tsx                Router oparty na hash, ekrany ładowane na żądanie, śnieg, powiadomienia
 │   ├── api.ts                 Klient HTTP API gry i admina, zapamiętane rozgrywki (localStorage)
+│   ├── artkit.ts              useArt(): opublikowany art kit (slot → URL), pobierany raz na wczytanie strony
 │   ├── ui.tsx                 System komponentów: Button, IconButton, Badge, Meter, Segmented, Sheet, Toast, Logo, SnowToggle
 │   ├── meta.ts                Kolory i etykiety typów wyborów i zakończeń, okładki, „x min ago”
 │   ├── prefs.ts               Przełącznik śniegu (localStorage + useSyncExternalStore)
@@ -58,7 +69,8 @@ flowchart LR
 │   └── screens/
 │       ├── Home.tsx           Wybór baśni, imię i język, zapisane rozgrywki
 │       ├── Story.tsx          Czytnik: strona, wybory, własny ruch, ilustracja, głos, zakończenia, skróty
-│       └── Admin.tsx          Konsola sysadmina
+│       ├── Admin.tsx          Konsola sysadmina
+│       └── ArtKitPanel.tsx    Sekcja „Art kit”: plan, render, podgląd, edycja promptów, publikacja
 ├── tests/                     Vitest: silnik, konfiguracja, dostawcy, API (na sztucznym serwerze Anthropic)
 ├── docs/                      Ta dokumentacja i OPERATORZY.md
 ├── .github/workflows/ci.yml   CI: typecheck, testy, build
@@ -108,7 +120,39 @@ Najważniejsze decyzje:
 
 ---
 
-## 3. Model danych (`shared/types.ts`)
+## 3. Art Kit: jak powstaje szata graficzna
+
+```mermaid
+sequenceDiagram
+  participant S as Sysadmin (Art kit)
+  participant R as artkit/routes.ts
+  participant P as planner.ts
+  participant C as Claude
+  participant G as generator.ts
+  participant O as OpenAI Images
+  participant F as Frontend (useArt)
+
+  S->>R: POST /api/admin/artkit/plan {notes}
+  R->>P: planArtKit(notes)
+  P->>C: system (gra, paleta UI, model Ignisa) + 19 slotów + notatki (stream, effort high)
+  C-->>P: style bible + prompt i alt dla każdego slotu
+  P-->>R: plan (brakujące sloty z briefu) → kit.json
+  S->>R: POST /generate {slots?}
+  R->>G: kolejka (3 naraz)
+  loop każdy slot
+    G->>O: style bible + prompt slotu + ograniczenia (rozmiar, tło, jakość)
+    O-->>G: PNG → DATA_DIR/artkit/files/<slot>-<id>.png
+  end
+  S->>R: POST /publish
+  F->>R: GET /api/artkit → {slot: url}
+  F->>F: podmienia CSS/SVG na grafiki tam, gdzie slot ma obraz
+```
+
+**19 slotów** (`shared/artkit.ts`): scena warsztatu, Ignis (poza bohatera, Ignis malujący), 5 okładek baśni, 4 ikony typów wyboru, 5 odznak zakończeń, znak marki i karta do udostępniania. Każdy slot zna swoje miejsce w interfejsie, więc plan uwzględnia kadrowanie (okładki są przycinane do paska) i czytelność w małym rozmiarze (ikony 44 px).
+
+---
+
+## 4. Model danych (`shared/types.ts`)
 
 | Typ | Pola kluczowe | Uwagi |
 |---|---|---|
@@ -128,19 +172,21 @@ Najważniejsze decyzje:
 
 ---
 
-## 4. Gdzie leżą dane
+## 5. Gdzie leżą dane
 
 | Miejsce | Zawartość |
 |---|---|
 | `DATA_DIR/config.json` (prawa 600) | Ustawienia z panelu i klucze zapisane w panelu |
 | `DATA_DIR/stories/<id>.json` | Pełne historie (cache w pamięci + zapis na dysk) |
 | `DATA_DIR/media/<storyId>/<pageId>.png\|mp3\|wav` | Wygenerowane ilustracje i nagrania, serwowane pod `/media/...` |
+| `DATA_DIR/artkit/kit.json` | Plan art kitu, stan każdego slotu, opublikowany zestaw |
+| `DATA_DIR/artkit/files/*.png` | Grafiki art kitu, serwowane pod `/artkit/...` z cache „immutable” |
 | `localStorage` gracza | `ignis.runs` (do 20 rozgrywek), `ignis.lang`, `ignis.hero`, `ignis.snow` |
 | `sessionStorage` sysadmina | `ignis.adminPw` (tylko na czas karty) |
 
 ---
 
-## 5. Frontend
+## 6. Frontend
 
 - **Routing przez hash:** `#/` to ekran główny, `#/story/:id` czytnik, `#/admin` konsola. Czytnik i konsola ładują się na żądanie.
 - **Dwa konteksty kolorów, te same tokeny:**

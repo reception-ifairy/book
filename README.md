@@ -5,7 +5,8 @@ Gra „wybierz własną przygodę” w klimacie cyber-magii. Sarkastyczna księg
 **Multimodalnie:**
 - **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
 - **Gemini** albo **OpenAI** rysuje ilustracje i czyta tekst na głos (głos z przeglądarki działa bez klucza);
-- przeglądarka obsługuje dyktowanie.
+- przeglądarka obsługuje dyktowanie;
+- **Art Kit:** Claude planuje całą szatę graficzną (style bible + prompty), a OpenAI ją maluje: tło, Ignisa, okładki, ikony, odznaki, logo i kartę do udostępniania.
 
 ## Szybki start
 
@@ -17,14 +18,15 @@ bun run dev            # http://localhost:3000
 
 1. Otwórz `http://localhost:3000/#/admin`, wklej klucz Anthropic, kliknij **Test**, a potem **Save**.
 2. Opcjonalnie dodaj klucz Gemini lub OpenAI i wybierz modele ilustracji i głosu.
-3. Wróć na stronę główną, wpisz imię i wybierz baśń.
+3. Opcjonalnie: sekcja **Art kit**, czyli *Plan with Claude* → *Render all 19* → *Publish* (potrzebny klucz OpenAI).
+4. Wróć na stronę główną, wpisz imię i wybierz baśń.
 
 Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASSWORD`.
 
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 28 testów (bez kluczy, na sztucznym API) + build
+bun run check   # typecheck + 35 testów (bez kluczy, na sztucznym API) + build
 ```
 
 To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.

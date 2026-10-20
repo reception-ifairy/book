@@ -35,22 +35,38 @@ export async function startFakeAnthropic() {
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
+      if (req.url?.startsWith('/v1/models')) {
+        // Model listing (the admin key test) must not consume queued pages.
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ data: [{ type: 'model', id: 'claude-opus-5-5', display_name: 'Claude Opus 5.5', created_at: '2026-01-01T00:00:00Z' }], has_more: false, first_id: 'claude-opus-5-5', last_id: 'claude-opus-5-5' }));
+      }
       requests.push({ url: req.url, headers: req.headers, body: JSON.parse(body || '{}') });
       const page = queue.shift() ?? samplePage();
+      const message = {
+        id: `msg_${requests.length}`,
+        type: 'message',
+        role: 'assistant',
+        model: 'claude-opus-5-5',
+        content: [{ type: 'text', text: JSON.stringify(page) }],
+        stop_reason: 'end_turn',
+        stop_sequence: null,
+        usage: { input_tokens: 1, output_tokens: 1 },
+      };
       setTimeout(() => {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            id: `msg_${requests.length}`,
-            type: 'message',
-            role: 'assistant',
-            model: 'claude-opus-5-5',
-            content: [{ type: 'text', text: JSON.stringify(page) }],
-            stop_reason: 'end_turn',
-            stop_sequence: null,
-            usage: { input_tokens: 1, output_tokens: 1 },
-          }),
-        );
+        if (!JSON.parse(body || '{}').stream) {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          return res.end(JSON.stringify(message));
+        }
+        // Server-sent events, as the SDK's .stream() expects.
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        const send = (type: string, data: object) => res.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
+        send('message_start', { message: { ...message, content: [], stop_reason: null } });
+        send('content_block_start', { index: 0, content_block: { type: 'text', text: '' } });
+        send('content_block_delta', { index: 0, delta: { type: 'text_delta', text: message.content[0].text } });
+        send('content_block_stop', { index: 0 });
+        send('message_delta', { delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 1 } });
+        send('message_stop', {});
+        res.end();
       }, delayMs);
     });
   });

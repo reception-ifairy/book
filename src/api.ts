@@ -1,4 +1,12 @@
 import type { Page, PublicConfig, Story, Tale } from '../shared/types';
+import type { ArtKitState, ArtSlot } from '../shared/artkit';
+
+export interface ArtKitView {
+  slots: ArtSlot[];
+  kit: ArtKitState;
+  settings: { model: string; quality: 'low' | 'medium' | 'high' };
+  ready: { anthropic: boolean; openai: boolean };
+}
 
 export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
 
@@ -32,6 +40,14 @@ export const adminApi = (password: string) => {
     save: (body: unknown) => call<any>('PUT', '/api/admin/config', body, h),
     models: (provider: string, key?: string) => call<any>('POST', `/api/admin/providers/${provider}/models`, { key }, h),
     probe: (role: string) => call<any>('POST', `/api/admin/probe/${role}`, {}, h),
+    artkit: {
+      get: () => call<ArtKitView>('GET', '/api/admin/artkit', undefined, h),
+      plan: (notes: string) => call<ArtKitView>('POST', '/api/admin/artkit/plan', { notes }, h),
+      edit: (slot: string, prompt: string, alt: string) => call<ArtKitView>('PUT', `/api/admin/artkit/plan/${slot}`, { prompt, alt }, h),
+      generate: (slots?: string[]) => call<ArtKitView>('POST', '/api/admin/artkit/generate', { slots }, h),
+      publish: () => call<ArtKitView>('POST', '/api/admin/artkit/publish', {}, h),
+      unpublish: () => call<ArtKitView>('DELETE', '/api/admin/artkit/published', undefined, h),
+    },
   };
 };
 

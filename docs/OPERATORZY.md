@@ -13,6 +13,8 @@ Kto lub co obsługuje każdą część systemu: modele AI, ludzie, endpointy ser
 | **Ilustracje** | Gemini **albo** OpenAI (albo wyłączone) | Gemini `gemini-3.1-flash-image-preview` | Panel → *Illustrations* | `server/media.ts`, `providers/gemini.ts`, `providers/openai.ts` |
 | **Głos narratora** | przeglądarka, OpenAI TTS **albo** Gemini TTS | przeglądarka (za darmo) | Panel → *Narration voice* | `server/media.ts`, `Story.tsx` |
 | **Dyktowanie ruchu** | przeglądarka (Web Speech API) | włączone, jeśli przeglądarka je obsługuje | — | `Story.tsx` → `listen()` |
+| **Dyrekcja artystyczna** (plan szaty graficznej) | Anthropic (Claude) | model silnika opowieści, effort `high` | Panel → *Art kit* → krok 1 | `server/artkit/planner.ts` |
+| **Szata graficzna** (19 grafik) | OpenAI Images | `gpt-image-1`, jakość `medium` | Panel → *Art kit* → krok 2 | `server/artkit/generator.ts`, `providers/openai.ts` → `openaiArt()` |
 
 Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz właściwy model z listy pobranej w panelu.
 
@@ -39,6 +41,17 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Cache i odporność:** gotowy obraz i nagranie zapisują się przy stronie i nie są generowane drugi raz. Równoległe prośby o ten sam obraz łączą się w jedną.
 - **Brak klucza** zwraca 503 z instrukcją. **Błąd dostawcy** zwraca 502 z krótkim komunikatem „Gemini: …” / „OpenAI: …”.
 
+### Art Kit: Claude planuje, OpenAI maluje
+
+- **Claude (dyrektor artystyczny)** dostaje opis gry i grupy docelowej, paletę obecnego interfejsu, kanoniczny wygląd Ignisa oraz 19 slotów z briefem, miejscem użycia, rozmiarem i informacją o przezroczystości. Do tego notatki sysadmina.
+  - Zwraca *style bible* i prompt oraz tekst alternatywny dla każdego slotu.
+  - Działa na streamingu (długa odpowiedź), z ustrukturyzowanym wyjściem i fallbackiem przy odmowie.
+- **OpenAI** renderuje każdy slot osobno, w kolejce w tle (3 naraz).
+  - Prompt składa się ze style bible, promptu slotu i ograniczeń technicznych.
+  - Modele GPT Image dostają dokładny rozmiar, jakość i przezroczyste tło; DALL·E 3 najbliższy obsługiwany rozmiar.
+  - Błąd jednego obrazu (np. filtr bezpieczeństwa) oznacza tylko ten slot jako „Failed” z czytelnym komunikatem.
+- **Koszt:** pełny render to 19 wywołań API obrazów. Pojedynczy slot można wygenerować ponownie osobno. Art kit nie wlicza się do dziennego budżetu ilustracji graczy, bo to akcja sysadmina.
+
 ---
 
 ## 2. Operatorzy ludzie
@@ -60,6 +73,13 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Role:** model i effort Claude, liczba stron do zakończenia, dostawca i model ilustracji, dostawca, model i głos TTS.
 - **Testy na żywo:** prawdziwe wywołanie z zapisaną konfiguracją. Claude odpowiada zdaniem, ilustracja się wyświetla, a głos odtwarza.
 - **Limity:** akcje na minutę na gracza i ilustracje dziennie dla wszystkich graczy.
+- **Art kit:**
+  1. notatki dla Claude, potem *Plan with Claude*;
+  2. przegląd style bible;
+  3. model i jakość OpenAI (zapisywane z konfiguracją);
+  4. *Render all 19* albo *Render missing*;
+  5. poprawki promptów i ponowny render pojedynczych slotów;
+  6. *Publish* (gracze widzą grafiki) albo *Back to built-in look*.
 
 ---
 
@@ -79,6 +99,9 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `POST /api/story/:id/page/:pageId/image` | ✓ + budżet | Ilustracja strony (z cache albo generowana) |
 | `POST /api/story/:id/page/:pageId/speech` | ✓ | Nagranie strony albo `null` (wtedy czyta przeglądarka) |
 | `GET /media/...` | — | Zapisane obrazy i nagrania |
+| `GET /api/artkit` | — | Opublikowany art kit: `{version, assets: {slot: url}, alt}` |
+| `GET /artkit/...` | — | Grafiki art kitu (cache na rok, nazwy unikalne) |
+| `GET /favicon.png`, `GET /og.png` | — | Przekierowanie na znak marki / kartę do udostępniania (404 bez publikacji) |
 
 **API admina** (`server/admin.ts`, za autoryzacją):
 
@@ -88,6 +111,12 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `PUT /api/admin/config` | Zapis ról i limitów. `keys.{provider}`: tekst zapisuje klucz, `null` go usuwa |
 | `POST /api/admin/providers/:provider/models` | Test klucza (z formularza albo zapisanego) i lista modeli z tagami `text` / `image` / `tts` |
 | `POST /api/admin/probe/:role` | Test na żywo: `story`, `image` albo `tts` |
+| `GET /api/admin/artkit` | Sloty, plan, stan każdego obrazu, ustawienia, gotowość kluczy |
+| `POST /api/admin/artkit/plan` | Plan od Claude `{notes?}` (jeden naraz, 409 jeśli trwa) |
+| `PUT /api/admin/artkit/plan/:slot` | Edycja promptu i alt jednego slotu |
+| `POST /api/admin/artkit/generate` | Render `{slots?}`: wszystkie albo wybrane (409, jeśli render trwa; 503 bez klucza OpenAI) |
+| `POST /api/admin/artkit/publish` | Publikuje gotowe grafiki (wersja +1) |
+| `DELETE /api/admin/artkit/published` | Powrót do wbudowanego wyglądu |
 
 **Kody błędów:** 400 zły input · 401/403 brak dostępu · 404 brak zasobu · 409 konflikt (koniec historii, brak many, strona w trakcie pisania) · 413 za duże zapytanie · 422 odmowa modelu · 429 limit · 502 błąd dostawcy · 503 brak klucza albo modalność wyłączona.
 
@@ -111,7 +140,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `bun run test` / `test:watch` | Vitest |
 | `bun run check` | Typecheck + testy + build: to samo, co robi CI |
 
-**Testy** (`tests/`, 28 testów):
+**Testy** (`tests/`, 35 testów):
 - `engine.test.ts`:
   - normalizacja wartości spoza listy;
   - przycinanie statystyk i kanonu;
@@ -130,6 +159,15 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
   - brak klucza dla ilustracji;
   - maskowanie i usuwanie kluczy;
   - hasło admina i test na żywo.
+
+- `artkit.test.ts` (sztuczne API Anthropic ze streamingiem i sztuczne API OpenAI):
+  - plan pokrywa wszystkie sloty i odrzuca złe kolory;
+  - składanie promptów (karta Ignisa tylko tam, gdzie Ignis; napisy tylko w karcie do udostępniania);
+  - edycja promptu;
+  - render z poprawnym rozmiarem i tłem, błąd jednego slotu i ponowny render;
+  - publikacja, pliki, favicon i karta do udostępniania;
+  - cofnięcie publikacji;
+  - brak klucza OpenAI.
 
 **CI** (`.github/workflows/ci.yml`): na każdy push do `main` i `claude/**` oraz każdy PR uruchamia bun install, typecheck, testy i build. Nie potrzebuje żadnych kluczy.
 

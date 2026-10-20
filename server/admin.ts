@@ -7,6 +7,7 @@ import { listGeminiModels } from './providers/gemini';
 import { listOpenAIModels } from './providers/openai';
 import { generateImage, generateSpeech, IMAGE_STYLE } from './media';
 import { probeStoryModel } from './story/engine';
+import { artkitAdmin } from './artkit/routes';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
 
 export const admin = Router();
@@ -29,6 +30,7 @@ function guard(req: Request, res: Response, next: NextFunction) {
   return res.status(403).json({ error: 'Admin panel is local-only. Set ADMIN_PASSWORD on the server to use it remotely.' });
 }
 admin.use(guard);
+admin.use('/artkit', artkitAdmin);
 
 const PROVIDERS = ProviderId.options;
 

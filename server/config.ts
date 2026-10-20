@@ -38,6 +38,11 @@ export const AppConfigSchema = z.object({
     actionsPerMinute: z.number().int().min(1).max(600),
     imagesPerDay: z.number().int().min(0).max(100000),
   }),
+  /** Art Kit: Claude plans the artwork, this OpenAI image model renders it. */
+  artkit: z.object({
+    model: z.string().min(1),
+    quality: z.enum(['low', 'medium', 'high']),
+  }),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
@@ -47,6 +52,7 @@ const DEFAULTS: AppConfig = {
   image: { provider: 'gemini', model: 'gemini-3.1-flash-image-preview' },
   tts: { provider: 'browser', model: '', voice: '' },
   limits: { actionsPerMinute: 12, imagesPerDay: 300 },
+  artkit: { model: 'gpt-image-1', quality: 'medium' },
 };
 
 let current: AppConfig = load();
