@@ -6,7 +6,10 @@ import { listAnthropicModels, describeAnthropicError } from './providers/anthrop
 import { listGeminiModels } from './providers/gemini';
 import { listOpenAIModels } from './providers/openai';
 import { generateImage, generateSpeech, IMAGE_STYLE } from './media';
-import { probeStoryModel } from './story/engine';
+import { probeStoryModel, StoryError } from './story/engine';
+import { probeGm } from './gm/loop';
+import { auditStory } from './gm/audit';
+import { getStory } from './story/store';
 import { artkitAdmin } from './artkit/routes';
 import { universeAdmin } from './universe/admin';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
@@ -57,6 +60,7 @@ const UpdateBody = z.object({
   limits: S.limits.partial().optional(),
   artkit: S.artkit.partial().optional(),
   universe: S.universe.partial().optional(),
+  gm: S.gm.partial().optional(),
   // A string sets the key, null removes the admin-saved key (falls back to env), absent leaves it.
   keys: z.object(Object.fromEntries(SecretId.options.map((k) => [k, z.string().nullable()])) as Record<SecretId, z.ZodNullable<z.ZodString>>).partial().optional(),
 });
@@ -113,6 +117,8 @@ admin.post('/probe/:role', async (req, res) => {
     switch (req.params.role) {
       case 'story':
         return res.json({ ok: true, ...(await probeStoryModel()) });
+      case 'gm':
+        return res.json({ ok: true, ...(await probeGm()) });
       case 'image': {
         const img = await generateImage(`${IMAGE_STYLE}\nScene: a sarcastic floating spellbook with cartoon eyes and a glowing antenna, booting up in a dark server room.`);
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: `data:${img.mime};base64,${img.data.toString('base64')}` });
@@ -125,7 +131,15 @@ admin.post('/probe/:role', async (req, res) => {
         return res.status(404).json({ ok: false, error: 'Unknown role.' });
     }
   } catch (e) {
+    if (req.params.role === 'gm' && e instanceof StoryError) return res.status(e.status).json({ ok: false, ms: Date.now() - t0, error: e.message });
     const provider = req.params.role === 'story' ? 'anthropic' : (req.params.role === 'image' ? getConfig().image.provider : getConfig().tts.provider);
     res.status(502).json({ ok: false, ms: Date.now() - t0, error: describe(ProviderId.safeParse(provider).data ?? 'openai', e) });
   }
+});
+
+/** Game Master audit: recomputes the dice from the seed and refolds every page's events. */
+admin.get('/story/:id/audit', (req, res) => {
+  const story = getStory(String(req.params.id));
+  if (!story) return res.status(404).json({ error: 'Timeline not found.' });
+  res.json(auditStory(story));
 });
