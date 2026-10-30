@@ -37,6 +37,7 @@ To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
 |---|---|
 | [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md) | Struktura repo plik po pliku, przebieg tury (diagramy), model danych, zapis danych, frontend i motyw |
 | [docs/OPERATORZY.md](docs/OPERATORZY.md) | Kto co obsługuje: modele AI, gracz i sysadmin, wszystkie endpointy, zabezpieczenia, skrypty, testy, CI, zmienne środowiskowe |
+| [docs/KONCEPCJA-GAME-MASTER.md](docs/KONCEPCJA-GAME-MASTER.md) | Propozycja rozbudowy: kampania „Bajkoverse” prowadzona przez AI Game Mastera (reguły, kanon, NPC, świat, zadania, plan faz) |
 | [CHANGELOG.md](CHANGELOG.md) | Wszystkie zmiany od wersji z AI Studio do obecnej |
 
 ## Stos
