@@ -2,7 +2,7 @@
 
 Gra „wybierz własną przygodę” w klimacie cyber-magii. Sarkastyczna księga-robot **Ignis** opowiada klasyczne baśnie jako zabugowany kod: Czerwony Kapturek kontra atak MITM, Trzy Świnki kontra DDoS, Kopciuszek z wygasającą sesją. Każdy wybór forkuje linię czasu. Dla widzów w stylu *Ricka i Morty'ego* (16+).
 
-**Drugi świat: iFairy Universe** (13+). Przygody z kanonu iFairy (6 haków z portali, Saga If-AI w 8 aktach, 26 Dzielnic Podróżników) opowiada Narrator-Archiwista, a treść i lore na żywo przychodzą z API iFairy Universe. Świat pojawia się na stronie głównej, gdy sysadmin go włączy i zsynchronizuje.
+**Drugi świat: iFairy Universe** (13+). Przygody z kanonu iFairy (6 haków z portali, Saga If-AI w 8 aktach, 26 Dzielnic Podróżników) opowiada Narrator-Archiwista, a treść i lore na żywo przychodzą z API iFairy Universe. Świat pojawia się na stronie głównej, gdy sysadmin go włączy i zsynchronizuje. Opcjonalnie prowadzi go **AI Game Master**: kości 2d6 i reguły działają w kodzie jako narzędzia Claude'a, model tylko wybiera regułę i opowiada wynik.
 
 **Multimodalnie:**
 - **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
@@ -29,7 +29,8 @@ Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASS
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 57 testów (bez kluczy, na sztucznych API) + build
+bun run check   # typecheck + 71 testów (bez kluczy, na sztucznych API) + build
+npm run eval:gm # ewaluacje Game Mastera na żywym modelu (klucz Anthropic, poza CI)
 ```
 
 To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.

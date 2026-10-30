@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 4.4.0 · AI Game Master świata iFairy
+
+- **Kernel reguł** (`server/gm/kernel/`): 2d6 + podejście (cztery siły), pasma jasny sukces / sukces z kosztem / zwrot akcji (nigdy porażka), opcje wyniku jako dane. Kości z HMAC ziarna historii: ten sam ruch po cofnięciu daje te same kości, ziarno zna tylko serwer, gracz widzi jego sha256.
+- **Pętla narzędzi** (`server/gm/loop.ts`, `tools.ts`): `roll_check`, `choose_outcome`, `grant_item`, `drop_item`, `adjust_meter`, `search_canon`, `add_canon_claim`. Strona GM nie ma pól statystyk ani przedmiotów, więc każda zmiana pochodzi ze zdarzenia narzędzia. Ryzykowna opcja jest rzucana w kodzie, zanim model zacznie pisać; nierozstrzygnięty rzut dostaje najłagodniejszy legalny wynik.
+- **Bezpieczeństwo 13+:** dane osobowe usuwane ze słów gracza przed zapisem i wysłaniem, flaga niepokoju z kartą wsparcia, lint (wycofani bogowie, pytania o dane, przedwczesne zakończenie, kontrakt wyborów) i opcjonalna recenzja Claude Haiku 5.5, z jedną rundą naprawy.
+- **Audyt** `GET /api/admin/story/:id/audit`; `publicStory` usuwa ziarno i fakty `gm_only` (także ze strony zwracanej przez `/act`).
+- **UI:** wybór najsilniejszej siły, tacka kości z modyfikatorami i odciskiem ziarna, oznaczenie ryzykownych opcji, warunki, dziennik faktów w Codexie, karta wsparcia; w panelu sekcja *Game Master* z testem na żywo.
+- **Ewaluacje:** `npm run eval:gm` z 9 scenariuszami (rzuty, brak porażki, brak bogów, prywatność, niepokój, jailbreak); testy: 71.
+
+---
+
 ## 4.3.0 · Drugi świat: iFairy Universe
 
 Gra dostaje drugi świat obok Grimm Protocol. Grimm działa bez zmian: dokładne zapytania do Claude pilnuje nowy test `grimm-golden`.

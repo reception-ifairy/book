@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, FlaskConical, Gauge, Globe2, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Dices, FlaskConical, Gauge, Globe2, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { ArtKitPanel } from './ArtKitPanel';
 import { UniversePanel } from './UniversePanel';
 import { adminApi } from '../api';
@@ -29,6 +29,7 @@ const NAV = [
   { id: 'tts', label: 'Voice', icon: Mic2 },
   { id: 'artkit', label: 'Art kit', icon: Palette },
   { id: 'universe', label: 'iFairy Universe', icon: Globe2 },
+  { id: 'gm', label: 'Game Master', icon: Dices },
   { id: 'limits', label: 'Limits', icon: Gauge },
 ];
 
@@ -51,7 +52,7 @@ const session = {
 };
 
 /** The editable settings sections; everything else in the config view is status from the server. */
-const ROLE_SECTIONS = ['story', 'image', 'tts', 'limits', 'artkit', 'universe'] as const;
+const ROLE_SECTIONS = ['story', 'image', 'tts', 'limits', 'artkit', 'universe', 'gm'] as const;
 const sectionsOf = (c: any) => Object.fromEntries(ROLE_SECTIONS.map((k) => [k, c[k]]));
 const rolesOf = (c: any) => c && JSON.stringify(sectionsOf(c));
 
@@ -418,6 +419,34 @@ export function Admin() {
                 onConfig={keepEdits}
                 dirty={dirty}
               />
+            </Section>
+
+            <Section id="gm" title="Game Master" desc="For the iFairy world: dice and rules run as tools in code, the model only chooses and narrates. Applies to stories started while it is on.">
+              <div className="card p-5 space-y-5">
+                <Field label="Game Master" help="Stories keep the mode they started with.">
+                  <ProviderPicker value={cfg.gm.enabled ? 'on' : 'off'} onChange={(v) => set('gm', 'enabled', v === 'on')} options={[['on', 'On'], ['off', 'Off']]} />
+                </Field>
+                <Field label="Model" help="Empty uses the story engine's model.">
+                  <ModelInput value={cfg.gm.model} onChange={(v) => set('gm', 'model', v)} models={options('anthropic', 'text')} id="gm-models" />
+                </Field>
+                <Field label="Effort">
+                  <select value={cfg.gm.effort} onChange={(e) => set('gm', 'effort', e.target.value)} className="field">
+                    <option value="low">Low · fastest turns</option>
+                    <option value="medium">Medium · balanced</option>
+                    <option value="high">High · smartest, slowest</option>
+                  </select>
+                </Field>
+                <Field label="Tool rounds per page" help="The last round must answer without tools.">
+                  <input type="number" min={1} max={6} value={cfg.gm.maxRounds} onChange={(e) => set('gm', 'maxRounds', Number(e.target.value))} className="field w-28" />
+                </Field>
+                <Field label="Time budget (s)" help="Per page; keep it under the proxy timeout.">
+                  <input type="number" min={20} max={110} value={Math.round(cfg.gm.turnBudgetMs / 1000)} onChange={(e) => set('gm', 'turnBudgetMs', Number(e.target.value) * 1000)} className="field w-28" />
+                </Field>
+                <Field label="Content review" help="Claude Haiku 5.5 reads finished pages against the 13+ profile.">
+                  <ProviderPicker value={cfg.gm.outputCheck} onChange={(v) => set('gm', 'outputCheck', v)} options={[['custom', 'Own words'], ['all', 'Every page'], ['off', 'Off']]} />
+                </Field>
+                <Probe role="gm" state={probes.gm} onRun={() => probe('gm')} dirty={dirty} />
+              </div>
             </Section>
 
             <Section id="limits" title="Limits" desc="Protect your API bill from enthusiastic timeline-breakers.">

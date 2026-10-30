@@ -54,6 +54,14 @@ flowchart LR
 │   │   ├── gemini.ts          Lista modeli, ilustracje (z obrazem referencyjnym), TTS (PCM → WAV)
 │   │   ├── openai.ts          Lista modeli, ilustracje (gpt-image / DALL·E), TTS (mp3)
 │   │   └── types.ts           ModelInfo, Media, ProviderError, czyszczenie komunikatów błędów
+│   ├── gm/
+│   │   ├── kernel/rng.ts      Kości z HMAC(seed, historia|rodzic|ruch|indeks), commit sha256 ziarna
+│   │   ├── kernel/rules.ts    2d6 + podejście (siła), pasma, opcje wyniku jako dane, walidacja wyboru
+│   │   ├── kernel/events.ts   Zdarzenia GM i czysty reduktor (meters, przedmioty, warunki, fakty)
+│   │   ├── tools.ts           Narzędzia GM (strict), limity na stronę, Ledger zamieniający wywołania w zdarzenia
+│   │   ├── loop.ts            Pętla narzędzi: rundy, termin, ostatnia runda bez narzędzi, lint i naprawa, sędzia Haiku, probe
+│   │   ├── safety.ts          Redakcja danych osobowych, flaga niepokoju, lint strony (bogowie, pytania o dane, kontrakt wyborów)
+│   │   └── audit.ts           Audyt historii: kości z ziarna, stan = rodzic + zdarzenia
 │   ├── universe/
 │   │   ├── client.ts          Klient API lore (klucz, grant, timeouty), searchCanonSafe: cache 10 min, nigdy nie rzuca błędem
 │   │   ├── terms.ts           Lista dozwolonych terminów kanonu; z niej (i tylko z niej) składa się zapytanie o lore
@@ -183,6 +191,45 @@ Historia iFairy przypina pełny snapshot przygody (`Story.adventure`) i `maxDept
 
 ---
 
+## 2b. AI Game Master świata iFairy
+
+Włączany w panelu (*Game Master*), działa tylko dla historii iFairy rozpoczętych, gdy jest włączony (`Story.gm`). Zasada: **kod decyduje, model opowiada**.
+
+```mermaid
+sequenceDiagram
+  participant A as routes.ts
+  participant T as worlds/ifairy/turn.ts
+  participant K as gm/kernel
+  participant L as gm/loop.ts
+  participant C as Claude
+  participant X as gm/tools.ts (Ledger)
+
+  A->>T: act(story, pageId, {choiceId | custom})
+  T->>T: screenInput: redakcja danych osobowych, flaga niepokoju
+  alt wybrana opcja ma risk = risky
+    T->>K: rollCheck (pre-roll) z HMAC(seed, historia|rodzic|ruch|indeks)
+  end
+  T->>L: runGmTurn (GM CONTEXT: podejścia, warunki, fakty, pre-roll, flagi)
+  loop do maxRounds, w budżecie czasu
+    L->>C: system (cache) + narzędzia (strict, stała kolejność) + rozmowa
+    C-->>L: tool_use (roll_check, choose_outcome, grant_item, …)
+    L->>X: wykonanie po kolei, limity, walidacja reguł
+    X-->>L: tool_result (wszystkie w jednej wiadomości)
+  end
+  C-->>L: strona JSON (bez statystyk i przedmiotów)
+  L->>L: lint (+ opcjonalnie sędzia Haiku) → najwyżej jedna naprawa
+  L->>X: settle(): nierozstrzygnięte rzuty dostają najłagodniejszy wynik
+  L-->>T: Page z page.gm = {rolls, events, state, trace, usage}
+```
+
+- **Mechanika:** 2d6 + podejście (najsilniejsza siła +2, pozostałe +1), ryzyko ±1, warunki −1, suma modyfikatorów −2..+3. 10+ jasny sukces (korzyść), 7–9 sukces z kosztem (koszt + korzyść), 6− zwrot akcji (ruch GM, nigdy porażka). Opcje wyniku i ich efekty są danymi w `rules.ts`.
+- **Brak narzędzia = brak skutku:** schemat strony GM nie ma pól statystyk ani ekwipunku. Każda zmiana to zdarzenie z narzędzia, a `fold(stan rodzica, zdarzenia)` musi dać zapisany stan (sprawdza to audyt).
+- **Uczciwe kości:** ziarno jest tylko na serwerze (`Story.gmSecret`), przeglądarka dostaje jego sha256 (`gmCommit`). Ten sam ruch po cofnięciu daje te same kości.
+- **Cache:** narzędzia i prompt systemowy są stałe (kolejność renderowania: narzędzia → system → wiadomości), drugi breakpoint stoi na końcu tury gracza. Wiadomości w turze są tylko dopisywane (zachowane bloki thinking).
+- **Budżet:** `gm.turnBudgetMs` (domyślnie 75 s) przy nginx `proxy_read_timeout` 180 s; poniżej 20 s następna runda idzie z `tool_choice: none`, poniżej 8 s tura kończy się 502 bez zapisu.
+
+---
+
 ## 3. Art Kit: jak powstaje szata graficzna
 
 ```mermaid
@@ -224,6 +271,7 @@ sequenceDiagram
 | `Choice` | `id`, `label`, `kind` (Grimm: `sane` · `chaos` · `dumb` · `sudo`; iFairy: `logos` · `mythos` · `gnosis` · `phantasia`) | `id` nadaje serwer |
 | `Stats` | `chaos` 0..100, `karma` −100..100, `mana` 0..100 | Start: 0 / 0 / 60, kanon 100. W iFairy te same pola to Dysonans, Harmonia i Etherium |
 | `Tale` | `twist`, `beats`, `cast`, `art`, `tech`, `hue`, `title`/`tagline` (pl/en) | Klient dostaje tylko część do wyświetlenia |
+| `PageGm` (`shared/gm.ts`) | `rolls` (kości, modyfikatory, pasmo, wybrane opcje, `streamKey`), `events`, `state` (podejścia, warunki, fakty), `trace`, `usage` | Tylko historie z Game Masterem; fakty `gm_only` nie wychodzą do przeglądarki |
 | `AdventureSnapshot` (`shared/universe.ts`) | karta (`id`, `kind`, `order`, `emoji`, `hue`, `title`, `tagline`, `structure`, `version`) + `premise`, `setting`, `cast`, `loreTerms`, `art`, `sources` (C-uchwyty), `checklist`, `canonVersion`, `status`, `hash` | Zamrożona przy Sync, przypięta do historii przy starcie |
 
 **Zasady gry pilnowane po stronie serwera** (`toPage` / `act`):
