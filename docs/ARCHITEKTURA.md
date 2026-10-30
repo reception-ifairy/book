@@ -1,6 +1,10 @@
 # Architektura
 
-**IGNIS // OS: Grimm Protocol** to gra „wybierz własną przygodę” (CYOS) dla widzów w stylu *Ricka i Morty'ego*. Klasyczne baśnie są tu zabugowanym kodem, a narrator Ignis to sarkastyczna księga-robot.
+**IGNIS // OS: Grimm Protocol** to gra „wybierz własną przygodę” (CYOS) z dwoma światami:
+- **Grimm Protocol** (16+): klasyczne baśnie jako zabugowany kod, narrator Ignis to sarkastyczna księga-robot w stylu *Ricka i Morty'ego*;
+- **iFairy Universe** (13+): przygody z kanonu iFairy (haki z portali, Saga If-AI, Dzielnice Podróżników), które opowiada Narrator-Archiwista z kanonu. Treść przychodzi z API lore iFairy Universe.
+
+Świat Grimm działa dokładnie tak jak przed dodaniem drugiego świata; pilnuje tego test `tests/grimm-golden.test.ts`.
 
 Jeden proces Node (Express) obsługuje API gry, panel admina i frontend React (w dev przez Vite, w produkcji jako statyczny build).
 
@@ -19,6 +23,11 @@ flowchart LR
   AK -- "19 grafik" --> OI[(OpenAI Images)]
   AK -- "opublikowany zestaw" --> FE
   API --> FS[(DATA_DIR<br/>config, historie, media)]
+  API --> IF[Świat iFairy<br/>server/story/worlds/ifairy/]
+  IF -- "strona jako JSON" --> CL
+  IF -- "terminy kanonu" --> UV[(iFairy Universe<br/>API lore :8793)]
+  S -- "Sync" --> UC[Katalog przygód<br/>server/universe/]
+  UC -- "REF → chunk" --> UV
   FE -. "głos i dyktowanie w przeglądarce" .- P
 ```
 
@@ -45,13 +54,27 @@ flowchart LR
 │   │   ├── gemini.ts          Lista modeli, ilustracje (z obrazem referencyjnym), TTS (PCM → WAV)
 │   │   ├── openai.ts          Lista modeli, ilustracje (gpt-image / DALL·E), TTS (mp3)
 │   │   └── types.ts           ModelInfo, Media, ProviderError, czyszczenie komunikatów błędów
+│   ├── universe/
+│   │   ├── client.ts          Klient API lore (klucz, grant, timeouty), searchCanonSafe: cache 10 min, nigdy nie rzuca błędem
+│   │   ├── terms.ts           Lista dozwolonych terminów kanonu; z niej (i tylko z niej) składa się zapytanie o lore
+│   │   ├── seeds.ts           Kuratorowany katalog: 6 haków, 8 aktów sagi, 26 dzielnic + reguły narratora (CORE_REFS)
+│   │   ├── catalogue.ts       Sync: REF → oczekiwany chunk, snapshoty z hashem, błąd zamyka tylko daną przygodę
+│   │   ├── store.ts           DATA_DIR/universe: catalogue.json i niezmienne snapshoty przygód
+│   │   ├── pii.ts             Wzorce danych osobowych z guardu Universe (imię bohatera iFairy)
+│   │   └── admin.ts           API panelu: status, test (health + prawdziwe wyszukiwanie), sync, podgląd promptu
 │   └── story/
-│       ├── engine.ts          Silnik: schemat strony, kontekst dla Claude, wywołanie, normalizacja, start i akcje
-│       ├── prompts.ts         Prompt systemowy narratora (stały dla pary baśń + język, więc cache'owany)
-│       └── store.ts           Zapis historii (pamięć + JSON na dysku) i plików mediów, ochrona ścieżek
+│       ├── engine.ts          Silnik Grimm: schemat strony, kontekst dla Claude, wywołanie, normalizacja, start i akcje
+│       ├── prompts.ts         Prompt systemowy Ignisa (stały dla pary baśń + język, więc cache'owany)
+│       ├── public.ts          publicStory(): przeglądarka dostaje tylko kartę przygody, nie materiał promptu
+│       ├── store.ts           Zapis historii (pamięć + JSON na dysku) i plików mediów, ochrona ścieżek
+│       └── worlds/ifairy/
+│           ├── prompt.ts      Prompt Archiwisty zbudowany wyłącznie ze snapshotu (cache per przygoda + język)
+│           ├── page.ts        Schemat strony iFairy i normalizacja (siły jako typy wyborów, opcja C, bez śmierci)
+│           └── turn.ts        Start przygody, akcja, lore na żywo w ostatniej turze gracza
 ├── shared/
 │   ├── artkit.ts              Katalog 19 slotów graficznych (brief, miejsce użycia, rozmiar, przezroczystość) i typy art kitu
-│   ├── types.ts               Typy wspólne dla serwera i klienta: Story, Page, Choice, Stats, Tale, PublicConfig
+│   ├── types.ts               Typy wspólne dla serwera i klienta: Story, Page, Choice, Stats, Tale, World, PublicStory
+│   ├── universe.ts            Typy przygód iFairy: AdventureCard, AdventureSnapshot, CanonPassage
 │   └── tales.ts               Katalog baśni: twist, kanoniczne momenty, obsada, scenografia ilustracji, kolor okładki
 ├── src/                       Frontend (React 19, Tailwind 4, motion)
 │   ├── main.tsx               Start: MotionConfig (ograniczenie ruchu), podświetlenie za kursorem
@@ -64,17 +87,19 @@ flowchart LR
 │   ├── index.css              Tokeny motywu (@theme), konteksty drewno / papier, komponenty CSS, animacje
 │   ├── components/
 │   │   ├── SVGCharacter.tsx   Ignis: księga-robot z ekranem CRT, nastroje, skrzydła, mówienie
+│   │   ├── ArchivistAvatar.tsx Narrator-Archiwista: księga światła, kryształ pamięci, cztery siły
 │   │   ├── Effects.tsx        ComicBurst, EmberSparks, StringLights, Snow, Equalizer, RuneLoader
 │   │   └── TimelineMap.tsx    Drzewo forków z cofaniem
 │   └── screens/
-│       ├── Home.tsx           Wybór baśni, imię i język, zapisane rozgrywki
-│       ├── Story.tsx          Czytnik: strona, wybory, własny ruch, ilustracja, głos, zakończenia, skróty
+│       ├── Home.tsx           Przełącznik światów, baśnie albo przygody iFairy, imię i język, zapisane rozgrywki
+│       ├── Story.tsx          Czytnik: strona, wybory, własny ruch, ilustracja, głos, zakończenia, Codex (iFairy), skróty
 │       ├── Admin.tsx          Konsola sysadmina
-│       └── ArtKitPanel.tsx    Sekcja „Art kit”: plan, render, podgląd, edycja promptów, publikacja
-├── tests/                     Vitest: silnik, konfiguracja, dostawcy, API (na sztucznym serwerze Anthropic)
+│       ├── ArtKitPanel.tsx    Sekcja „Art kit”: plan, render, podgląd, edycja promptów, publikacja
+│       └── UniversePanel.tsx  Sekcja „iFairy Universe”: adres, grant, klucz, test, sync, podgląd promptu
+├── tests/                     Vitest: silnik, konfiguracja, dostawcy, API, Universe, świat iFairy, golden Grimma (sztuczne serwery Anthropic, OpenAI, Universe)
 ├── docs/                      Ta dokumentacja i OPERATORZY.md
 ├── .github/workflows/ci.yml   CI: typecheck, testy, build
-└── data/ (gitignored)         Tworzony w runtime: config.json, stories/, media/
+└── data/ (gitignored)         Tworzony w runtime: config.json, stories/, media/, artkit/, universe/
 ```
 
 ---
@@ -120,6 +145,44 @@ Najważniejsze decyzje:
 
 ---
 
+## 2a. Świat iFairy: Sync i tura
+
+**Sync** (panel → „iFairy Universe” → *Sync now*) zamraża katalog przygód:
+
+```mermaid
+sequenceDiagram
+  participant S as Sysadmin
+  participant C as catalogue.ts
+  participant U as Universe API
+  participant D as DATA_DIR/universe
+
+  S->>C: POST /api/admin/universe/sync
+  C->>U: GET /v1/health (wersja kanonu)
+  C->>U: GET /v1/ref/<REF> dla reguł narratora (CORE_REFS) i chunku portali
+  Note over C: każdy REF musi trafić w oczekiwany chunk.id<br/>(dopasowanie strukturalne Universe bywa rozmyte)
+  loop każdy seed (hak / akt / dzielnica)
+    C->>U: GET /v1/ref/<REF seeda> (+ chunki potomne)
+    alt chunk się zgadza
+      C->>D: snapshots/<id>@<hash8>.json (niezmienny)
+    else dzielnica nieindeksowana
+      C->>D: snapshot z kopii wpisu w seedzie (status seed-only)
+    else błąd
+      Note over C: zostaje poprzedni snapshot
+    end
+  end
+  C->>D: catalogue.json (atomowo)
+```
+
+**Tura iFairy** idzie tą samą trasą co Grimm (`POST /api/story/:id/act`), ale `routes.ts` kieruje ją do `worlds/ifairy/turn.ts`:
+1. `buildLoreQuery()` składa do 8 terminów z listy dozwolonych: terminy znalezione w ruchu gracza, scena z poprzedniej strony i kotwice przygody. Imię, surowy tekst gracza ani wolny tekst modelu nigdy nie trafiają do Universe (Universe wysyła zapytanie do zewnętrznego modelu embeddingów).
+2. `searchCanonSafe()` (limit 1,5 s, cache 10 min, próg 0,35) zwraca fragmenty z uchwytami L1–L4. Przy awarii Universe tura idzie dalej bez fragmentów.
+3. Claude dostaje prompt systemowy zbudowany wyłącznie ze snapshotu przygody (persona Archiwisty, profil 13+, canon lock, checklista portali, premise z uchwytami C1…), a fragmenty L tylko w ostatniej turze gracza, w `<canon_excerpts>`. Dzięki temu prompt systemowy jest identyczny przez całą historię i trafia do cache'a.
+4. `toIfairyPage()` normalizuje stronę: wybory A/B z siłą (`logos` · `mythos` · `gnosis` · `phantasia`), opcja C jako `freeForm`, zakończenia tylko `canon` · `subverted` · `secret`, a `lore_refs` zamieniają się w cytaty `Page.lore` (nieznane uchwyty odpadają).
+
+Historia iFairy przypina pełny snapshot przygody (`Story.adventure`) i `maxDepth` przy starcie, więc ponowny Sync nigdy nie zmienia trwającej historii. Przeglądarka dostaje przez `publicStory()` tylko kartę przygody.
+
+---
+
 ## 3. Art Kit: jak powstaje szata graficzna
 
 ```mermaid
@@ -156,11 +219,12 @@ sequenceDiagram
 
 | Typ | Pola kluczowe | Uwagi |
 |---|---|---|
-| `Story` | `id`, `taleId`, `lang`, `heroName`, `timeline`, `rootPageId`, `currentPageId`, `pages` | Wszystkie strony wszystkich gałęzi w jednej mapie |
-| `Page` | `parentId`, `depth`, `action`, `narration`, `quip`, `mood`, `choices`, `ending`, `stats`, `canon`, `inventory`, `summary`, `imagePrompt`, `imageUrl`, `audioUrl` | Pełny stan po tej stronie |
-| `Choice` | `id`, `label`, `kind` (`sane` · `chaos` · `dumb` · `sudo`) | `id` nadaje serwer |
-| `Stats` | `chaos` 0..100, `karma` −100..100, `mana` 0..100 | Start: 0 / 0 / 60, kanon 100 |
+| `Story` | `id`, `taleId`, `lang`, `heroName`, `timeline`, `rootPageId`, `currentPageId`, `pages`; iFairy: `world`, `adventure`, `maxDepth` | Wszystkie strony wszystkich gałęzi w jednej mapie. Brak `world` = Grimm (historie sprzed 4.3) |
+| `Page` | `parentId`, `depth`, `action`, `narration`, `quip`, `mood`, `choices`, `ending`, `stats`, `canon`, `inventory`, `summary`, `imagePrompt`, `imageUrl`, `audioUrl`; iFairy: `lore`, `freeForm`, `scene` | Pełny stan po tej stronie |
+| `Choice` | `id`, `label`, `kind` (Grimm: `sane` · `chaos` · `dumb` · `sudo`; iFairy: `logos` · `mythos` · `gnosis` · `phantasia`) | `id` nadaje serwer |
+| `Stats` | `chaos` 0..100, `karma` −100..100, `mana` 0..100 | Start: 0 / 0 / 60, kanon 100. W iFairy te same pola to Dysonans, Harmonia i Etherium |
 | `Tale` | `twist`, `beats`, `cast`, `art`, `tech`, `hue`, `title`/`tagline` (pl/en) | Klient dostaje tylko część do wyświetlenia |
+| `AdventureSnapshot` (`shared/universe.ts`) | karta (`id`, `kind`, `order`, `emoji`, `hue`, `title`, `tagline`, `structure`, `version`) + `premise`, `setting`, `cast`, `loreTerms`, `art`, `sources` (C-uchwyty), `checklist`, `canonVersion`, `status`, `hash` | Zamrożona przy Sync, przypięta do historii przy starcie |
 
 **Zasady gry pilnowane po stronie serwera** (`toPage` / `act`):
 - zmiana każdej statystyki to najwyżej ±25 na stronę;
@@ -169,6 +233,8 @@ sequenceDiagram
 - najwyżej 4 wybory, a przy zakończeniu żadnych;
 - ekwipunek ma najwyżej 12 unikalnych przedmiotów, a obraz dołączony przez gracza dopisuje się jako `🖼 opis`;
 - wartości spoza listy (nastrój, typ wyboru, typ zakończenia) zamieniają się w bezpieczną wartość domyślną, więc strona nie wysypuje się z ich powodu.
+
+W świecie iFairy (`toIfairyPage`) obowiązują te same limity ±25 i 12 przedmiotów, a do tego: najwyżej 3 wybory, typ wyboru to jedna z czterech sił, brak `sudo`, kanon stały 100, zakończenia `death` i `cursed` zamieniają się w `canon`.
 
 ---
 
@@ -181,7 +247,9 @@ sequenceDiagram
 | `DATA_DIR/media/<storyId>/<pageId>.png\|mp3\|wav` | Wygenerowane ilustracje i nagrania, serwowane pod `/media/...` |
 | `DATA_DIR/artkit/kit.json` | Plan art kitu, stan każdego slotu, opublikowany zestaw |
 | `DATA_DIR/artkit/files/*.png` | Grafiki art kitu, serwowane pod `/artkit/...` z cache „immutable” |
-| `localStorage` gracza | `ignis.runs` (do 20 rozgrywek), `ignis.lang`, `ignis.hero`, `ignis.snow` |
+| `DATA_DIR/universe/catalogue.json` | Wynik ostatniego Sync: wersja kanonu, bieżący snapshot każdej przygody, raport |
+| `DATA_DIR/universe/snapshots/<id>@<hash8>.json` | Niezmienne snapshoty przygód (trzymane są 3 ostatnie na przygodę) |
+| `localStorage` gracza | `ignis.runs` (do 20 rozgrywek), `ignis.lang`, `ignis.hero`, `ignis.world`, `ignis.snow` |
 | `sessionStorage` sysadmina | `ignis.adminPw` (tylko na czas karty) |
 
 ---
@@ -201,3 +269,4 @@ sequenceDiagram
   
   Wszystko respektuje systemowe ograniczenie ruchu.
 - **Skróty w czytniku:** `1`–`4` wybór, `/` własny ruch, `M` mapa linii czasu, `V` czytanie na głos, `Spacja` pominięcie animacji tekstu.
+- **Dwa światy w jednym interfejsie:** przełącznik na ekranie głównym pojawia się dopiero, gdy świat iFairy jest włączony i zsynchronizowany. Teksty zależne od świata (narrator, nazwy wskaźników, zakończenia) są w `WORLD_TEXT` w `src/meta.ts`, a kolory sił w tokenach `--color-logos` / `-mythos` / `-gnosis` / `-phantasia`.

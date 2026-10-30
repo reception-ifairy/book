@@ -2,6 +2,8 @@
 
 Gra „wybierz własną przygodę” w klimacie cyber-magii. Sarkastyczna księga-robot **Ignis** opowiada klasyczne baśnie jako zabugowany kod: Czerwony Kapturek kontra atak MITM, Trzy Świnki kontra DDoS, Kopciuszek z wygasającą sesją. Każdy wybór forkuje linię czasu. Dla widzów w stylu *Ricka i Morty'ego* (16+).
 
+**Drugi świat: iFairy Universe** (13+). Przygody z kanonu iFairy (6 haków z portali, Saga If-AI w 8 aktach, 26 Dzielnic Podróżników) opowiada Narrator-Archiwista, a treść i lore na żywo przychodzą z API iFairy Universe. Świat pojawia się na stronie głównej, gdy sysadmin go włączy i zsynchronizuje.
+
 **Multimodalnie:**
 - **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
 - **Gemini** albo **OpenAI** rysuje ilustracje i czyta tekst na głos (głos z przeglądarki działa bez klucza);
@@ -19,14 +21,15 @@ bun run dev            # http://localhost:3000
 1. Otwórz `http://localhost:3000/#/admin`, wklej klucz Anthropic, kliknij **Test**, a potem **Save**.
 2. Opcjonalnie dodaj klucz Gemini lub OpenAI i wybierz modele ilustracji i głosu.
 3. Opcjonalnie: sekcja **Art kit**, czyli *Plan with Claude* → *Render all 19* → *Publish* (potrzebny klucz OpenAI).
-4. Wróć na stronę główną, wpisz imię i wybierz baśń.
+4. Opcjonalnie: sekcja **iFairy Universe**, czyli klucz konsumenta → *Test* → *Save* → *Sync now* → *iFairy world: On*.
+5. Wróć na stronę główną, wpisz imię i wybierz baśń albo przygodę.
 
 Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASSWORD`.
 
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 35 testów (bez kluczy, na sztucznym API) + build
+bun run check   # typecheck + 57 testów (bez kluczy, na sztucznych API) + build
 ```
 
 To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
