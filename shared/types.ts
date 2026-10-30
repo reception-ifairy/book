@@ -1,6 +1,13 @@
+import type { AdventureCard, AdventureSnapshot } from './universe';
+
 export type Lang = 'en' | 'pl';
 export type Mood = 'neutral' | 'smug' | 'annoyed' | 'panic' | 'sincere' | 'hyped';
-export type ChoiceKind = 'sane' | 'chaos' | 'dumb' | 'sudo';
+/** Grimm Protocol (IGNIS, 16+) or the iFairy Universe (canon narrator, 13+). */
+export type World = 'grimm' | 'ifairy';
+/** The four Archetypal forces of the iFairy canon; iFairy choices are tied to one each. */
+export const FORCES = ['logos', 'mythos', 'gnosis', 'phantasia'] as const;
+export type Force = (typeof FORCES)[number];
+export type ChoiceKind = 'sane' | 'chaos' | 'dumb' | 'sudo' | Force;
 export type EndingType = 'canon' | 'subverted' | 'cursed' | 'secret' | 'death';
 
 export const SUDO_MANA_COST = 20;
@@ -36,6 +43,19 @@ export interface Page {
   inventory: string[];
   summary: string;
   createdAt: number;
+  /** iFairy world: canon passages the narrator cited on this page. */
+  lore?: LoreRef[];
+  /** iFairy world: the narrator's invitation for option C, the player's own words. */
+  freeForm?: string;
+  /** iFairy world: where the page happens and who is in it, used to pick the next lore lookup. */
+  scene?: { location: string; present: string[] };
+}
+
+/** A canon passage from the iFairy Universe, cited by its REF. */
+export interface LoreRef {
+  ref: string;
+  title: string;
+  excerpt: string;
 }
 
 export interface Story {
@@ -49,7 +69,18 @@ export interface Story {
   pages: Record<string, Page>;
   createdAt: number;
   updatedAt: number;
+  /** Absent on stories from before v4.3, which are all Grimm Protocol. */
+  world?: World;
+  /** iFairy world: the adventure as synced from the Universe, pinned at start so a re-sync never changes a running story. */
+  adventure?: AdventureSnapshot;
+  /** iFairy world: pinned at start so the system prompt stays the same for the whole story. */
+  maxDepth?: number;
 }
+
+/** A story as the browser sees it: the pinned adventure is reduced to its card. */
+export type PublicStory = Omit<Story, 'adventure'> & { adventure?: AdventureCard };
+
+export const worldOf = (story: Pick<Story, 'world'>): World => story.world ?? 'grimm';
 
 export interface Tale {
   id: string;
