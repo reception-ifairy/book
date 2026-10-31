@@ -41,6 +41,11 @@
   --color-chaos: #8b63e6;
   --color-dumb: #e0a10f;
   --color-mana: #2f9fd8;
+  /* The four Archetypal forces of the iFairy world. */
+  --color-logos: #3f8fd8;
+  --color-mythos: #d99a12;
+  --color-gnosis: #d0558f;
+  --color-phantasia: #8b63e6;
   --color-danger: #d8423b;
   --color-ok: #3f9f5f;
 

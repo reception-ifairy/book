@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, FlaskConical, Gauge, Globe2, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { ArtKitPanel } from './ArtKitPanel';
+import { UniversePanel } from './UniversePanel';
 import { adminApi } from '../api';
 import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
@@ -27,6 +28,7 @@ const NAV = [
   { id: 'image', label: 'Illustrations', icon: ImageIcon },
   { id: 'tts', label: 'Voice', icon: Mic2 },
   { id: 'artkit', label: 'Art kit', icon: Palette },
+  { id: 'universe', label: 'iFairy Universe', icon: Globe2 },
   { id: 'limits', label: 'Limits', icon: Gauge },
 ];
 
@@ -48,7 +50,10 @@ const session = {
   },
 };
 
-const rolesOf = (c: any) => c && JSON.stringify({ story: c.story, image: c.image, tts: c.tts, limits: c.limits, artkit: c.artkit });
+/** The editable settings sections; everything else in the config view is status from the server. */
+const ROLE_SECTIONS = ['story', 'image', 'tts', 'limits', 'artkit', 'universe'] as const;
+const sectionsOf = (c: any) => Object.fromEntries(ROLE_SECTIONS.map((k) => [k, c[k]]));
+const rolesOf = (c: any) => c && JSON.stringify(sectionsOf(c));
 
 export function Admin() {
   const toast = useToast();
@@ -110,12 +115,15 @@ export function Admin() {
       .catch((e) => setAuthError(e.message));
   }, [client]);
 
+  /** Takes the server's view after a key change but keeps any unsaved section edits in the form. */
+  const keepEdits = (next: any) => {
+    setSaved(next);
+    setCfg((c: any) => ({ ...next, ...sectionsOf(c) }));
+  };
+
   const saveKey = async (p: Provider, value: string | null) => {
     try {
-      const next = await client.save({ keys: { [p]: value } });
-      // Keep any unsaved role edits in the form; only the key status comes from the server.
-      setSaved(next);
-      setCfg((c: any) => ({ ...next, story: c.story, image: c.image, tts: c.tts, limits: c.limits, artkit: c.artkit }));
+      keepEdits(await client.save({ keys: { [p]: value } }));
       setKeys((k) => ({ ...k, [p]: '' }));
       toast(value ? `${p} key saved.` : `${p} key removed.`);
       if (value) testProvider(p, undefined, true);
@@ -127,8 +135,7 @@ export function Admin() {
   const saveRoles = async () => {
     setSaving(true);
     try {
-      const { story, image, tts, limits, artkit } = cfg;
-      apply(await client.save({ story, image, tts, limits, artkit }));
+      apply(await client.save(sectionsOf(cfg)));
       toast('Configuration saved.');
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -398,6 +405,17 @@ export function Admin() {
                 settings={cfg.artkit}
                 onSettings={(field, value) => set('artkit', field, value)}
                 imageModels={options('openai', 'image')}
+                dirty={dirty}
+              />
+            </Section>
+
+            <Section id="universe" title="iFairy Universe" desc="The second world: adventures and live canon from the iFairy Universe lore API. Stories pin the adventure they start with, so syncing never changes a running story.">
+              <UniversePanel
+                client={client}
+                settings={cfg.universe}
+                keyInfo={cfg.universeKey}
+                onSettings={(field, value) => set('universe', field, value)}
+                onConfig={keepEdits}
                 dirty={dirty}
               />
             </Section>

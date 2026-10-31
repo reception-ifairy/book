@@ -6,8 +6,15 @@ import { act, pathTo, startStory, StoryError } from './story/engine';
 import { getStory, readMedia, saveMedia, saveStory } from './story/store';
 import { extFor, mimeFromUrl, generateImage, generateSpeech, IMAGE_STYLE, ModalityUnavailable } from './media';
 import { getTale, TALES } from '../shared/tales';
-import type { PublicConfig } from '../shared/types';
+import { worldOf, type PublicConfig } from '../shared/types';
 import { ProviderError, type Media } from './providers/types';
+import { publicStory } from './story/public';
+import { ifairyAct, startAdventure } from './story/worlds/ifairy/turn';
+import { getCatalogue, getSnapshot, listCards } from './universe/store';
+import { looksPersonal } from './universe/pii';
+
+/** iFairy illustrations follow the canon's visual identity rule. */
+const IFAIRY_ART = 'iFairies are genderless robotic beings with wings of glowing cybermagic circuitry; no wands, petals or folkloric fairy wings.';
 
 export const api = Router();
 
@@ -56,6 +63,31 @@ api.get('/config', (_req, res) => {
 
 api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, tech, hue, title, tagline }) => ({ id, emoji, tech, hue, title, tagline }))));
 
+const ifairyOn = () => getConfig().universe.enabled;
+
+/** Which worlds can be played right now. */
+api.get('/worlds', (_req, res) => {
+  const adventures = ifairyOn() ? listCards().length : 0;
+  res.json([
+    { id: 'grimm', ready: !!getKey('anthropic') },
+    { id: 'ifairy', ready: !!getKey('anthropic') && adventures > 0, adventures, canonVersion: getCatalogue()?.canonVersion ?? null },
+  ]);
+});
+
+api.get('/adventures', (_req, res) => res.json(ifairyOn() ? listCards() : []));
+
+const AdventureStart = z.object({
+  world: z.literal('ifairy'),
+  adventureId: z.string(),
+  lang: z.enum(['en', 'pl']),
+  heroName: z
+    .string()
+    .trim()
+    .min(1, 'Choose an Architect name.')
+    .max(24)
+    .refine((n) => !looksPersonal(n), 'Use a made-up Architect name, not personal details.'),
+});
+
 const StartBody = z.object({
   taleId: z.string(),
   lang: z.enum(['en', 'pl']),
@@ -64,6 +96,14 @@ const StartBody = z.object({
 
 api.post('/story', actionLimiter, async (req, res) => {
   try {
+    if (req.body?.world === 'ifairy') {
+      const { adventureId, lang, heroName } = AdventureStart.parse(req.body);
+      const snap = ifairyOn() ? getSnapshot(adventureId) : null;
+      if (!snap) throw new StoryError('Adventure not found. The Archive may need a sync in the admin panel.', 404);
+      const story = await startAdventure(snap, lang, heroName);
+      saveStory(story);
+      return res.json(publicStory(story));
+    }
     const { taleId, lang, heroName } = StartBody.parse(req.body);
     const story = await startStory(taleId, lang, heroName);
     saveStory(story);
@@ -75,7 +115,7 @@ api.post('/story', actionLimiter, async (req, res) => {
 
 api.get('/story/:id', (req, res) => {
   try {
-    res.json(loadStory(req));
+    res.json(publicStory(loadStory(req)));
   } catch (e) {
     fail(res, e);
   }
@@ -101,9 +141,9 @@ api.post('/story/:id/act', actionLimiter, async (req, res) => {
     const { pageId, ...input } = ActBody.parse(req.body);
     if (writing.has(story.id)) throw new StoryError('IGNIS is still writing the last page. Patience, meatbag.', 409);
     writing.add((locked = story.id));
-    const page = await act(story, pageId, input);
+    const page = worldOf(story) === 'ifairy' ? await ifairyAct(story, pageId, input) : await act(story, pageId, input);
     saveStory(story);
-    res.json({ page, story });
+    res.json({ page, story: publicStory(story) });
   } catch (e) {
     fail(res, e);
   } finally {
@@ -119,7 +159,7 @@ api.post('/story/:id/goto', (req, res) => {
     if (!story.pages[pageId]) throw new StoryError('Page not found.', 404);
     story.currentPageId = pageId;
     saveStory(story);
-    res.json(story);
+    res.json(publicStory(story));
   } catch (e) {
     fail(res, e);
   }
@@ -137,12 +177,12 @@ api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
     let job = inflight.get(page.id);
     if (!job) {
       takeImageBudget();
-      const tale = getTale(story.taleId)!;
+      const setting = worldOf(story) === 'ifairy' ? `${story.adventure!.art}. ${IFAIRY_ART}` : getTale(story.taleId)!.art;
       // The earliest illustrated page on this path anchors how the hero and cast look.
       const anchor = pathTo(story, page.id).find((p) => p.imageUrl && p.id !== page.id);
       const anchorData = anchor?.imageUrl ? readMedia(anchor.imageUrl) : null;
       const refs: Media[] = anchorData ? [{ mime: mimeFromUrl(anchor!.imageUrl!), data: anchorData }] : [];
-      const prompt = `${IMAGE_STYLE}\nSetting: ${tale.art}.\nScene: ${page.imagePrompt}${refs.length ? '\nKeep the characters looking exactly as in the reference image.' : ''}`;
+      const prompt = `${IMAGE_STYLE}\nSetting: ${setting}.\nScene: ${page.imagePrompt}${refs.length ? '\nKeep the characters looking exactly as in the reference image.' : ''}`;
       job = generateImage(prompt, refs).then((img) => {
         const url = saveMedia(story.id, `${page.id}.${extFor(img.mime)}`, img.data);
         page.imageUrl = url;

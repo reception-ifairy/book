@@ -1,13 +1,14 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import { timingSafeEqual, createHash } from 'crypto';
 import { z } from 'zod';
-import { AppConfigSchema, getConfig, getKey, keySource, maskKey, ProviderId, saveConfig } from './config';
+import { AppConfigSchema, getConfig, getKey, keySource, maskKey, ProviderId, saveConfig, SecretId, type AppConfig } from './config';
 import { listAnthropicModels, describeAnthropicError } from './providers/anthropic';
 import { listGeminiModels } from './providers/gemini';
 import { listOpenAIModels } from './providers/openai';
 import { generateImage, generateSpeech, IMAGE_STYLE } from './media';
 import { probeStoryModel } from './story/engine';
 import { artkitAdmin } from './artkit/routes';
+import { universeAdmin } from './universe/admin';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
 
 export const admin = Router();
@@ -31,6 +32,7 @@ function guard(req: Request, res: Response, next: NextFunction) {
 }
 admin.use(guard);
 admin.use('/artkit', artkitAdmin);
+admin.use('/universe', universeAdmin);
 
 const PROVIDERS = ProviderId.options;
 
@@ -39,29 +41,45 @@ function publicView() {
   return {
     ...rest,
     providers: Object.fromEntries(PROVIDERS.map((p) => [p, { source: keySource(p), masked: maskKey(getKey(p)) }])),
+    universeKey: { source: keySource('universe'), masked: maskKey(getKey('universe')) },
     passwordProtected: !!process.env.ADMIN_PASSWORD,
   };
 }
 
 admin.get('/config', (_req, res) => res.json(publicView()));
 
-const UpdateBody = AppConfigSchema.omit({ keys: true }).partial().extend({
+const S = AppConfigSchema.shape;
+/** Every section is optional and so is every field in it; what is sent is merged over the saved config. */
+const UpdateBody = z.object({
+  story: S.story.partial().optional(),
+  image: S.image.partial().optional(),
+  tts: S.tts.partial().optional(),
+  limits: S.limits.partial().optional(),
+  artkit: S.artkit.partial().optional(),
+  universe: S.universe.partial().optional(),
   // A string sets the key, null removes the admin-saved key (falls back to env), absent leaves it.
-  keys: z.object({ anthropic: z.string().nullable(), gemini: z.string().nullable(), openai: z.string().nullable() }).partial().optional(),
+  keys: z.object(Object.fromEntries(SecretId.options.map((k) => [k, z.string().nullable()])) as Record<SecretId, z.ZodNullable<z.ZodString>>).partial().optional(),
 });
 
 admin.put('/config', (req, res) => {
   const parsed = UpdateBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message });
-  const { keys, ...rest } = parsed.data;
+  const { keys, ...sections } = parsed.data;
   const cur = getConfig();
-  const nextKeys = { ...cur.keys };
-  for (const p of PROVIDERS) {
-    const v = keys?.[p];
-    if (v === null) delete nextKeys[p];
-    else if (typeof v === 'string' && v.trim()) nextKeys[p] = v.trim();
+  const next: AppConfig = { ...cur, keys: { ...cur.keys } };
+  for (const [name, patch] of Object.entries(sections)) {
+    if (patch) Object.assign(next, { [name]: { ...cur[name as keyof AppConfig], ...patch } });
   }
-  saveConfig({ ...cur, ...rest, keys: nextKeys });
+  for (const p of SecretId.options) {
+    const v = keys?.[p];
+    if (v === null) delete next.keys[p];
+    else if (typeof v === 'string' && v.trim()) next.keys[p] = v.trim();
+  }
+  try {
+    saveConfig(next);
+  } catch (e) {
+    return res.status(400).json({ error: e instanceof z.ZodError ? e.issues[0]?.message : 'Invalid configuration.' });
+  }
   res.json(publicView());
 });
 

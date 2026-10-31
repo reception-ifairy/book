@@ -5,6 +5,28 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 4.3.0 · Drugi świat: iFairy Universe
+
+Gra dostaje drugi świat obok Grimm Protocol. Grimm działa bez zmian: dokładne zapytania do Claude pilnuje nowy test `grimm-golden`.
+
+- **Połączenie z iFairy Universe** (`server/universe/`):
+  - klient API lore (klucz konsumenta, grant, timeouty); wyszukiwanie na ścieżce gry nigdy nie rzuca błędem i ma cache 10 minut;
+  - zapytania o lore składają się wyłącznie z terminów kanonu z listy dozwolonych, nigdy z tekstu gracza ani jego imienia (Universe przesyła zapytania do zewnętrznego modelu embeddingów);
+  - kuratorowany katalog: 6 haków z portali, 8 aktów Sagi If-AI, 26 Dzielnic Podróżników;
+  - Sync z panelu: każdy REF musi trafić w oczekiwany chunk, przygody zamrażają się w niezmiennych snapshotach z hashem, błąd zamyka tylko daną przygodę, dzielnice jeszcze nieindeksowane przez Universe biorą treść z kopii w seedzie (`seed-only`).
+- **Świat iFairy** (`server/story/worlds/ifairy/`):
+  - narrator z kanonu, Architectus Magnus Realitas, zwraca się do gracza „Young Architect” / „Młody Architekcie”;
+  - prompt systemowy zbudowany tylko ze snapshotu przygody, więc trafia do cache'a; fragmenty kanonu na żywo idą w ostatniej turze gracza z uchwytami L1–L4;
+  - profil treści 13+ z reguł kanonu, canon lock (tylko cztery siły i If-AI), checklista portali;
+  - wybory A/B przypisane do sił (Logos, Mythos, Gnosis, Phantasia), C to zawsze własne słowa; bez śmierci i klątw;
+  - statystyki jako Harmonia, Dysonans i Etherium; cytowane fragmenty kanonu zapisują się przy stronie.
+- **Historie przypinają przygodę** przy starcie (snapshot i `maxDepth`), więc ponowny Sync nigdy nie zmienia trwającej historii. Przeglądarka dostaje tylko kartę przygody. Historie bez pola `world` to Grimm, bez migracji.
+- **Frontend:** przełącznik światów, karty przygód w trzech grupach (z filtrem dzielnic), awatar Archiwisty, Codex z cytowanym kanonem, etykiety zależne od świata; w panelu sekcja „iFairy Universe” (adres, grant, klucz, test, sync z raportem, podgląd promptu).
+- **Konfiguracja:** sekcja `universe` i klucz `UNIVERSE_API_KEY`; każda sekcja `config.json` jest sprawdzana osobno (jedno złe pole nie kasuje już zapisanych kluczy), a `PUT /api/admin/config` scala sekcje pole po polu.
+- **Testy:** 57 (było 35): sztuczne API Universe, Sync i prywatność zapytań, pełny przebieg świata iFairy, zgodność ze starymi historiami.
+
+---
+
 ## 4.2.0 · Art Kit: szata graficzna z planu Claude i obrazów OpenAI
 
 Nowy moduł, który tworzy całą grafikę gry w stylu cyber-magii.
