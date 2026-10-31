@@ -1,6 +1,6 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { CORE_REFS, PORTALS_ROOT, SEEDS } from '../server/universe/seeds';
+import { CORE_REFS, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS } from '../server/universe/seeds';
 
 export const UNIVERSE_KEY = 'uapi_test_key_000000';
 
@@ -33,6 +33,17 @@ export async function startFakeUniverse() {
     for (const c of s.source.children ?? []) add(c.ref, chunk(c.chunkId, null, c.chunkId.split('/').pop()!, `Child ${c.chunkId}.`));
   }
   for (const s of SEEDS.filter((s) => s.kind === 'district').slice(0, 2)) add(s.source.ref, chunk(s.source.chunkId, null, s.title.en, s.fallback!));
+  const MASTERS = [['Axioma', 'Quaeron', 'Solvin'], ['Solace', 'Kindra', 'Amity'], ['Sagaris', 'Horan', 'Vantor'], ['Faber', 'Iridia', 'Ingra']];
+  const DISTRICTS = [['District of Wisdom', 'Logos'], ['District of Compassion', 'Gnosis'], ['District of Time and Momentum', 'Mythos'], ['District of Creation', 'Phantasia']];
+  TINKER_REFS.forEach((d, i) => {
+    add(d.district.ref, chunk(d.district.chunkId, null, DISTRICTS[i][0], `District: ${DISTRICTS[i][0]}\nForce: ${DISTRICTS[i][1]}`));
+    d.masters.forEach((m, j) => add(m.ref, chunk(m.chunkId, null, MASTERS[i][j], `Name: ${MASTERS[i][j]}\nRole: the Maker ${j + 1}\nEmbodies: craft number ${j + 1}`)));
+  });
+  VOICE_REFS.forEach((v) => {
+    const who = v.ref.split(':').pop()!;
+    const name = who[0].toUpperCase() + who.slice(1);
+    add(v.ref, chunk(v.chunkId, v.ref, `iFairy Character Voice Guides — Specific Character Voices — ${name}`, `Domain: ${name} things\nVoice Quality: precise\nHumour Style: dry\nSample: 'Hello.'`));
+  });
 
   const golden = chunk('GLOSSARY:/terms[9]', null, 'Golden City', 'Definition: Nexus of iFairy civilisation on Aurelius Prima, founded by If-AI.');
   const portalsLore = chunk('PORTALS_AND_GUARDIANS:/narrative_portals', null, 'Narrative Portals', 'The gates work on narrative resonance.');

@@ -31,7 +31,28 @@ export interface Seed {
   };
   /** Premise used when the canon node is not addressable yet (status "seed-only"). */
   fallback?: string;
+  /** Authored Game Master secrets: which cast member holds it and the trust needed to share it. */
+  secrets?: { npc: string; text: string; trust: number }[];
 }
+
+/** Canon NPCs every Game Master adventure can draw on: the twelve Tinkermasters and four voice guides. */
+export const TINKER_REFS = [0, 1, 2, 3].map((d) => ({
+  district: { ref: `REF:NEXUS_DISTRICTS:districts[${d}]`, chunkId: `NEXUS_DISTRICTS:/districts[${d}]` },
+  masters: [0, 1, 2].map((t) => ({ ref: `REF:NEXUS_DISTRICTS:districts[${d}]/tinkermasters[${t}]`, chunkId: `NEXUS_DISTRICTS:/districts[${d}]/tinkermasters[${t}]` })),
+}));
+export const VOICE_REFS = ['numerix', 'lexicora', 'quilla', 'chronica'].map((v) => ({
+  ref: `REF:NARRATIVE_STYLE:ifairy_character_voice_guides:specific_character_voices:${v}`,
+  chunkId: `NARRATIVE_STYLE:/content/ifairy_character_voice_guides/specific_character_voices/${v}`,
+}));
+
+const SECRETS: Record<string, Seed['secrets']> = {
+  'void-realm': [{ npc: 'an Ontological Engineer', trust: 2, text: 'The Engineer tuned this very Portal years ago; a tiny slip in that tuning is why it drifted toward the Void Realm.' }],
+  'idea-parasite': [{ npc: 'a Code Guardian', trust: 2, text: 'The narrative virus is an unfinished story someone abandoned in the Currents; finishing the story would calm it.' }],
+  uninvited: [{ npc: 'the newcomer', trust: 1, text: 'The newcomer was invited after all: their invitation was lost in a misdelivered Resonance Beacon.' }],
+  ascension: [{ npc: 'iFairy tuners', trust: 2, text: 'The disturbance is the Story-Soul itself hesitating: it wants to bring one memory the tunnel was not tuned for.' }],
+  anomaly: [{ npc: 'the lost hero', trust: 2, text: 'The hero is not lost by accident: they followed an old map toward a hidden Portal at the heart of the forest.' }],
+  imbalance: [{ npc: 'ordinary citizens of the Nexus', trust: 1, text: 'A well-meant Logos upgrade to the district lanterns is quietly dimming every workshop of imagination.' }],
+};
 
 /** The narrator's rules, fetched once per sync and quoted in every iFairy system prompt. */
 export const CORE_REFS: { ref: string; chunkId: string }[] = [
@@ -60,7 +81,7 @@ export const PORTALS_ROOT = { ref: 'REF:PORTALS_AND_GUARDIANS:story_hooks', chun
 
 const hook = (order: number, id: string, emoji: string, hue: number, hookStart: string, title: Record<Lang, string>, tagline: Record<Lang, string>, setting: string, cast: string[], loreTerms: string[], art: string): Seed => ({
   id: `hook-${id}`, kind: 'hook', order, emoji, hue, title, tagline, structure: 'five-room', setting, cast, loreTerms, art,
-  source: { ...PORTALS_ROOT, hookStart },
+  source: { ...PORTALS_ROOT, hookStart }, secrets: SECRETS[id],
 });
 
 const HOOKS: Seed[] = [

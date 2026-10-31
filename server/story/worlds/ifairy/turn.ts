@@ -12,6 +12,8 @@ import { runGmTurn } from '../../../gm/loop';
 import { screenInput, type Screened } from '../../../gm/safety';
 import { actionDigest, newSeed } from '../../../gm/kernel/rng';
 import { rollCheck, startingApproaches } from '../../../gm/kernel/rules';
+import { clocksFor, questFor } from '../../../gm/kernel/quests';
+import { getSnapshot } from '../../../universe/store';
 import type { World } from '../../../gm/kernel/events';
 import { FORCES, type Force, type Lang, type Page, type Story } from '../../../../shared/types';
 import type { AdventureSnapshot, CanonPassage } from '../../../../shared/universe';
@@ -81,15 +83,39 @@ interface TurnExtras {
   screened?: Screened;
   /** First page only: the force the player rolls best with. */
   strongest?: Force;
+  /** First page only: items carried over from the previous saga chapter. */
+  inventory?: string[];
 }
 
-const initialGmState = (strongest: Force = 'mythos'): GmState => ({ v: 1, approaches: startingApproaches(strongest), conditions: [], facts: [], rollCount: 0 });
+/** Carried from one saga chapter to the next: approaches, bonds, facts and items. */
+export interface Carry {
+  fromStoryId: string;
+  chapter: number;
+  inventory: string[];
+  gm?: Pick<GmState, 'approaches' | 'npcs' | 'facts'>;
+}
+
+/** The state a Game Master story starts from: the quest skeleton and clocks of its shape, plus anything carried over. */
+function initialGmState(snap: AdventureSnapshot, strongest: Force = 'mythos', carry?: Carry): GmState {
+  return {
+    v: 1,
+    approaches: carry?.gm?.approaches ?? startingApproaches(strongest),
+    conditions: [],
+    facts: carry?.gm?.facts ?? [],
+    rollCount: 0,
+    npcs: carry?.gm?.npcs ?? {},
+    quest: questFor(snap.structure),
+    consequences: [],
+    world: { day: 1, segment: 0, clocks: clocksFor(snap.structure), rumours: [] },
+  };
+}
+const legacyGmState = (strongest: Force = 'mythos'): GmState => ({ v: 1, approaches: startingApproaches(strongest), conditions: [], facts: [], rollCount: 0 });
 
 /** A Game Master page: rolls a risky option before the model is called, then runs the tool loop. */
 function writeGmPage(story: Story, parent: Page | null, action: PlayerAction, lore: CanonPassage[], extras: TurnExtras): Promise<Page> {
   const world: World = parent
-    ? { stats: parent.stats, inventory: parent.inventory, gm: parent.gm?.state ?? initialGmState() }
-    : { stats: IFAIRY_START_STATS, inventory: [], gm: initialGmState(extras.strongest) };
+    ? { stats: parent.stats, inventory: parent.inventory, gm: parent.gm?.state ?? legacyGmState() }
+    : { stats: IFAIRY_START_STATS, inventory: extras.inventory ?? [], gm: story.gmStart ?? legacyGmState(extras.strongest) };
   const streamBase = `${story.id}|${parent?.id ?? 'root'}|${extras.digest}`;
   const choice = parent?.choices.find((c) => `c:${c.id}` === extras.digest);
   const preRoll = choice && choice.risk === 'risky' && (FORCES as readonly string[]).includes(choice.kind)
@@ -134,8 +160,9 @@ async function writePage(story: Story, parent: Page | null, action: PlayerAction
 }
 
 /** Starts an iFairy adventure with its snapshot pinned into the story, with the Game Master if it is on. */
-export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroName: string, strongest?: Force): Promise<Story> {
-  const gm = getConfig().gm.enabled ? newSeed() : null;
+export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroName: string, strongest?: Force, carry?: Carry): Promise<Story> {
+  // A chapter continuing a Game Master story stays a Game Master story.
+  const gm = (carry ? !!carry.gm : getConfig().gm.enabled) ? newSeed() : null;
   const story: Story = {
     id: randomUUID(),
     world: 'ifairy',
@@ -150,9 +177,10 @@ export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroNa
     pages: {},
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    ...(gm ? { gm: true, gmSecret: { seed: gm.seed }, gmCommit: gm.commit } : {}),
+    ...(gm ? { gm: true, gmSecret: { seed: gm.seed }, gmCommit: gm.commit, gmStart: initialGmState(snap, strongest, carry) } : {}),
+    ...(carry ? { campaign: { fromStoryId: carry.fromStoryId, chapter: carry.chapter } } : {}),
   };
-  const page = await writePage(story, null, { kind: 'boot', label: '' }, { digest: actionDigest('boot'), strongest });
+  const page = await writePage(story, null, { kind: 'boot', label: '' }, { digest: actionDigest('boot'), strongest, inventory: carry?.inventory });
   story.pages[page.id] = page;
   story.rootPageId = story.currentPageId = page.id;
   return story;
@@ -180,4 +208,22 @@ export async function ifairyAct(story: Story, parentId: string, input: { choiceI
   story.pages[page.id] = page;
   story.currentPageId = page.id;
   return page;
+}
+
+/** The If-AI Saga as a campaign: after an act ends, the next act starts with bonds, facts and items carried over. */
+export async function nextChapter(story: Story): Promise<Story> {
+  const snap = story.adventure;
+  const page = story.pages[story.currentPageId];
+  if (!snap || snap.kind !== 'saga') throw new StoryError('Only acts of the If-AI Saga continue as chapters.', 400);
+  if (!page?.ending) throw new StoryError('Finish this act first.', 409);
+  if (snap.order >= 8) throw new StoryError('This was the last act of the saga.', 409);
+  const next = getSnapshot(`saga-${snap.order + 1}`);
+  if (!next) throw new StoryError('The next act is not synced yet.', 404);
+  const st = page.gm?.state;
+  return startAdventure(next, story.lang, story.heroName, undefined, {
+    fromStoryId: story.id,
+    chapter: snap.order + 1,
+    inventory: page.inventory,
+    ...(story.gm && st ? { gm: { approaches: st.approaches, npcs: st.npcs ?? {}, facts: st.facts } } : {}),
+  });
 }

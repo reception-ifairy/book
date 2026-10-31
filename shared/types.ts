@@ -1,5 +1,5 @@
 import type { AdventureCard, AdventureSnapshot } from './universe';
-import type { PageGm } from './gm';
+import type { GmState, PageGm } from './gm';
 
 export type Lang = 'en' | 'pl';
 export type Mood = 'neutral' | 'smug' | 'annoyed' | 'panic' | 'sincere' | 'hyped';
@@ -88,10 +88,14 @@ export interface Story {
   gmSecret?: { seed: string };
   /** sha256 of the dice seed, shown to players so the dice can be audited afterwards. */
   gmCommit?: string;
+  /** Server only: the Game Master state the first page started from (quest, clocks, carried-over bonds). */
+  gmStart?: GmState;
+  /** The If-AI Saga as a campaign: the chapter this story continues. */
+  campaign?: { fromStoryId: string; chapter: number };
 }
 
 /** A story as the browser sees it: the pinned adventure is reduced to its card, the dice seed removed. */
-export type PublicStory = Omit<Story, 'adventure' | 'gmSecret'> & { adventure?: AdventureCard };
+export type PublicStory = Omit<Story, 'adventure' | 'gmSecret' | 'gmStart'> & { adventure?: AdventureCard };
 
 export const worldOf = (story: Pick<Story, 'world'>): World => story.world ?? 'grimm';
 

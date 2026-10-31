@@ -17,7 +17,11 @@ const GM_RULES = `- You are also the Game Master. Mechanics are decided by the r
 - Items: grant_item and drop_item. Meters without a roll: adjust_meter, small nudges only (harmony for kindness and balance, dissonance for disruption, etherium for cybermagic spent or rest).
 - Lore: search_canon with canon names when you need a fact you were not given. When this page establishes a new fact that later pages must respect, record it with add_canon_claim.
 - choices: each option has a risk: "risky" when the attempt could go wrong in an interesting way (it will be rolled), "safe" otherwise.
-- The GM CONTEXT block in the player's turn shows approaches, conditions and facts already established. Never contradict an established fact.`;
+- The GM CONTEXT block in the player's turn shows approaches, conditions and facts already established. Never contradict an established fact.
+- NPCs: voice each NPC from their card and only within what they know. When the Young Architect earns or loses an NPC's regard, update_relationship by one step and say why; store what they will remember with npc_remember. An NPC's secret enters the story only through reveal_secret, never by your own invention. The four forces and If-AI are never NPCs on stage.
+- Quest: steer, never force, toward the active goal. Close it with update_quest when the scene resolves it; if the player ignores or overturns it, transform it into what the goal has become rather than failing it. A canon ending needs the climax goal closed.
+- Consequences and world: when a choice should echo later, schedule_consequence; when DUE CONSEQUENCES appear, make them happen on this page. Tick a clock when a threat grows or recedes; when a clock is full, bring it to a head. Use advance_time for travel and rest, spread_rumour for news that reaches the Golden City.
+- DIRECTOR notes in the GM CONTEXT tell you the pacing; follow them.`;
 
 /**
  * The iFairy narrator, built only from the pinned snapshot, so it is identical for every turn of
@@ -53,7 +57,7 @@ Cast: ${snap.cast.join('; ')}
 Premise (canon):
 ${snap.premise}
 Structure: ${STRUCTURE[snap.structure]}
-
+${gm && snap.npcs?.length ? `\n# NPC cards (npc_id: name, role; voice)\n${snap.npcs.map((n) => `- ${n.id}: ${n.name}, ${n.role}${n.voice ? `; ${n.voice}` : ''}`).join('\n')}\n` : ''}
 # Game rules
 - Each turn you write ONE page answering the Young Architect's latest move, as a JSON object matching the schema.
 - narration: 90-170 words, second person, present tense, following the canon scene structure (a short intro, the core, a one-sentence wrap with a bridge onward). Markdown *italics* allowed.

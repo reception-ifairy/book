@@ -43,12 +43,13 @@ export function pickRule(roll: Pick<RollRecord, 'band' | 'surge'>): { benefit: n
 export const defaultChoice = (roll: RollRecord): string[] =>
   roll.band === 'bright' ? (roll.surge ? ['insight', 'resonance'] : ['insight']) : roll.band === 'but' ? ['complication', 'insight'] : ['hard_choice'];
 
-export function rollCheck(args: { seed: string; streamKey: string; id: string; approach: Force; risk: Risk; intent: string; state: GmState; pre?: boolean }): RollRecord {
+export function rollCheck(args: { seed: string; streamKey: string; id: string; approach: Force; risk: Risk; intent: string; state: GmState; pre?: boolean; extraMods?: { label: string; value: number }[] }): RollRecord {
   const [a, b] = rollD6(args.seed, args.streamKey, 2);
   const mods = [
     { label: `${args.approach} approach`, value: args.state.approaches[args.approach] ?? 1 },
     ...(RISK_MOD[args.risk] ? [{ label: `${args.risk} risk`, value: RISK_MOD[args.risk] }] : []),
     ...(args.state.conditions.length ? [{ label: args.state.conditions.join(', '), value: -1 }] : []),
+    ...(args.extraMods ?? []),
   ];
   const mod = Math.max(-2, Math.min(3, mods.reduce((s, m) => s + m.value, 0)));
   const total = a + b + mod;

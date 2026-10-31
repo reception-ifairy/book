@@ -125,7 +125,10 @@ describe('playing with the Game Master', () => {
     expect(root.stats).toEqual({ chaos: 0, karma: 0, mana: 60 }); // no tool calls, no change
 
     const body = lastBody();
-    expect(body.tools.map((t: any) => t.name)).toEqual(['roll_check', 'choose_outcome', 'grant_item', 'drop_item', 'adjust_meter', 'search_canon', 'add_canon_claim']);
+    expect(body.tools.map((t: any) => t.name)).toEqual([
+      'roll_check', 'choose_outcome', 'grant_item', 'drop_item', 'adjust_meter', 'search_canon', 'add_canon_claim',
+      'get_npc', 'npc_remember', 'update_relationship', 'reveal_secret', 'update_quest', 'schedule_consequence', 'advance_time', 'tick_clock', 'spread_rumour',
+    ]);
     expect(body.tools.every((t: any) => t.strict === true && t.input_schema.additionalProperties === false)).toBe(true);
     // The API rejects numeric bounds in strict tool schemas (400 "properties maximum, minimum are not supported").
     expect(JSON.stringify(body.tools)).not.toMatch(/"(minimum|maximum|exclusiveMinimum|exclusiveMaximum|\$schema)"/);
@@ -138,7 +141,7 @@ describe('playing with the Game Master', () => {
   it('rolls a risky option in code first, and applies only what the tools did', async () => {
     fake.requests.length = 0;
     fake.enqueue(
-      toolUse(['roll_check', { approach: 'phantasia', risk: 'standard', intent: 'climb' }]),
+      toolUse(['roll_check', { approach: 'phantasia', risk: 'standard', intent: 'climb', helper_npc: null }]),
       gmPage(),
     );
     // The outcome is picked by the narrator in a second tool round; it needs the roll's band, so script it after seeing it.
@@ -173,7 +176,7 @@ describe('playing with the Game Master', () => {
     const current = res0.body.pages[res0.body.currentPageId];
     fake.requests.length = 0;
     fake.enqueue(
-      toolUse(['roll_check', { approach: 'logos', risk: 'low', intent: 'map the ring' }], ['roll_check', { approach: 'logos', risk: 'low', intent: 'again' }], ['roll_check', { approach: 'logos', risk: 'low', intent: 'a third' }]),
+      toolUse(['roll_check', { approach: 'logos', risk: 'low', intent: 'map the ring', helper_npc: null }], ['roll_check', { approach: 'logos', risk: 'low', intent: 'again', helper_npc: null }], ['roll_check', { approach: 'logos', risk: 'low', intent: 'a third', helper_npc: null }]),
       toolUse(['grant_item', { name: 'tuning glyph', reason: 'found on the ring' }], ['add_canon_claim', { subject: 'The ring', text: 'The ring hums lower near the Void Realm.', visibility: 'party', ref_handle: 'C1' }], ['add_canon_claim', { subject: 'The Engineer', text: 'She once sealed a portal alone.', visibility: 'gm_only', ref_handle: null }]),
       gmPage(),
     );

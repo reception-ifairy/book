@@ -30,7 +30,12 @@ export function auditStory(story: Story) {
     const firstRoll = page.gm.rolls[0];
     const start: World = parent?.gm
       ? { stats: parent.stats, inventory: parent.inventory, gm: parent.gm.state }
-      : { stats: IFAIRY_START_STATS, inventory: [], gm: { v: 1, approaches: page.gm.state.approaches ?? startingApproaches(firstRoll?.approach ?? 'mythos'), conditions: [], facts: [], rollCount: 0 } };
+      : {
+        stats: IFAIRY_START_STATS,
+        // A chapter's first page starts with the items carried over; they arrive without events.
+        inventory: story.campaign ? page.inventory.filter((i) => !page.gm!.events.some((e) => e.type === 'item_add' && e.name === i)) : [],
+        gm: story.gmStart ?? { v: 1, approaches: page.gm.state.approaches ?? startingApproaches(firstRoll?.approach ?? 'mythos'), conditions: [], facts: [], rollCount: 0 },
+      };
     const end = fold(start, page.gm.events);
     const same = JSON.stringify([end.stats, end.inventory, end.gm]) === JSON.stringify([page.stats, page.inventory, page.gm.state]);
     if (!same) problems.push(`${page.id}: stored state does not equal its parent's state plus this page's events.`);
