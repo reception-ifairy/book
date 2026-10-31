@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 5.0.0 · Game Master: postacie, questy, świat i kampania sagi
+
+- **Postacie:** karty NPC (obsada przygody, 12 Tinkermasterów i 4 przewodników głosu z kanonu), relacje affinity / trust / respect, pamięć z ważnością, autorskie sekrety haków ujawniane dopiero przy zaufaniu (tekst sekretu nie trafia do modelu wcześniej), pomoc NPC w rzucie (+1).
+- **Questy i konsekwencje:** szkielety celów zależne od kształtu historii, cele przekształcone zamiast porażki, konsekwencje odroczone odpalane na stronie, na którą przypadają, kulminacja wymagana przed zakończeniem `canon`.
+- **Świat:** pora dnia mija z każdą stroną, zegary zagrożeń, plotki z ukrytą prawdziwością, notatki reżysera dla tempa.
+- **Kampania sagi:** po zakończeniu aktu przycisk „Continue to Act …” otwiera kolejny akt z przeniesionymi podejściami, więziami, faktami i przedmiotami.
+- **Poprawki wykryte ewaluacjami na żywo:** schematy narzędzi bez granic liczbowych (API odrzucało je w trybie strict) i tryb strict tylko dla narzędzi mechaniki (przy 16 narzędziach strict API zwraca „grammar too large”).
+- **UI:** w Codexie sekcje Quest, Więzi i Świat. Testy: 79.
+
+---
+
 ## 4.4.0 · AI Game Master świata iFairy
 
 - **Kernel reguł** (`server/gm/kernel/`): 2d6 + podejście (cztery siły), pasma jasny sukces / sukces z kosztem / zwrot akcji (nigdy porażka), opcje wyniku jako dane. Kości z HMAC ziarna historii: ten sam ruch po cofnięciu daje te same kości, ziarno zna tylko serwer, gracz widzi jego sha256.

@@ -114,12 +114,18 @@ function jsonSchema(schema: z.ZodType) {
   return stripBounds(z.toJSONSchema(schema)) as Anthropic.Beta.BetaTool.InputSchema;
 }
 
+/**
+ * Strict (grammar-constrained) only for the mechanics: the API rejects too many strict tools at once
+ * ("compiled grammar is too large"), and the ledger validates every input with zod anyway.
+ */
+const STRICT = new Set<ToolName>(['roll_check', 'choose_outcome', 'update_relationship', 'reveal_secret', 'update_quest']);
+
 /** Fixed order and fixed text, built once: the tool list is the start of the cached prefix. */
 export const GM_TOOLS: Anthropic.Beta.BetaTool[] = (Object.keys(SCHEMAS) as ToolName[]).map((name) => ({
   name,
   description: DESCRIPTIONS[name],
   input_schema: jsonSchema(SCHEMAS[name]),
-  strict: true,
+  ...(STRICT.has(name) ? { strict: true } : {}),
 }));
 
 export interface LedgerContext {

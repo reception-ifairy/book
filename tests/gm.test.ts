@@ -129,7 +129,9 @@ describe('playing with the Game Master', () => {
       'roll_check', 'choose_outcome', 'grant_item', 'drop_item', 'adjust_meter', 'search_canon', 'add_canon_claim',
       'get_npc', 'npc_remember', 'update_relationship', 'reveal_secret', 'update_quest', 'schedule_consequence', 'advance_time', 'tick_clock', 'spread_rumour',
     ]);
-    expect(body.tools.every((t: any) => t.strict === true && t.input_schema.additionalProperties === false)).toBe(true);
+    expect(body.tools.every((t: any) => t.input_schema.additionalProperties === false)).toBe(true);
+    // Only the mechanics are strict: the API rejects too many strict tools in one request.
+    expect(body.tools.filter((t: any) => t.strict).map((t: any) => t.name)).toEqual(['roll_check', 'choose_outcome', 'update_relationship', 'reveal_secret', 'update_quest']);
     // The API rejects numeric bounds in strict tool schemas (400 "properties maximum, minimum are not supported").
     expect(JSON.stringify(body.tools)).not.toMatch(/"(minimum|maximum|exclusiveMinimum|exclusiveMaximum|\$schema)"/);
     expect(body.tool_choice).toEqual({ type: 'auto' });

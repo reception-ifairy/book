@@ -49,7 +49,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 
 ### AI Game Master
 
-- **Narzędzia** (`server/gm/tools.ts`, wszystkie `strict`, stała kolejność): `roll_check`, `choose_outcome`, `grant_item`, `drop_item`, `adjust_meter` (±5), `search_canon` (tylko terminy kanonu), `add_canon_claim` (widoczność `public` · `party` · `gm_only`). Limity na stronę pilnuje Ledger; odrzucone wywołanie wraca jako błąd i niczego nie zmienia.
+- **Narzędzia** (`server/gm/tools.ts`, wszystkie `strict`, stała kolejność): `roll_check` (z pomocnikiem NPC: +1 przy zaufaniu 2+), `choose_outcome`, `grant_item`, `drop_item`, `adjust_meter` (±5), `search_canon` (tylko terminy kanonu), `add_canon_claim` (widoczność `public` · `party` · `gm_only`), a od 5.0: `get_npc`, `npc_remember`, `update_relationship`, `reveal_secret`, `update_quest`, `schedule_consequence`, `advance_time`, `tick_clock`, `spread_rumour`. Schematy narzędzi nie mogą mieć `minimum`/`maximum` (API odrzuca je w trybie strict); zakresy sprawdza Ledger. Limity na stronę pilnuje Ledger; odrzucone wywołanie wraca jako błąd i niczego nie zmienia.
 - **Pętla** (`loop.ts`): `beta.messages.parse` z narzędziami i structured output w każdej rundzie, `tool_choice: auto`, a w ostatniej rundzie albo blisko terminu `none` (Opus 5.5 nie przyjmuje `any`/`tool`). Strona z błędem lintu albo negatywną recenzją dostaje jedną rundę naprawy; drugi raz zakazane imię albo pytanie o dane osobowe → 422.
 - **Bezpieczeństwo:** słowa gracza są ekranowane przed zapisem i wysłaniem (dane osobowe zamieniane na `[personal detail removed]`); sygnały niepokoju dają flagę dla narratora i kartę wsparcia w czytniku (treść karty do zatwierdzenia przez właściciela: Childline 0800 1111).
 - **Audyt:** `GET /api/admin/story/:id/audit` liczy kości od nowa z ziarna i porównuje stan każdej strony z rodzicem + zdarzeniami.
@@ -126,6 +126,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `GET /api/story/:id` | — | Pełna historia (w iFairy przygoda tylko jako karta) |
 | `POST /api/story/:id/act` | ✓ + blokada | `{pageId, choiceId}` albo `{pageId, custom?, image?}` → nowa strona |
 | `POST /api/story/:id/goto` | — | Cofnięcie do strony (następny ruch tworzy fork) |
+| `POST /api/story/:id/next-chapter` | ✓ | Saga If-AI: po zakończeniu aktu nowa historia następnego aktu z przeniesionym stanem |
 | `POST /api/story/:id/page/:pageId/image` | ✓ + budżet | Ilustracja strony (z cache albo generowana) |
 | `POST /api/story/:id/page/:pageId/speech` | ✓ | Nagranie strony albo `null` (wtedy czyta przeglądarka) |
 | `GET /media/...` | — | Zapisane obrazy i nagrania |
@@ -177,7 +178,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `bun run test` / `test:watch` | Vitest |
 | `bun run check` | Typecheck + testy + build: to samo, co robi CI |
 
-**Testy** (`tests/`, 71 testów):
+**Testy** (`tests/`, 79 testów):
 - `engine.test.ts`:
   - normalizacja wartości spoza listy;
   - przycinanie statystyk i kanonu;
@@ -216,6 +217,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
   - pre-roll ryzykownej opcji, te same kości po cofnięciu, limity narzędzi, fakty `gm_only` niewidoczne w przeglądarce;
   - ostatnia runda bez narzędzi, naprawa po lincie, wiadomości tylko dopisywane, recenzja Haiku z naprawą;
   - audyt wykrywa podmienione kości; historie bez GM zostają w trybie narratora.
+- `gm-world.test.ts`: karty NPC z kanonu i obsady, sekret poza promptem do czasu ujawnienia, zaufanie krok po kroku i pomoc NPC w rzucie, quest z celem przekształconym, konsekwencja ukryta odpalana na właściwej stronie, czas, zegary i plotki (prawda ukryta), kulminacja przed zakończeniem `canon`, kampania sagi z przeniesieniem stanu, audyt.
 - `artkit.test.ts` (sztuczne API Anthropic ze streamingiem i sztuczne API OpenAI):
   - plan pokrywa wszystkie sloty i odrzuca złe kolory;
   - składanie promptów (karta Ignisa tylko tam, gdzie Ignis; napisy tylko w karcie do udostępniania);

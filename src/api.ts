@@ -35,6 +35,7 @@ export const api = {
   act: (id: string, body: { pageId: string; choiceId?: string; custom?: string; image?: { mime: string; data: string } }) =>
     call<{ page: Page; story: PublicStory }>('POST', `/api/story/${id}/act`, body),
   goto: (id: string, pageId: string) => call<PublicStory>('POST', `/api/story/${id}/goto`, { pageId }),
+  nextChapter: (id: string) => call<PublicStory>('POST', `/api/story/${id}/next-chapter`, {}),
   image: (id: string, pageId: string) => call<{ url: string }>('POST', `/api/story/${id}/page/${pageId}/image`, {}),
   speech: (id: string, pageId: string) => call<{ url: string | null }>('POST', `/api/story/${id}/page/${pageId}/speech`, {}),
 };
