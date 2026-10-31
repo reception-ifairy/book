@@ -62,6 +62,8 @@ export interface AdventureSnapshot extends AdventureCard {
   hash: string;
   /** Game Master NPCs (5.0 snapshots). Secrets stay on the server with the snapshot. */
   npcs?: NpcCard[];
+  /** The canon's iFairy visual lock, prepended to illustrations that show an iFairy. */
+  imageLock?: { text: string; ref: string };
 }
 
 export const cardOf = ({ id, kind, order, emoji, hue, title, tagline, structure, version }: AdventureCard): AdventureCard => ({

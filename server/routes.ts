@@ -12,9 +12,7 @@ import { publicStory } from './story/public';
 import { ifairyAct, nextChapter, startAdventure } from './story/worlds/ifairy/turn';
 import { getCatalogue, getSnapshot, listCards } from './universe/store';
 import { looksPersonal } from './universe/pii';
-
-/** iFairy illustrations follow the canon's visual identity rule. */
-const IFAIRY_ART = 'iFairies (canon): compact androgynous technomagical beings, 30-100 cm, a sleek iridescent alloy body that shifts colour with mood, a swirling energy core glowing through translucent skin, wings made of a luminous lattice of circuitry and magical symbols, mask-like faces that express through light patterns, glowing eyes in blue, gold, violet or silver; never gendered, no wands, no petal dresses, no folkloric fairy wings.';
+import { showsIFairy, withLock } from './universe/image-lock';
 
 export const api = Router();
 
@@ -188,15 +186,22 @@ api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
     if (!page) throw new StoryError('Page not found.', 404);
     if (page.imageUrl) return res.json({ url: page.imageUrl });
 
+    // iFairy world: a picture with an iFairy in it gets the canon visual lock, or none at all.
+    const snap = worldOf(story) === 'ifairy' ? story.adventure! : null;
+    const locked = !!snap && showsIFairy(`${snap.art}\n${page.imagePrompt}`, snap);
+    if (locked && !snap!.imageLock) throw new StoryError('The canon visual lock for iFairies is not in this adventure, so this scene cannot be illustrated. Re-sync the Archive.', 503);
+    const guard = locked ? { guard: 'ifairy_visual_lock', ref: snap!.imageLock!.ref, canonVersion: snap!.canonVersion } : { guard: 'not_applicable' };
+
     let job = inflight.get(page.id);
     if (!job) {
       takeImageBudget();
-      const setting = worldOf(story) === 'ifairy' ? `${story.adventure!.art}. ${IFAIRY_ART}` : getTale(story.taleId)!.art;
+      const setting = snap ? snap.art : getTale(story.taleId)!.art;
       // The earliest illustrated page on this path anchors how the hero and cast look.
       const anchor = pathTo(story, page.id).find((p) => p.imageUrl && p.id !== page.id);
       const anchorData = anchor?.imageUrl ? readMedia(anchor.imageUrl) : null;
       const refs: Media[] = anchorData ? [{ mime: mimeFromUrl(anchor!.imageUrl!), data: anchorData }] : [];
-      const prompt = `${IMAGE_STYLE}\nSetting: ${setting}.\nScene: ${page.imagePrompt}${refs.length ? '\nKeep the characters looking exactly as in the reference image.' : ''}`;
+      const base = `${IMAGE_STYLE}\nSetting: ${setting}.\nScene: ${page.imagePrompt}${refs.length ? '\nKeep the characters looking exactly as in the reference image.' : ''}`;
+      const prompt = locked ? withLock(snap!.imageLock!.text, base) : base;
       job = generateImage(prompt, refs).then((img) => {
         const url = saveMedia(story.id, `${page.id}.${extFor(img.mime)}`, img.data);
         page.imageUrl = url;
@@ -208,7 +213,7 @@ api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
         imagesToday = Math.max(0, imagesToday - 1); // failed renders don't spend the budget
       });
     }
-    res.json({ url: await job });
+    res.json({ url: await job, ...(snap ? { guard } : {}) });
   } catch (e) {
     fail(res, e);
   }

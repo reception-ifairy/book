@@ -54,6 +54,11 @@ const SECRETS: Record<string, Seed['secrets']> = {
   imbalance: [{ npc: 'ordinary citizens of the Nexus', trust: 1, text: 'A well-meant Logos upgrade to the district lanterns is quietly dimming every workshop of imagination.' }],
 };
 
+function physicalForm(sec: string) {
+  const path = `canonical_volume/books/BOOK_10B_PHYSIOLOGY_AND_NATURE/chapters/CH_10B_01_PHYSICAL_FORM/sections/${sec}`;
+  return { ref: `REF:SPECIES_IFAIRY:${path}`, chunkId: `SPECIES_IFAIRY:/${path}` };
+}
+
 /** The narrator's rules, fetched once per sync and quoted in every iFairy system prompt. */
 export const CORE_REFS: { ref: string; chunkId: string }[] = [
   ['narrator', 'narrator'],
@@ -81,13 +86,22 @@ export const CORE_REFS: { ref: string; chunkId: string }[] = [
     { ref: 'REF:FOUNDATIONS:CANON_LOCK', chunkId: 'FOUNDATIONS:/CANON_LOCK' },
     { ref: 'REF:NEXUS_DISTRICTS:canon_rules', chunkId: 'NEXUS_DISTRICTS:/canon_rules' },
     { ref: 'REF:TRAVELLERS_ROSTER:governing_rules', chunkId: 'TRAVELLERS_ROSTER:/governing_rules' },
-    // What an iFairy is and what one looks like, so narration and illustrations follow the canon.
+    // What an iFairy is and what one looks like (canon R6 visual lock), so narration follows the canon.
     { ref: 'REF:GLOSSARY:terms[8]', chunkId: 'GLOSSARY:/terms[8]' },
-    ...['SEC_10B_01_01_core_nature', 'SEC_10B_01_02_body_structure', 'SEC_10B_01_03_wings', 'SEC_10B_01_04_face_and_eyes', 'SEC_10B_01_06_visual_identity_and_gender_neutrality'].map((sec) => {
-      const path = `canonical_volume/books/BOOK_10B_PHYSIOLOGY_AND_NATURE/chapters/CH_10B_01_PHYSICAL_FORM/sections/${sec}`;
-      return { ref: `REF:SPECIES_IFAIRY:${path}`, chunkId: `SPECIES_IFAIRY:/${path}` };
-    }),
+    ...[
+      'SEC_10B_01_01_core_nature',
+      'SEC_10B_01_02_body_structure/canonical_data/the_aperture',
+      'SEC_10B_01_02_body_structure/canonical_data/three_material_rule',
+      'SEC_10B_01_03_wings/canonical_data/structure',
+      'SEC_10B_01_04_face_and_eyes/canonical_data/visor_specification',
+      'SEC_10B_01_04_face_and_eyes/canonical_data/eye_specification',
+      'SEC_10B_01_04_face_and_eyes/canonical_data/resonance_antennae',
+      'SEC_10B_01_06_visual_identity_and_gender_neutrality',
+    ].map(physicalForm),
   ]);
+
+/** The exact text image prompts prepend when an iFairy is in the picture (canon R6 §6). */
+export const IMAGE_LOCK_REF = physicalForm('SEC_10B_01_06_visual_identity_and_gender_neutrality/canonical_data/image_guard_rule');
 
 /** The chunk holding the six story hooks and the portal consistency checklist. */
 export const PORTALS_ROOT = { ref: 'REF:PORTALS_AND_GUARDIANS:story_hooks', chunkId: 'PORTALS_AND_GUARDIANS:/' };
