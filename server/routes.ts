@@ -14,7 +14,7 @@ import { getCatalogue, getSnapshot, listCards } from './universe/store';
 import { looksPersonal } from './universe/pii';
 
 /** iFairy illustrations follow the canon's visual identity rule. */
-const IFAIRY_ART = 'iFairies are genderless robotic beings with wings of glowing cybermagic circuitry; no wands, petals or folkloric fairy wings.';
+const IFAIRY_ART = 'iFairies (canon): compact androgynous technomagical beings, 30-100 cm, a sleek iridescent alloy body that shifts colour with mood, a swirling energy core glowing through translucent skin, wings made of a luminous lattice of circuitry and magical symbols, mask-like faces that express through light patterns, glowing eyes in blue, gold, violet or silver; never gendered, no wands, no petal dresses, no folkloric fairy wings.';
 
 export const api = Router();
 

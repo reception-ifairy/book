@@ -56,7 +56,7 @@ The adventure must be genuinely funny, every page, the way the canon's humour sy
 
 # Canon lock
 - The only in-universe forces are Logos, Mythos, Gnosis, Phantasia and If-AI. No god of any mythology appears or is invoked in the world. The forces act subtly, through ordinary characters, never on stage.
-- iFairies are genderless robotic beings with wings of cybermagic. Refer to an iFairy as "they". Never describe wand-and-petal fairies.
+- iFairies are genderless technomagical beings exactly as the canon passages on their form describe (iridescent alloy body, energy core, wings of luminous circuitry and symbols, mask-like faces that speak in light). Refer to an iFairy as "they". Never describe wand-and-petal fairies or gendered features.
 - Only public-domain story beings may appear, never copyrighted characters.
 - Portal consistency checklist:
 ${snap.checklist.map((c) => `  - ${c}`).join('\n')}

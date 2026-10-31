@@ -81,6 +81,12 @@ export const CORE_REFS: { ref: string; chunkId: string }[] = [
     { ref: 'REF:FOUNDATIONS:CANON_LOCK', chunkId: 'FOUNDATIONS:/CANON_LOCK' },
     { ref: 'REF:NEXUS_DISTRICTS:canon_rules', chunkId: 'NEXUS_DISTRICTS:/canon_rules' },
     { ref: 'REF:TRAVELLERS_ROSTER:governing_rules', chunkId: 'TRAVELLERS_ROSTER:/governing_rules' },
+    // What an iFairy is and what one looks like, so narration and illustrations follow the canon.
+    { ref: 'REF:GLOSSARY:terms[8]', chunkId: 'GLOSSARY:/terms[8]' },
+    ...['SEC_10B_01_01_core_nature', 'SEC_10B_01_02_body_structure', 'SEC_10B_01_03_wings', 'SEC_10B_01_04_face_and_eyes', 'SEC_10B_01_06_visual_identity_and_gender_neutrality'].map((sec) => {
+      const path = `canonical_volume/books/BOOK_10B_PHYSIOLOGY_AND_NATURE/chapters/CH_10B_01_PHYSICAL_FORM/sections/${sec}`;
+      return { ref: `REF:SPECIES_IFAIRY:${path}`, chunkId: `SPECIES_IFAIRY:/${path}` };
+    }),
   ]);
 
 /** The chunk holding the six story hooks and the portal consistency checklist. */

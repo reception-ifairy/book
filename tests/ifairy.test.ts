@@ -169,7 +169,7 @@ describe('playing an iFairy adventure', () => {
     const img = await call('POST', `/api/story/${story.id}/page/${story.rootPageId}/image`, {});
     expect(img.status).toBe(200);
     expect(fakeO.requests.at(-1)!.body.prompt).toContain('ring-shaped Narrative Portal');
-    expect(fakeO.requests.at(-1)!.body.prompt).toContain('genderless robotic beings');
+    expect(fakeO.requests.at(-1)!.body.prompt).toContain('wings made of a luminous lattice of circuitry');
   });
 
   it('refuses a real-looking name, and an adventure that is not synced', async () => {
