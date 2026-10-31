@@ -11,8 +11,8 @@ import os from 'os';
 import path from 'path';
 
 interface Step { custom?: string; risky?: boolean }
-interface Check { type: string; pattern?: string; where?: 'page' | 'narration'; flag?: 'privacy' | 'distress' }
-interface Scenario { id: string; adventure: string; steps: Step[]; checks: Check[] }
+interface Check { type: string; pattern?: string; where?: 'page' | 'narration'; flag?: 'privacy' | 'distress'; min?: number }
+interface Scenario { id: string; adventure: string; lang?: 'en' | 'pl'; steps: Step[]; checks: Check[] }
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -34,7 +34,24 @@ config.saveConfig({
 });
 await syncCatalogue();
 
+const { anthropicClient } = await import('../../server/providers/anthropic');
+const { betaZodOutputFormat } = await import('@anthropic-ai/sdk/helpers/beta/zod');
+const { z } = await import('zod');
+
+/** Humour judge: rates one page 1-5 for kind, genuinely funny cybermagical wit. */
+async function humourScore(text: string): Promise<{ score: number; why: string }> {
+  const res = await anthropicClient(process.env.ANTHROPIC_API_KEY!).beta.messages.parse({
+    model: 'claude-haiku-5-5',
+    max_tokens: 1000,
+    system: 'You rate one page of an interactive story for readers aged 13+. Score its humour 1-5: 1 = no humour at all, 2 = a faint smile at most, 3 = one clearly funny beat, 4 = several genuinely funny moments woven into the story, 5 = laugh-out-loud while still warm. Humour that mocks the reader scores 1. why: one short sentence.',
+    messages: [{ role: 'user', content: text }],
+    output_config: { effort: 'low', format: betaZodOutputFormat(z.object({ score: z.number().int(), why: z.string() })) },
+  });
+  return res.parsed_output ?? { score: 0, why: 'no verdict' };
+}
+
 const scenarios: Scenario[] = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, 'scenarios.json'), 'utf8')).filter((s: Scenario) => !arg('only') || s.id === arg('only'));
+const humour: number[] = [];
 const results: { id: string; pass: boolean; failures: string[]; turnsMs: number[]; usage: Record<string, number> }[] = [];
 
 for (const sc of scenarios) {
@@ -45,7 +62,7 @@ for (const sc of scenarios) {
     const snap = getSnapshot(sc.adventure);
     if (!snap) throw new Error(`Adventure ${sc.adventure} not synced.`);
     let t0 = Date.now();
-    const story = await startAdventure(snap, 'en', 'Eval_Architect', 'logos');
+    const story = await startAdventure(snap, sc.lang ?? 'en', 'Eval_Architect', 'logos');
     turnsMs.push(Date.now() - t0);
     let page = story.pages[story.currentPageId];
     for (const step of sc.steps) {
@@ -65,6 +82,13 @@ for (const sc of scenarios) {
       if (c.type === 'regex' && !new RegExp(c.pattern!, 'i').test(where)) failures.push(`did not match /${c.pattern}/`);
       if (c.type === 'safety' && !page.safety?.[c.flag!]) failures.push(`expected safety flag ${c.flag}`);
       if (c.type === 'no_ending' && page.ending) failures.push(`unexpected ending ${page.ending.type}`);
+      if (c.type === 'humour') {
+        const pages = Object.values(story.pages);
+        const scores = await Promise.all(pages.map((p) => humourScore([p.narration, `Narrator aside: ${p.quip}`].join('\n'))));
+        const avg = scores.reduce((s, x) => s + x.score, 0) / scores.length;
+        humour.push(...scores.map((x) => x.score));
+        if (avg < (c.min ?? 3)) failures.push(`humour ${avg.toFixed(1)} < ${c.min ?? 3} (${scores.map((x) => x.why).join(' | ')})`);
+      }
       if (c.type === 'choice_contract' && (page.choices.length !== 2 || page.choices[0].kind === page.choices[1].kind || !page.freeForm)) failures.push('expected two options with different forces and an option C');
     }
   } catch (e) {
@@ -79,6 +103,7 @@ const pct = (p: number) => all[Math.min(all.length - 1, Math.floor(p * all.lengt
 const summary = {
   model: config.getConfig().gm.model || config.getConfig().story.model,
   passRate: results.filter((r) => r.pass).length / Math.max(1, results.length),
+  humour: humour.length ? Number((humour.reduce((a, b) => a + b, 0) / humour.length).toFixed(2)) : null,
   p50Ms: pct(0.5),
   p95Ms: pct(0.95),
   tokens: results.reduce((s, r) => ({ input: s.input + r.usage.input, output: s.output + r.usage.output, cacheRead: s.cacheRead + r.usage.cacheRead }), { input: 0, output: 0, cacheRead: 0 }),
@@ -88,4 +113,4 @@ const outDir = path.join(import.meta.dirname, '..', 'results');
 fs.mkdirSync(outDir, { recursive: true });
 const file = path.join(outDir, `gm-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
 fs.writeFileSync(file, JSON.stringify(summary, null, 2));
-console.log(`\npass ${Math.round(summary.passRate * 100)}% · p50 ${summary.p50Ms} ms · p95 ${summary.p95Ms} ms · ${file}`);
+console.log(`\nhumour ${summary.humour ?? '-'} · pass ${Math.round(summary.passRate * 100)}% · p50 ${summary.p50Ms} ms · p95 ${summary.p95Ms} ms · ${file}`);

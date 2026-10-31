@@ -5,6 +5,14 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 5.1.0 · Humor narratora świata iFairy
+
+- Prompt Archiwisty cytuje cały system humoru cybermagicznego z kanonu (kategorie żartów, komedia każdej z czterech sił, częstotliwość i miejsce żartów, przykładowa scena) i ma twardą sekcję o humorze: prawdziwy komiczny moment na każdej stronie, aside zawsze jako żart, NPC zabawni zgodnie ze swoją siłą, zwroty akcji z komicznym wyczuciem, żarty po polsku pisane po polsku, nigdy kosztem gracza; przy niepokoju gracza humor się wycofuje.
+- Game Master: mechanika nie zastępuje żartów.
+- Ewaluacje: sędzia humoru (Claude Haiku 5.5, skala 1–5) i dwa nowe scenariusze (po polsku, zwrot akcji przy rzucie). Na Haiku 5.5 średnia wzrosła z 2,92 do 3,83–3,92 przy 11/11 zaliczonych scenariuszach.
+
+---
+
 ## 5.0.0 · Game Master: postacie, questy, świat i kampania sagi
 
 - **Postacie:** karty NPC (obsada przygody, 12 Tinkermasterów i 4 przewodników głosu z kanonu), relacje affinity / trust / respect, pamięć z ważnością, autorskie sekrety haków ujawniane dopiero przy zaufaniu (tekst sekretu nie trafia do modelu wcześniej), pomoc NPC w rzucie (+1).

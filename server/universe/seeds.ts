@@ -69,6 +69,13 @@ export const CORE_REFS: { ref: string; chunkId: string }[] = [
   ['safety:emotional_safety', 'safety/emotional_safety'],
   ['safety:void_content_handling', 'safety/void_content_handling'],
   ['practical_implementation:handling_common_scenarios:user_distress', 'practical_implementation/handling_common_scenarios/user_distress'],
+  // The canon's cybermagical humour system: what to joke about, how often, and each force's comedy.
+  ['cybermagic_humour_system:core_principles', 'cybermagic_humour_system/core_principles'],
+  ...['technomagical_puns', 'cosmic_scale_absurdity', 'ifairy_daily_life_humour', 'narrator_self_deprecation'].map((c) => [`cybermagic_humour_system:humour_categories:${c}`, `cybermagic_humour_system/humour_categories/${c}`]),
+  ...['logos', 'mythos', 'gnosis', 'phantasia'].map((f) => [`cybermagic_humour_system:humour_categories:archetype_personality_humour:${f}_comedy`, `cybermagic_humour_system/humour_categories/archetype_personality_humour/${f}_comedy`]),
+  ['cybermagic_humour_system:humour_integration_rules:frequency', 'cybermagic_humour_system/humour_integration_rules/frequency'],
+  ['cybermagic_humour_system:humour_integration_rules:placement', 'cybermagic_humour_system/humour_integration_rules/placement'],
+  ['cybermagic_humour_system:example_integrated_scene', 'cybermagic_humour_system/example_integrated_scene'],
 ].map(([ref, path]) => ({ ref: `REF:NARRATIVE_STYLE:${ref}`, chunkId: `NARRATIVE_STYLE:/content/${path}` }))
   .concat([
     { ref: 'REF:FOUNDATIONS:CANON_LOCK', chunkId: 'FOUNDATIONS:/CANON_LOCK' },
