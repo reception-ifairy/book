@@ -28,6 +28,20 @@ export interface CanonPassage {
   text: string;
 }
 
+/** An NPC the Game Master can voice, from the canon or the adventure's cast. */
+export interface NpcCard {
+  id: string;
+  name: string;
+  tier: 'ifairy' | 'traveller' | 'role';
+  role: string;
+  voice: string;
+  /** What this NPC can plausibly know; they never voice facts beyond it. */
+  knows: string[];
+  /** Authored for portal hooks; revealed only through reveal_secret once trust is high enough. */
+  secret?: { id: string; text: string; trust: number };
+  ref?: string;
+}
+
 /** Everything the narrator needs for one adventure, frozen at sync time. */
 export interface AdventureSnapshot extends AdventureCard {
   /** Canon text of the hook, saga act or district, as fetched from the Universe. */
@@ -46,6 +60,8 @@ export interface AdventureSnapshot extends AdventureCard {
   /** "seed-only": the canon chunk was not addressable, so the premise comes from the seed's copy. */
   status: 'ok' | 'seed-only';
   hash: string;
+  /** Game Master NPCs (5.0 snapshots). Secrets stay on the server with the snapshot. */
+  npcs?: NpcCard[];
 }
 
 export const cardOf = ({ id, kind, order, emoji, hue, title, tagline, structure, version }: AdventureCard): AdventureCard => ({

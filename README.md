@@ -29,7 +29,7 @@ Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASS
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 71 testów (bez kluczy, na sztucznych API) + build
+bun run check   # typecheck + 79 testów (bez kluczy, na sztucznych API) + build
 npm run eval:gm # ewaluacje Game Mastera na żywym modelu (klucz Anthropic, poza CI)
 ```
 

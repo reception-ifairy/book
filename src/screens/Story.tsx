@@ -5,6 +5,8 @@ import { ArrowLeft, ArrowUp, BookMarked, Brain, GitFork, HeartHandshake, ImagePl
 import { SVGCharacter } from '../components/SVGCharacter';
 import { ArchivistAvatar } from '../components/ArchivistAvatar';
 import { DiceTray } from '../components/DiceTray';
+import { navigate } from '../App';
+import { SEGMENTS } from '../../shared/gm';
 import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
@@ -232,6 +234,21 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       setStory(await api.goto(story.id, pageId));
       setShowMap(false);
       toast('Rolled back. Your next move forks a new branch.');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** If-AI Saga: the next act opens as a new story with this one's bonds, facts and items. */
+  const nextChapter = async () => {
+    if (!story) return;
+    setBusy(true);
+    try {
+      const next = await api.nextChapter(story.id);
+      rememberRun(next);
+      navigate(`story/${next.id}`);
     } catch (e) {
       toast((e as Error).message, 'error');
     } finally {
@@ -606,6 +623,9 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                           <Button onClick={() => jump(parent.id)} disabled={busy}><Undo2 size={16} /> Roll back one page</Button>
                         )}
                         <Button onClick={() => setShowMap(true)}><GitFork size={16} /> Fork from the map</Button>
+                        {story.adventure?.kind === 'saga' && story.adventure.order < 8 && (
+                          <Button variant="primary" onClick={nextChapter} disabled={busy}>Continue to Act {['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][story.adventure.order - 1]}</Button>
+                        )}
                         <Button variant="primary" onClick={share}><Share2 size={16} /> Share ending</Button>
                       </div>
                     </div>
@@ -733,6 +753,50 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       </Sheet>
       {ifairy && (
         <Sheet open={showCodex} onClose={() => setShowCodex(false)} title="Codex">
+          {page.gm?.state.quest && (
+            <>
+              <div className="eyebrow mb-2">Quest</div>
+              <ol className="space-y-1 mb-6 text-sm">
+                {page.gm.state.quest.map((n) => (
+                  <li key={n.id} className={cx('flex gap-2', n.status === 'locked' && 'text-faint')}>
+                    <span className="w-4 shrink-0">{{ done: '✓', failed: '✗', transformed: '↻', active: '▸', locked: '·' }[n.status]}</span>
+                    <span className={cx(n.status === 'active' && 'font-bold', (n.status === 'done' || n.status === 'transformed') && 'line-through text-muted')}>{n.title}</span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+          {page.gm?.state.npcs && Object.values(page.gm.state.npcs).some((n) => n.met) && (
+            <>
+              <div className="eyebrow mb-2">Bonds</div>
+              <ul className="space-y-2 mb-6">
+                {Object.entries(page.gm.state.npcs).filter(([, n]) => n.met).map(([id, n]) => (
+                  <li key={id} className="text-sm">
+                    <div className="font-bold capitalize">{id.replace(/-/g, ' ')}</div>
+                    <div className="grid grid-cols-3 gap-3 mt-1">
+                      {(['affinity', 'trust', 'respect'] as const).map((axis) => (
+                        <Meter key={axis} label={axis} value={n[axis]} min={-3} max={3} center color="var(--color-gnosis)" />
+                      ))}
+                    </div>
+                    {n.memories.length > 0 && <p className="text-xs text-faint mt-1">Remembers: {n.memories.at(-1)!.text}</p>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {page.gm?.state.world && (
+            <>
+              <div className="eyebrow mb-2">World</div>
+              <p className="text-sm mb-2">Day {page.gm.state.world.day}, {SEGMENTS[page.gm.state.world.segment]}</p>
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                {page.gm.state.world.clocks.map((c) => <Meter key={c.id} label={c.label} value={c.value} max={c.max} color="var(--color-ember)" />)}
+              </div>
+              {page.gm.state.world.rumours.length > 0 && (
+                <ul className="text-xs text-muted space-y-0.5 mb-2">{page.gm.state.world.rumours.slice(-3).map((r) => <li key={r.id}>“{r.text}”</li>)}</ul>
+              )}
+              <div className="mb-6" />
+            </>
+          )}
           {!!page.gm?.state.facts.length && (
             <>
               <div className="eyebrow mb-2">Journal</div>

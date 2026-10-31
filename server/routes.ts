@@ -9,7 +9,7 @@ import { getTale, TALES } from '../shared/tales';
 import { FORCES, worldOf, type PublicConfig } from '../shared/types';
 import { ProviderError, type Media } from './providers/types';
 import { publicStory } from './story/public';
-import { ifairyAct, startAdventure } from './story/worlds/ifairy/turn';
+import { ifairyAct, nextChapter, startAdventure } from './story/worlds/ifairy/turn';
 import { getCatalogue, getSnapshot, listCards } from './universe/store';
 import { looksPersonal } from './universe/pii';
 
@@ -151,6 +151,17 @@ api.post('/story/:id/act', actionLimiter, async (req, res) => {
     fail(res, e);
   } finally {
     if (locked) writing.delete(locked);
+  }
+});
+
+/** If-AI Saga: start the next act as a new story, carrying bonds, facts and items over. */
+api.post('/story/:id/next-chapter', actionLimiter, async (req, res) => {
+  try {
+    const story = await nextChapter(loadStory(req));
+    saveStory(story);
+    res.json(publicStory(story));
+  } catch (e) {
+    fail(res, e);
   }
 });
 

@@ -7,8 +7,8 @@ import { pick, StoryError, type PlayerAction } from '../story/engine';
 import { IfairyPageOutput, IFAIRY_ENDINGS, resolveLore } from '../story/worlds/ifairy/page';
 import { ifairySystemPrompt } from '../story/worlds/ifairy/prompt';
 import { FORCES, type Page, type Story } from '../../shared/types';
-import type { CanonPassage } from '../../shared/universe';
-import { BAND_LABEL, type GmState, type PageGm, type RollRecord } from '../../shared/gm';
+import type { CanonPassage, NpcCard } from '../../shared/universe';
+import { BAND_LABEL, SEGMENTS, type GmState, type PageGm, type RollRecord } from '../../shared/gm';
 import { GM_TOOLS, Ledger } from './tools';
 import { lintPage, type Screened } from './safety';
 import type { World } from './kernel/events';
@@ -64,14 +64,52 @@ export interface GmTurn {
   messages: (gmContext: string) => Anthropic.Beta.BetaMessageParam[];
 }
 
-/** The GM CONTEXT block: approaches, conditions, established facts, the pre-roll and safety flags. */
-export function gmContext(state: GmState, preRoll: RollRecord | undefined, screened: Screened | undefined): string {
+export interface Direction {
+  npcs: NpcCard[];
+  /** Consequences that came due on this page. */
+  due: string[];
+  depth: number;
+  maxDepth: number;
+}
+
+/** The GM CONTEXT block: approaches, conditions, facts, NPCs, quest, world, director notes, pre-roll, safety flags. */
+export function gmContext(state: GmState, preRoll: RollRecord | undefined, screened: Screened | undefined, dir?: Direction): string {
   const facts = state.facts.slice(-12).map((f) => `- ${f.subject}: ${f.text}${f.visibility === 'gm_only' ? ' (gm only: never reveal directly)' : ''}`);
   const lines = [
     'GM CONTEXT',
     `Approaches: ${FORCES.map((f) => `${f} +${state.approaches[f]}`).join(', ')}. Conditions: ${state.conditions.join(', ') || 'none'}.`,
     facts.length ? `Established facts:\n${facts.join('\n')}` : 'Established facts: none yet.',
   ];
+  if (dir?.npcs.length) {
+    const npcLine = (n: NpcCard) => {
+      const st = state.npcs?.[n.id];
+      const regard = st ? ` regard ${st.affinity}/${st.trust}/${st.respect}${st.memories.length ? `, remembers: ${[...st.memories].sort((a, b) => b.salience - a.salience).slice(0, 2).map((m) => m.text).join(' / ')}` : ''}` : '';
+      const secret = n.secret && !st?.revealed.includes(n.secret.id) ? `, holds secret ${n.secret.id} (trust ${n.secret.trust})` : '';
+      return `- ${n.id}: ${n.name}, ${n.role}${regard}${secret}`;
+    };
+    const known = dir.npcs.filter((n) => n.tier !== 'ifairy' || state.npcs?.[n.id]?.met);
+    const others = dir.npcs.filter((n) => !known.includes(n));
+    lines.push(`NPCs (regard = affinity/trust/respect, -3..3):\n${known.map(npcLine).join('\n')}`);
+    if (others.length) lines.push(`Canon iFairies you may bring in (get_npc for their card): ${others.map((n) => `${n.id} (${n.role.split(',')[0]})`).join('; ')}.`);
+  }
+  if (state.quest?.length) lines.push(`Quest: ${state.quest.map((n) => `[${n.status}] ${n.id}: ${n.title}${n.climax ? ' (climax)' : ''}`).join(' · ')}`);
+  if (state.world) {
+    const w = state.world;
+    lines.push(`World: day ${w.day}, ${SEGMENTS[w.segment]}. Clocks: ${w.clocks.map((c) => `${c.id} "${c.label}" ${c.value}/${c.max}`).join(', ') || 'none'}.${w.rumours.length ? ` Rumours: ${w.rumours.slice(-3).map((r) => `"${r.text}" (${r.truth ? 'true' : 'false'})`).join('; ')}.` : ''}`);
+  }
+  const pending = (state.consequences ?? []).filter((c) => !c.fired);
+  if (pending.length) lines.push(`Planted consequences: ${pending.map((c) => `page ${c.dueDepth + 1}: ${c.text}`).join('; ')}.`);
+  if (dir?.due.length) lines.push(`DUE CONSEQUENCES (make them happen on this page): ${dir.due.join('; ')}`);
+  if (dir) {
+    const notes = [`page ${dir.depth + 1} of about ${dir.maxDepth + 1}`];
+    const active = state.quest?.find((n) => n.status === 'active');
+    if (active) notes.push(`steer toward the active goal "${active.title}"`);
+    if (dir.depth >= dir.maxDepth) notes.push('this page must bring the adventure to its ending');
+    else if (dir.depth < 4) notes.push('too early to end');
+    const full = state.world?.clocks.filter((c) => c.value >= c.max) ?? [];
+    if (full.length) notes.push(`clock full, bring it to a head: ${full.map((c) => c.label).join(', ')}`);
+    lines.push(`DIRECTOR: ${notes.join('; ')}.`);
+  }
   if (preRoll) {
     lines.push(`PRE-ROLLED CHECK ${preRoll.id} for the option the player picked: ${preRoll.approach}, dice ${preRoll.dice.join('+')}, modifiers ${preRoll.mods.map((m) => `${m.label} ${m.value >= 0 ? '+' : ''}${m.value}`).join(', ')}, total ${preRoll.total}: ${BAND_LABEL[preRoll.band]}${preRoll.surge ? ' (surge)' : ''}. Call roll_check to see its options, then choose_outcome.`);
   }
@@ -101,8 +139,10 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
   const g = cfg.gm;
   const snap = t.story.adventure!;
   const client = anthropicClient(apiKey);
-  const ledger = new Ledger({ seed: t.story.gmSecret!.seed, streamBase: t.streamBase, pageId: t.pageId, world: t.world, whitelist: t.whitelist, passages: [...snap.sources, ...t.lore], preRoll: t.preRoll });
-  const messages = t.messages(gmContext(t.world.gm, t.preRoll, t.screened));
+  const depth = (t.parent?.depth ?? -1) + 1;
+  const npcs = snap.npcs ?? [];
+  const ledger = new Ledger({ seed: t.story.gmSecret!.seed, streamBase: t.streamBase, pageId: t.pageId, world: t.world, whitelist: t.whitelist, passages: [...snap.sources, ...t.lore], preRoll: t.preRoll, npcs, depth });
+  const messages = t.messages(gmContext(ledger.world.gm, t.preRoll, t.screened, { npcs, due: ledger.due, depth, maxDepth: t.story.maxDepth! }));
   markCache(messages);
   const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: 'text', text: ifairySystemPrompt(snap, t.story.lang, t.story.maxDepth!, true), cache_control: { type: 'ephemeral' } }];
   const usage = { rounds: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, ms: 0 };
@@ -157,7 +197,13 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
       forceLast = true;
       continue;
     }
-    const issues = lintPage(page, (t.parent?.depth ?? -1) + 1);
+    const issues = lintPage(page, depth);
+    const quest = ledger.world.gm.quest;
+    if (quest?.length) {
+      const climaxDone = quest.some((n) => n.climax && n.status !== 'active' && n.status !== 'locked');
+      if (page.ending?.type === 'canon' && !climaxDone && depth < t.story.maxDepth!) issues.push('A canon ending needs the climax goal closed first (update_quest), or keep going.');
+      if (!page.ending && depth >= t.story.maxDepth!) issues.push('This page must end the adventure: set ending and return no choices.');
+    }
     const judged = g.outputCheck === 'all' || (g.outputCheck === 'custom' && t.action.kind === 'custom');
     if (!issues.length && judged && deadline - Date.now() > FLOOR_MS) {
       const verdict = await judgePage(client, page, Math.min(15_000, deadline - Date.now() - FLOOR_MS));
@@ -181,6 +227,7 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
   usage.ms = Date.now() - t0;
 
   ledger.settle();
+  ledger.meetPresent(out.scene.present);
   if (out.artifact_description) ledger.addArtefact(out.artifact_description);
   return toGmPage(t, out, ledger, usage);
 }

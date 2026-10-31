@@ -57,7 +57,8 @@ flowchart LR
 │   ├── gm/
 │   │   ├── kernel/rng.ts      Kości z HMAC(seed, historia|rodzic|ruch|indeks), commit sha256 ziarna
 │   │   ├── kernel/rules.ts    2d6 + podejście (siła), pasma, opcje wyniku jako dane, walidacja wyboru
-│   │   ├── kernel/events.ts   Zdarzenia GM i czysty reduktor (meters, przedmioty, warunki, fakty)
+│   │   ├── kernel/events.ts   Zdarzenia GM i czysty reduktor (meters, przedmioty, warunki, fakty, NPC, quest, czas, zegary)
+│   │   ├── kernel/quests.ts   Szkielety questów per kształt historii, cele przekształcone, zegary zagrożeń
 │   │   ├── tools.ts           Narzędzia GM (strict), limity na stronę, Ledger zamieniający wywołania w zdarzenia
 │   │   ├── loop.ts            Pętla narzędzi: rundy, termin, ostatnia runda bez narzędzi, lint i naprawa, sędzia Haiku, probe
 │   │   ├── safety.ts          Redakcja danych osobowych, flaga niepokoju, lint strony (bogowie, pytania o dane, kontrakt wyborów)
@@ -226,6 +227,9 @@ sequenceDiagram
 - **Brak narzędzia = brak skutku:** schemat strony GM nie ma pól statystyk ani ekwipunku. Każda zmiana to zdarzenie z narzędzia, a `fold(stan rodzica, zdarzenia)` musi dać zapisany stan (sprawdza to audyt).
 - **Uczciwe kości:** ziarno jest tylko na serwerze (`Story.gmSecret`), przeglądarka dostaje jego sha256 (`gmCommit`). Ten sam ruch po cofnięciu daje te same kości.
 - **Cache:** narzędzia i prompt systemowy są stałe (kolejność renderowania: narzędzia → system → wiadomości), drugi breakpoint stoi na końcu tury gracza. Wiadomości w turze są tylko dopisywane (zachowane bloki thinking).
+- **NPC (5.0):** karty w snapshocie (obsada przygody + 12 Tinkermasterów + 4 przewodników głosu z kanonu). Relacje affinity / trust / respect (−3..3), pamięć z ważnością (8 najważniejszych), autorskie sekrety haków ujawniane tylko przez `reveal_secret` przy odpowiednim zaufaniu. Tekst sekretu nie trafia do promptu, dopóki nie zostanie ujawniony.
+- **Quest, konsekwencje, świat (5.0):** szkielet celów zależny od kształtu (pięć pokoi, potwór tygodnia, akt sagi), cele zamknięte, nieudane albo przekształcone. Zaplanowane konsekwencje odpalają się jako zdarzenia kernela na stronie, na którą przypadają. Każda strona to pora dnia dalej; zegary zagrożeń i plotki (prawdziwość widzi tylko GM). Notatki reżysera w GM CONTEXT pilnują tempa; zakończenie `canon` wymaga zamkniętej kulminacji.
+- **Kampania sagi (5.0):** `POST /api/story/:id/next-chapter` po zakończeniu aktu tworzy historię kolejnego aktu z przeniesionymi podejściami, więziami, faktami i przedmiotami (`Story.campaign`, stan startowy w `Story.gmStart`).
 - **Budżet:** `gm.turnBudgetMs` (domyślnie 75 s) przy nginx `proxy_read_timeout` 180 s; poniżej 20 s następna runda idzie z `tool_choice: none`, poniżej 8 s tura kończy się 502 bez zapisu.
 
 ---

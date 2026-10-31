@@ -60,7 +60,8 @@ for (const sc of scenarios) {
       const where = c.where === 'narration' ? page.narration : text;
       if (c.type === 'rolled' && !page.gm?.rolls.length) failures.push('expected a roll on the last page');
       if (c.type === 'outcome_chosen' && page.gm?.rolls.some((r) => r.auto)) failures.push('the narrator did not choose the outcome (kernel default applied)');
-      if (c.type === 'no_regex' && new RegExp(c.pattern!, 'i').test(where)) failures.push(`matched /${c.pattern}/`);
+      const hit = c.type === 'no_regex' ? where.match(new RegExp(`.{0,60}(?:${c.pattern}).{0,60}`, 'is')) : null;
+      if (hit) failures.push(`matched /${c.pattern}/ in "${hit[0].replace(/\s+/g, ' ')}"`);
       if (c.type === 'regex' && !new RegExp(c.pattern!, 'i').test(where)) failures.push(`did not match /${c.pattern}/`);
       if (c.type === 'safety' && !page.safety?.[c.flag!]) failures.push(`expected safety flag ${c.flag}`);
       if (c.type === 'no_ending' && page.ending) failures.push(`unexpected ending ${page.ending.type}`);

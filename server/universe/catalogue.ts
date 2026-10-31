@@ -1,8 +1,8 @@
 import { createHash } from 'crypto';
 import { universe, UniverseError, type Chunk } from './client';
-import { CORE_REFS, PORTALS_ROOT, SEEDS, type Seed } from './seeds';
+import { CORE_REFS, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS, type Seed } from './seeds';
 import { getCatalogue, writeCatalogue, writeSnapshot, type Catalogue, type SyncRow } from './store';
-import type { AdventureSnapshot, CanonPassage } from '../../shared/universe';
+import type { AdventureSnapshot, CanonPassage, NpcCard } from '../../shared/universe';
 
 const PREMISE_MAX = 4000;
 
@@ -43,6 +43,51 @@ export function splitHooks(line: string, starts: string[]): Map<string, string> 
 /** Checklist items end with a full stop; a "; " inside an item is not preceded by one. */
 export const splitChecklist = (line: string) => line.split(/(?<=\.)\s*;\s+/).map((s) => s.trim()).filter(Boolean);
 
+const slug = (s: string) => s.toLowerCase().replace(/^(?:an?|the)\s+/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/** The Tinkermasters and voice guides, as NPC cards. Fails soft: without them, adventures keep their own cast. */
+async function canonNpcs(): Promise<{ cards: NpcCard[]; error?: string }> {
+  try {
+    const cards: NpcCard[] = [];
+    for (const d of TINKER_REFS) {
+      const district = await fetchExact(d.district.ref, d.district.chunkId);
+      const [name, force] = [field(district.text, 'District') ?? district.title ?? '', field(district.text, 'Force') ?? ''];
+      for (const m of d.masters) {
+        const c = await fetchExact(m.ref, m.chunkId);
+        const who = field(c.text, 'Name') ?? c.title ?? '';
+        const embodies = field(c.text, 'Embodies') ?? '';
+        cards.push({ id: slug(who), name: who, tier: 'ifairy', role: `${field(c.text, 'Role') ?? 'Tinkermaster'}, a Tinkermaster of the ${name} (${force})`, voice: `Embodies ${embodies}.`, knows: [name, force, embodies].filter(Boolean), ref: m.ref });
+      }
+    }
+    for (const v of VOICE_REFS) {
+      const c = await fetchExact(v.ref, v.chunkId);
+      const who = (c.title ?? '').split('—').pop()!.trim().replace(/^If Ai$/, 'If-AI');
+      const domain = field(c.text, 'Domain') ?? '';
+      cards.push({ id: slug(who), name: who, tier: 'ifairy', role: domain, voice: [field(c.text, 'Voice Quality'), field(c.text, 'Humour Style') && `humour: ${field(c.text, 'Humour Style')}`, field(c.text, 'Sample') && `e.g. ${field(c.text, 'Sample')}`].filter(Boolean).join('; '), knows: [domain], ref: v.ref });
+    }
+    return { cards };
+  } catch (e) {
+    return { cards: [], error: (e as Error).message };
+  }
+}
+
+/** The adventure's own cast as cards, with any authored secret attached. */
+function castCards(seed: Seed): NpcCard[] {
+  return seed.cast.map((who, i) => {
+    const secret = seed.secrets?.find((s) => s.npc === who);
+    const name = who.replace(/^(?:an?|the)\s+/i, '');
+    return {
+      id: slug(who) || `cast-${i}`,
+      name: name[0].toUpperCase() + name.slice(1),
+      tier: seed.kind === 'district' ? 'traveller' : 'role',
+      role: who,
+      voice: '',
+      knows: [seed.setting],
+      ...(secret ? { secret: { id: `S${i + 1}`, text: secret.text, trust: secret.trust } } : {}),
+    } satisfies NpcCard;
+  });
+}
+
 const passage = (chunk: Chunk, ref: string): Omit<CanonPassage, 'handle'> => ({ ref: chunk.ref || ref, title: chunk.title ?? '', text: chunk.text });
 
 async function hydrate(seed: Seed, hooks: Map<string, string>, portals: Chunk) {
@@ -69,11 +114,12 @@ async function hydrate(seed: Seed, hooks: Map<string, string>, portals: Chunk) {
   };
 }
 
-function buildSnapshot(seed: Seed, premise: string, own: Omit<CanonPassage, 'handle'>[], core: Omit<CanonPassage, 'handle'>[], checklist: string[], status: AdventureSnapshot['status'], canonVersion: string): AdventureSnapshot {
+function buildSnapshot(seed: Seed, premise: string, own: Omit<CanonPassage, 'handle'>[], core: Omit<CanonPassage, 'handle'>[], checklist: string[], status: AdventureSnapshot['status'], canonVersion: string, npcs: NpcCard[]): AdventureSnapshot {
   const body = {
     id: seed.id, kind: seed.kind, order: seed.order, emoji: seed.emoji, hue: seed.hue, title: seed.title, tagline: seed.tagline,
     structure: seed.structure, premise: premise.slice(0, PREMISE_MAX), setting: seed.setting, cast: seed.cast, loreTerms: seed.loreTerms,
     art: seed.art, sources: [...own, ...core].map((p, i) => ({ handle: `C${i + 1}`, ...p })), checklist, canonVersion, status,
+    npcs: [...castCards(seed), ...npcs.filter((n) => !seed.cast.some((c) => slug(c) === n.id))],
   };
   const hash = createHash('sha256').update(stable(body)).digest('hex');
   return { ...body, hash, version: `${canonVersion}#${hash.slice(0, 8)}` };
@@ -88,6 +134,7 @@ async function run(): Promise<Catalogue> {
   if (!hooksLine || !checklistLine) throw new UniverseError('The portal story hooks or checklist are missing from the canon.', 409);
   const hooks = splitHooks(hooksLine, SEEDS.flatMap((s) => (s.source.hookStart ? [s.source.hookStart] : [])));
   const checklist = splitChecklist(checklistLine);
+  const npcs = await canonNpcs();
 
   const prev = getCatalogue();
   const next: Catalogue = { canonVersion: health.version, builtAt: health.builtAt, syncedAt: Date.now(), adventures: {}, report: [] };
@@ -95,10 +142,11 @@ async function run(): Promise<Catalogue> {
     const before = prev?.adventures[seed.id];
     try {
       const h = await hydrate(seed, hooks, portals);
-      const snap = buildSnapshot(seed, h.premise, h.sources, core, checklist, h.status, health.version);
+      const snap = buildSnapshot(seed, h.premise, h.sources, core, checklist, h.status, health.version, npcs.cards);
       next.adventures[seed.id] = { file: writeSnapshot(snap), hash: snap.hash, version: snap.version, status: snap.status };
       const status: SyncRow['status'] = snap.status === 'seed-only' ? 'seed-only' : !before ? 'new' : before.hash === snap.hash ? 'unchanged' : 'changed';
-      next.report.push({ id: seed.id, status, version: snap.version, ...('detail' in h ? { detail: h.detail } : {}) });
+      const detail = 'detail' in h ? h.detail : npcs.error ? `Canon NPCs unavailable: ${npcs.error}` : undefined;
+      next.report.push({ id: seed.id, status, version: snap.version, ...(detail ? { detail } : {}) });
     } catch (e) {
       // Fail closed per adventure: keep what was synced before, or leave it out.
       if (before) next.adventures[seed.id] = before;
