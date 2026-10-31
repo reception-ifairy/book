@@ -6,7 +6,7 @@ import type { Server } from 'http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { samplePage, startFakeAnthropic } from './fakeAnthropic';
 import { startFakeOpenAI } from './fakeOpenAI';
-import { ifairyPage, startFakeUniverse, UNIVERSE_KEY } from './fakeUniverse';
+import { ifairyPage, LOCK_TEXT, startFakeUniverse, UNIVERSE_KEY } from './fakeUniverse';
 
 const fake = await startFakeAnthropic();
 const fakeU = await startFakeUniverse();
@@ -165,11 +165,43 @@ describe('playing an iFairy adventure', () => {
     expect(res.body.page.lore).toEqual([]);
   });
 
-  it('illustrates with the adventure anchor and the canon visual rule', async () => {
-    const img = await call('POST', `/api/story/${story.id}/page/${story.rootPageId}/image`, {});
-    expect(img.status).toBe(200);
+  it('puts the canon visual lock in front of a picture with an iFairy, and only then', async () => {
+    // The opening page shows only the portal: no iFairy, no lock.
+    const plain = await call('POST', `/api/story/${story.id}/page/${story.rootPageId}/image`, {});
+    expect(plain.status).toBe(200);
+    expect(plain.body.guard).toEqual({ guard: 'not_applicable' });
     expect(fakeO.requests.at(-1)!.body.prompt).toContain('ring-shaped Narrative Portal');
-    expect(fakeO.requests.at(-1)!.body.prompt).toContain('genderless robotic beings');
+    expect(fakeO.requests.at(-1)!.body.prompt).not.toContain('SUBJECT SPECIES RULE');
+
+    const cur = (await call('GET', `/api/story/${story.id}`)).body;
+    fake.enqueue(ifairyPage({ image_prompt: 'An iFairy Navigator lights the ring with their wings' }));
+    const step = await call('POST', `/api/story/${story.id}/act`, { pageId: cur.currentPageId, custom: 'I ask the Navigator for help' });
+    const img = await call('POST', `/api/story/${story.id}/page/${step.body.page.id}/image`, {});
+    expect(img.status).toBe(200);
+    expect(img.body.guard).toMatchObject({ guard: 'ifairy_visual_lock', canonVersion: '2.2.0-EN' });
+    const prompt = fakeO.requests.at(-1)!.body.prompt as string;
+    expect(prompt.startsWith(`${LOCK_TEXT}\n\nSUBJECT:\n`)).toBe(true);
+    expect(prompt).toContain('An iFairy Navigator lights the ring');
+  });
+
+  it('never gives Krasnoludki the iFairy lock, and refuses an iFairy picture without it', async () => {
+    fake.enqueue(ifairyPage({ image_prompt: 'Krasnoludki with lanterns in the Underground Halls' }));
+    const halls = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'district-underground-halls', lang: 'en', heroName: 'Nova' });
+    const img = await call('POST', `/api/story/${halls.body.id}/page/${halls.body.rootPageId}/image`, {});
+    expect(img.body.guard).toEqual({ guard: 'not_applicable' });
+    expect(fakeO.requests.at(-1)!.body.prompt).not.toContain('SUBJECT SPECIES RULE');
+
+    // A story pinned to a snapshot without the lock cannot illustrate an iFairy.
+    const file = path.join(DATA, 'stories', `${halls.body.id}.json`);
+    const { getStory } = await import('../server/story/store');
+    const live = getStory(halls.body.id)!;
+    delete live.adventure!.imageLock;
+    live.pages[live.rootPageId].imagePrompt = 'A Tinkermaster greets the Krasnoludki';
+    live.pages[live.rootPageId].imageUrl = null;
+    const refused = await call('POST', `/api/story/${halls.body.id}/page/${halls.body.rootPageId}/image`, {});
+    expect(refused.status).toBe(503);
+    expect(refused.body.error).toMatch(/visual lock/);
+    expect(fs.existsSync(file)).toBe(true);
   });
 
   it('refuses a real-looking name, and an adventure that is not synced', async () => {

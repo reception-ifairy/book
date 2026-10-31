@@ -1,6 +1,8 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { CORE_REFS, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS } from '../server/universe/seeds';
+import { CORE_REFS, IMAGE_LOCK_REF, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS } from '../server/universe/seeds';
+
+export const LOCK_TEXT = 'SUBJECT SPECIES RULE — overrides anything below.\n\nAn iFairy is NOT a fairy.\nCHEST — REQUIRED. A shaped Aperture opens onto a luminous core.';
 
 export const UNIVERSE_KEY = 'uapi_test_key_000000';
 
@@ -27,6 +29,7 @@ export async function startFakeUniverse() {
   const byRef = new Map<string, Chunk>();
   const add = (ref: string, c: Chunk) => byRef.set(ref, c);
   for (const c of CORE_REFS) add(c.ref, chunk(c.chunkId, c.ref.startsWith('REF:NARRATIVE_STYLE') ? c.ref : null, c.ref.split(':').slice(2).join(' '), `Canon text of ${c.ref}.`));
+  add(IMAGE_LOCK_REF.ref, chunk(IMAGE_LOCK_REF.chunkId, null, 'Image Guard Rule — the Full iFairy Visual Lock', `Title: Image Guard Rule\nNote: iFairies only.\nText: ${LOCK_TEXT}`));
   add(PORTALS_ROOT.ref, chunk(PORTALS_ROOT.chunkId, null, 'PORTALS AND GUARDIANS', `Source Of Truth: spec.\nStory Hooks: ${HOOKS_LINE}\nConsistency Checklist: ${CHECKLIST_LINE}`));
   for (const s of SEEDS.filter((s) => s.kind === 'saga')) {
     add(s.source.ref, chunk(s.source.chunkId, s.order === 8 ? s.source.ref : null, s.title.en, `Saga text for act ${s.order}.`));

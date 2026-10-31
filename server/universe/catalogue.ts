@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { universe, UniverseError, type Chunk } from './client';
-import { CORE_REFS, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS, type Seed } from './seeds';
+import { CORE_REFS, IMAGE_LOCK_REF, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS, type Seed } from './seeds';
 import { getCatalogue, writeCatalogue, writeSnapshot, type Catalogue, type SyncRow } from './store';
 import type { AdventureSnapshot, CanonPassage, NpcCard } from '../../shared/universe';
 
@@ -114,12 +114,25 @@ async function hydrate(seed: Seed, hooks: Map<string, string>, portals: Chunk) {
   };
 }
 
-function buildSnapshot(seed: Seed, premise: string, own: Omit<CanonPassage, 'handle'>[], core: Omit<CanonPassage, 'handle'>[], checklist: string[], status: AdventureSnapshot['status'], canonVersion: string, npcs: NpcCard[]): AdventureSnapshot {
+/** The visual lock text: everything after the chunk's "Text:" label. Absent if the canon lacks it. */
+async function imageLock(): Promise<AdventureSnapshot['imageLock']> {
+  try {
+    const c = await fetchExact(IMAGE_LOCK_REF.ref, IMAGE_LOCK_REF.chunkId);
+    const at = c.text.indexOf('\nText: ');
+    const text = at >= 0 ? c.text.slice(at + '\nText: '.length).trim() : '';
+    return text.startsWith('SUBJECT SPECIES RULE') ? { text, ref: IMAGE_LOCK_REF.ref } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function buildSnapshot(seed: Seed, premise: string, own: Omit<CanonPassage, 'handle'>[], core: Omit<CanonPassage, 'handle'>[], checklist: string[], status: AdventureSnapshot['status'], canonVersion: string, npcs: NpcCard[], lock: AdventureSnapshot['imageLock']): AdventureSnapshot {
   const body = {
     id: seed.id, kind: seed.kind, order: seed.order, emoji: seed.emoji, hue: seed.hue, title: seed.title, tagline: seed.tagline,
     structure: seed.structure, premise: premise.slice(0, PREMISE_MAX), setting: seed.setting, cast: seed.cast, loreTerms: seed.loreTerms,
     art: seed.art, sources: [...own, ...core].map((p, i) => ({ handle: `C${i + 1}`, ...p })), checklist, canonVersion, status,
     npcs: [...castCards(seed), ...npcs.filter((n) => !seed.cast.some((c) => slug(c) === n.id))],
+    ...(lock ? { imageLock: lock } : {}),
   };
   const hash = createHash('sha256').update(stable(body)).digest('hex');
   return { ...body, hash, version: `${canonVersion}#${hash.slice(0, 8)}` };
@@ -135,6 +148,7 @@ async function run(): Promise<Catalogue> {
   const hooks = splitHooks(hooksLine, SEEDS.flatMap((s) => (s.source.hookStart ? [s.source.hookStart] : [])));
   const checklist = splitChecklist(checklistLine);
   const npcs = await canonNpcs();
+  const lock = await imageLock();
 
   const prev = getCatalogue();
   const next: Catalogue = { canonVersion: health.version, builtAt: health.builtAt, syncedAt: Date.now(), adventures: {}, report: [] };
@@ -142,7 +156,7 @@ async function run(): Promise<Catalogue> {
     const before = prev?.adventures[seed.id];
     try {
       const h = await hydrate(seed, hooks, portals);
-      const snap = buildSnapshot(seed, h.premise, h.sources, core, checklist, h.status, health.version, npcs.cards);
+      const snap = buildSnapshot(seed, h.premise, h.sources, core, checklist, h.status, health.version, npcs.cards, lock);
       next.adventures[seed.id] = { file: writeSnapshot(snap), hash: snap.hash, version: snap.version, status: snap.status };
       const status: SyncRow['status'] = snap.status === 'seed-only' ? 'seed-only' : !before ? 'new' : before.hash === snap.hash ? 'unchanged' : 'changed';
       const detail = 'detail' in h ? h.detail : npcs.error ? `Canon NPCs unavailable: ${npcs.error}` : undefined;
