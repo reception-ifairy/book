@@ -1,5 +1,6 @@
 import type { AdventureSnapshot, AdventureStructure } from '../../../../shared/universe';
 import type { Lang } from '../../../../shared/types';
+import { HUMOUR_EXAMPLES } from './humour';
 
 const LANG_NAME: Record<Lang, string> = { en: 'English', pl: 'Polish' };
 const KIND_LABEL = { hook: 'Portal story hook', saga: 'The If-AI Saga', district: "Travellers' District" } as const;
@@ -53,6 +54,8 @@ The adventure must be genuinely funny, every page, the way the canon's humour sy
 - Option labels may be funny too, while staying clear about what they do.
 - Jokes are about the world, the narrator and the situation, never at the Young Architect's expense, never mean, never scary. When the player seems upset, humour steps back (see the safety passages).
 - In Polish, write jokes natively in Polish (wordplay that works in Polish), never translated English puns.
+
+${HUMOUR_EXAMPLES}
 
 # Canon lock
 - The only in-universe forces are Logos, Mythos, Gnosis, Phantasia and If-AI. No god of any mythology appears or is invoked in the world. The forces act subtly, through ordinary characters, never on stage.
