@@ -7,7 +7,7 @@ import { api, loadRuns, rememberRun, type TaleCard, type WorldInfo } from '../ap
 import { navigate } from '../App';
 import { Badge, Logo, Segmented, SnowToggle, StatusDot, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
-import type { Lang, PublicConfig, World } from '../../shared/types';
+import { FORCES, type Force, type Lang, type PublicConfig, type World } from '../../shared/types';
 import type { AdventureCard, AdventureKind } from '../../shared/universe';
 import { ago, coverStyle } from '../meta';
 import { useArt } from '../artkit';
@@ -83,6 +83,7 @@ export function Home() {
   const [worlds, setWorlds] = useState<WorldInfo[]>([]);
   const [world, setWorld] = useState<World>(() => prefs.get('ignis.world', 'grimm') as World);
   const [districtFilter, setDistrictFilter] = useState('');
+  const [strongest, setStrongest] = useState<Force>(() => prefs.get('ignis.force', 'mythos') as Force);
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [lang, setLang] = useState<Lang>(() => prefs.get('ignis.lang', 'en') as Lang);
   const [hero, setHero] = useState(() => prefs.get('ignis.hero', ''));
@@ -101,7 +102,8 @@ export function Home() {
   }, []);
 
   // The iFairy world appears once the owner has enabled and synced it.
-  const ifairyOpen = (worlds.find((w) => w.id === 'ifairy')?.adventures ?? 0) > 0;
+  const ifairyInfo = worlds.find((w) => w.id === 'ifairy');
+  const ifairyOpen = (ifairyInfo?.adventures ?? 0) > 0;
   const active: World = world === 'ifairy' && ifairyOpen ? 'ifairy' : 'grimm';
   const copy = COPY[active];
   const quips = QUIPS[active];
@@ -119,7 +121,8 @@ export function Home() {
     prefs.set('ignis.lang', lang);
     prefs.set('ignis.hero', hero.trim());
     try {
-      const story = active === 'ifairy' ? await api.startAdventure(id, lang, hero.trim()) : await api.start(id, lang, hero.trim());
+      if (active === 'ifairy') prefs.set('ignis.force', strongest);
+      const story = active === 'ifairy' ? await api.startAdventure(id, lang, hero.trim(), ifairyInfo?.gm ? strongest : undefined) : await api.start(id, lang, hero.trim());
       rememberRun(story);
       navigate(`story/${story.id}`);
     } catch (e) {
@@ -218,6 +221,17 @@ export function Home() {
               />
               <Segmented<Lang> label="Story language" value={lang} onChange={setLang} options={[{ value: 'en', label: 'English' }, { value: 'pl', label: 'Polski' }]} />
             </div>
+            {active === 'ifairy' && ifairyInfo?.gm && (
+              <div className="mt-3">
+                <div className="eyebrow mb-1.5">Your strongest force · rolls at +2</div>
+                <Segmented<Force>
+                  label="Strongest force"
+                  value={strongest}
+                  onChange={setStrongest}
+                  options={FORCES.map((f) => ({ value: f, label: f[0].toUpperCase() + f.slice(1) }))}
+                />
+              </div>
+            )}
             <div className="mt-3 flex items-center gap-2 text-xs text-faint">
               {config === null ? null : config.storyReady ? (
                 <Badge tone="ok"><StatusDot tone="ok" /> Story engine online</Badge>

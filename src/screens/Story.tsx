@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, ArrowUp, BookMarked, Brain, GitFork, HeartHandshake, ImagePlus, Laugh, Mic, PenLine, ScrollText, Share2, ShieldCheck, Sparkles, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
 import { ArchivistAvatar } from '../components/ArchivistAvatar';
+import { DiceTray } from '../components/DiceTray';
 import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
@@ -458,6 +459,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
           <div className="card p-4 grid grid-cols-2 gap-4 lg:hidden">{stats}</div>
 
+          {page.gm && <DiceTray key={page.id} rolls={page.gm.rolls} commit={story.gmCommit} />}
+
           <div className="card p-4">
             <div className="eyebrow mb-2">🎒 Inventory</div>
             {page.inventory.length ? (
@@ -487,6 +490,12 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               </motion.div>
             ) : (
               <p className="text-sm text-faint">{W.emptyInventory}</p>
+            )}
+            {!!page.gm?.state.conditions.length && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <span className="eyebrow">Conditions</span>
+                {page.gm.state.conditions.map((c) => <Badge key={c} tone="warn">{c}</Badge>)}
+              </div>
             )}
           </div>
         </aside>
@@ -537,6 +546,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                 </button>
               )}
               </div>
+
+              {page.safety?.distress && (
+                // Shown whenever the player's own words sounded upset, whatever the narrator wrote.
+                <div className="card mt-4 p-4 text-sm !bg-[#e8f4ff]" role="note">
+                  <div className="font-serif font-bold">The Archivist hopes you are all right.</div>
+                  <p className="text-muted mt-1">If something real is worrying you, please talk to a trusted adult. In the UK you can contact Childline free and in confidence: call 0800 1111 or visit childline.org.uk.</p>
+                </div>
+              )}
 
               <div className="lg:hidden mt-6 flex items-center gap-4">
                 <Narrator ifairy={ifairy} isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
@@ -623,7 +640,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                 disabled={noMana || busy}
                                 committed={isPicked}
                                 onPick={(e) => choose(c, e)}
-                                title={noMana ? `Needs ${SUDO_MANA_COST} mana` : undefined}
+                                title={noMana ? `Needs ${SUDO_MANA_COST} mana` : c.risk === 'risky' ? 'Risky: the dice decide how it goes' : undefined}
+                                risky={c.risk === 'risky'}
                               >
                                 {burst?.target === c.id && <ComicBurst key={burst.key} x={burst.x} y={burst.y} color={burst.color} word={burst.word} size={96} />}
                               </ChoiceCard>
@@ -715,6 +733,17 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       </Sheet>
       {ifairy && (
         <Sheet open={showCodex} onClose={() => setShowCodex(false)} title="Codex">
+          {!!page.gm?.state.facts.length && (
+            <>
+              <div className="eyebrow mb-2">Journal</div>
+              <ul className="space-y-1.5 mb-6 text-sm">
+                {page.gm.state.facts.map((f) => (
+                  <li key={f.id}><span className="font-bold">{f.subject}:</span> <span className="text-muted">{f.text}</span>{f.ref && <span className="font-mono text-[11px] text-faint"> · {f.ref}</span>}</li>
+                ))}
+              </ul>
+              <div className="eyebrow mb-2">Canon</div>
+            </>
+          )}
           <p className="text-sm text-muted mb-4">Canon passages from the iFairy Universe that the Archivist drew on along this path.</p>
           {codex.length ? (
             <ul className="space-y-3">
@@ -743,6 +772,7 @@ function ChoiceCard({
   kind,
   label,
   kindLabel: kindLabelOverride,
+  risky,
   disabled,
   committed,
   onPick,
@@ -756,6 +786,8 @@ function ChoiceCard({
   kind: ChoiceKind | 'custom';
   label: string;
   kindLabel?: string;
+  /** iFairy Game Master: picking this option rolls the dice. */
+  risky?: boolean;
   disabled?: boolean;
   committed?: boolean;
   onPick?: (e: React.MouseEvent) => void;
@@ -794,6 +826,7 @@ function ChoiceCard({
         <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide" style={{ color }}>
           {kindLabel}
           {kind === 'sudo' && <span className="text-faint">· −{SUDO_MANA_COST} mana</span>}
+          {risky && <span className="text-faint normal-case">· 🎲 risky</span>}
         </span>
       </span>
       {index !== null && <Kbd>{index}</Kbd>}

@@ -6,7 +6,7 @@ import { act, pathTo, startStory, StoryError } from './story/engine';
 import { getStory, readMedia, saveMedia, saveStory } from './story/store';
 import { extFor, mimeFromUrl, generateImage, generateSpeech, IMAGE_STYLE, ModalityUnavailable } from './media';
 import { getTale, TALES } from '../shared/tales';
-import { worldOf, type PublicConfig } from '../shared/types';
+import { FORCES, worldOf, type PublicConfig } from '../shared/types';
 import { ProviderError, type Media } from './providers/types';
 import { publicStory } from './story/public';
 import { ifairyAct, startAdventure } from './story/worlds/ifairy/turn';
@@ -70,7 +70,7 @@ api.get('/worlds', (_req, res) => {
   const adventures = ifairyOn() ? listCards().length : 0;
   res.json([
     { id: 'grimm', ready: !!getKey('anthropic') },
-    { id: 'ifairy', ready: !!getKey('anthropic') && adventures > 0, adventures, canonVersion: getCatalogue()?.canonVersion ?? null },
+    { id: 'ifairy', ready: !!getKey('anthropic') && adventures > 0, adventures, canonVersion: getCatalogue()?.canonVersion ?? null, gm: getConfig().gm.enabled },
   ]);
 });
 
@@ -86,6 +86,8 @@ const AdventureStart = z.object({
     .min(1, 'Choose an Architect name.')
     .max(24)
     .refine((n) => !looksPersonal(n), 'Use a made-up Architect name, not personal details.'),
+  /** Game Master: the force the player rolls best with. */
+  strongest: z.enum(FORCES).optional(),
 });
 
 const StartBody = z.object({
@@ -97,10 +99,10 @@ const StartBody = z.object({
 api.post('/story', actionLimiter, async (req, res) => {
   try {
     if (req.body?.world === 'ifairy') {
-      const { adventureId, lang, heroName } = AdventureStart.parse(req.body);
+      const { adventureId, lang, heroName, strongest } = AdventureStart.parse(req.body);
       const snap = ifairyOn() ? getSnapshot(adventureId) : null;
       if (!snap) throw new StoryError('Adventure not found. The Archive may need a sync in the admin panel.', 404);
-      const story = await startAdventure(snap, lang, heroName);
+      const story = await startAdventure(snap, lang, heroName, strongest);
       saveStory(story);
       return res.json(publicStory(story));
     }
@@ -143,7 +145,8 @@ api.post('/story/:id/act', actionLimiter, async (req, res) => {
     writing.add((locked = story.id));
     const page = worldOf(story) === 'ifairy' ? await ifairyAct(story, pageId, input) : await act(story, pageId, input);
     saveStory(story);
-    res.json({ page, story: publicStory(story) });
+    const pub = publicStory(story);
+    res.json({ page: pub.pages[page.id], story: pub });
   } catch (e) {
     fail(res, e);
   } finally {

@@ -10,7 +10,7 @@ export interface ArtKitView {
 }
 
 export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
-export type WorldInfo = { id: World; ready: boolean; adventures?: number; canonVersion?: string | null };
+export type WorldInfo = { id: World; ready: boolean; adventures?: number; canonVersion?: string | null; gm?: boolean };
 
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const res = await fetch(url, {
@@ -29,8 +29,8 @@ export const api = {
   worlds: () => call<WorldInfo[]>('GET', '/api/worlds'),
   adventures: () => call<AdventureCard[]>('GET', '/api/adventures'),
   start: (taleId: string, lang: string, heroName: string) => call<PublicStory>('POST', '/api/story', { taleId, lang, heroName }),
-  startAdventure: (adventureId: string, lang: string, heroName: string) =>
-    call<PublicStory>('POST', '/api/story', { world: 'ifairy', adventureId, lang, heroName }),
+  startAdventure: (adventureId: string, lang: string, heroName: string, strongest?: string) =>
+    call<PublicStory>('POST', '/api/story', { world: 'ifairy', adventureId, lang, heroName, strongest }),
   story: (id: string) => call<PublicStory>('GET', `/api/story/${id}`),
   act: (id: string, body: { pageId: string; choiceId?: string; custom?: string; image?: { mime: string; data: string } }) =>
     call<{ page: Page; story: PublicStory }>('POST', `/api/story/${id}/act`, body),
@@ -46,6 +46,7 @@ export const adminApi = (password: string) => {
     save: (body: unknown) => call<any>('PUT', '/api/admin/config', body, h),
     models: (provider: string, key?: string) => call<any>('POST', `/api/admin/providers/${provider}/models`, { key }, h),
     probe: (role: string) => call<any>('POST', `/api/admin/probe/${role}`, {}, h),
+    audit: (storyId: string) => call<any>('GET', `/api/admin/story/${storyId}/audit`, undefined, h),
     artkit: {
       get: () => call<ArtKitView>('GET', '/api/admin/artkit', undefined, h),
       plan: (notes: string) => call<ArtKitView>('POST', '/api/admin/artkit/plan', { notes }, h),
