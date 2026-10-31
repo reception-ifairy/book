@@ -127,6 +127,8 @@ describe('playing with the Game Master', () => {
     const body = lastBody();
     expect(body.tools.map((t: any) => t.name)).toEqual(['roll_check', 'choose_outcome', 'grant_item', 'drop_item', 'adjust_meter', 'search_canon', 'add_canon_claim']);
     expect(body.tools.every((t: any) => t.strict === true && t.input_schema.additionalProperties === false)).toBe(true);
+    // The API rejects numeric bounds in strict tool schemas (400 "properties maximum, minimum are not supported").
+    expect(JSON.stringify(body.tools)).not.toMatch(/"(minimum|maximum|exclusiveMinimum|exclusiveMaximum|\$schema)"/);
     expect(body.tool_choice).toEqual({ type: 'auto' });
     expect(body.system[0].text).toContain('no tool call, no mechanical outcome');
     expect(body.messages.at(-1).content.at(-1).cache_control).toEqual({ type: 'ephemeral' });

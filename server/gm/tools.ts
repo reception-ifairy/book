@@ -58,9 +58,19 @@ const DESCRIPTIONS: Record<ToolName, string> = {
 
 const LIMITS: Record<ToolName, number> = { roll_check: 2, choose_outcome: 2, grant_item: 2, drop_item: 2, adjust_meter: 2, search_canon: 1, add_canon_claim: 3 };
 
+/** Strict tool schemas reject numeric bounds (zod adds safe-integer limits to every int); the ledger checks ranges itself. */
+function stripBounds(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(stripBounds);
+  if (!node || typeof node !== 'object') return node;
+  return Object.fromEntries(
+    Object.entries(node)
+      .filter(([k]) => !['$schema', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'].includes(k))
+      .map(([k, v]) => [k, stripBounds(v)]),
+  );
+}
+
 function jsonSchema(schema: z.ZodType) {
-  const { $schema: _drop, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
-  return rest as Anthropic.Beta.BetaTool.InputSchema;
+  return stripBounds(z.toJSONSchema(schema)) as Anthropic.Beta.BetaTool.InputSchema;
 }
 
 /** Fixed order and fixed text, built once: the tool list is the start of the cached prefix. */
