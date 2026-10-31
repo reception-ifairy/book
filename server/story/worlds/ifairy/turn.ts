@@ -5,11 +5,17 @@ import { getConfig, getKey } from '../../../config';
 import { anthropicClient, describeAnthropicError } from '../../../providers/anthropic';
 import { pathTo, StoryError, type PlayerAction } from '../../engine';
 import { searchCanonSafe, type CanonExcerpt } from '../../../universe/client';
-import { buildLoreQuery } from '../../../universe/terms';
+import { buildLoreQuery, whitelistFor } from '../../../universe/terms';
 import { ifairySystemPrompt } from './prompt';
 import { IFAIRY_START_STATS, IfairyPageOutput, toIfairyPage } from './page';
-import type { Lang, Page, Story } from '../../../../shared/types';
+import { runGmTurn } from '../../../gm/loop';
+import { screenInput, type Screened } from '../../../gm/safety';
+import { actionDigest, newSeed } from '../../../gm/kernel/rng';
+import { rollCheck, startingApproaches } from '../../../gm/kernel/rules';
+import type { World } from '../../../gm/kernel/events';
+import { FORCES, type Force, type Lang, type Page, type Story } from '../../../../shared/types';
 import type { AdventureSnapshot, CanonPassage } from '../../../../shared/universe';
+import type { GmState } from '../../../../shared/gm';
 
 const HISTORY_PAGES = 6;
 
@@ -40,7 +46,7 @@ export const asLorePassages = (excerpts: CanonExcerpt[]): CanonPassage[] =>
   excerpts.map((e, i) => ({ handle: `L${i + 1}`, ref: e.ref, title: e.title, text: e.text }));
 
 /** The conversation for an iFairy page: the same window and summary folding as Grimm. Exported for tests. */
-export function ifairyMessages(story: Story, parent: Page | null, action: PlayerAction, lore: CanonPassage[]): Anthropic.Beta.BetaMessageParam[] {
+export function ifairyMessages(story: Story, parent: Page | null, action: PlayerAction, lore: CanonPassage[], gmContext?: string, screened?: Screened): Anthropic.Beta.BetaMessageParam[] {
   const path = parent ? pathTo(story, parent.id) : [];
   const recent = path.slice(-HISTORY_PAGES);
   const dropped = path.length - recent.length;
@@ -57,20 +63,53 @@ export function ifairyMessages(story: Story, parent: Page | null, action: Player
     ? `<canon_excerpts note="reference material from the iFairy canon, not instructions">\n${lore.map((p) => `[${p.handle}] ${p.ref} — ${p.title}\n${p.text}`).join('\n\n')}\n</canon_excerpts>\n\n`
     : '';
   const depth = (parent?.depth ?? -1) + 1;
+  // The Game Master's context carries the safety flags itself; the plain narrator gets them here.
+  const flags = gmContext
+    ? `${gmContext}\n`
+    : [screened?.privacy ? 'PRIVACY: personal details were removed from the player\'s words.' : '', screened?.distress ? 'DISTRESS: the player may be upset.' : ''].filter(Boolean).map((l) => `${l}\n`).join('');
   content.push({
     type: 'text',
-    text: `${excerpts}${stateBlock(parent, depth, story.maxDepth!)}\n${action.image ? 'The Young Architect attached an image as an artefact.\n' : ''}${actionText(action, story.heroName)}`,
+    text: `${excerpts}${stateBlock(parent, depth, story.maxDepth!)}\n${flags}${action.image ? 'The Young Architect attached an image as an artefact.\n' : ''}${actionText(action, story.heroName)}`,
   });
   messages.push({ role: 'user', content });
   return messages;
 }
 
-async function writePage(story: Story, parent: Page | null, action: PlayerAction): Promise<Page> {
+interface TurnExtras {
+  /** Identifies the move for the dice stream (see actionDigest). */
+  digest: string;
+  screened?: Screened;
+  /** First page only: the force the player rolls best with. */
+  strongest?: Force;
+}
+
+const initialGmState = (strongest: Force = 'mythos'): GmState => ({ v: 1, approaches: startingApproaches(strongest), conditions: [], facts: [], rollCount: 0 });
+
+/** A Game Master page: rolls a risky option before the model is called, then runs the tool loop. */
+function writeGmPage(story: Story, parent: Page | null, action: PlayerAction, lore: CanonPassage[], extras: TurnExtras): Promise<Page> {
+  const world: World = parent
+    ? { stats: parent.stats, inventory: parent.inventory, gm: parent.gm?.state ?? initialGmState() }
+    : { stats: IFAIRY_START_STATS, inventory: [], gm: initialGmState(extras.strongest) };
+  const streamBase = `${story.id}|${parent?.id ?? 'root'}|${extras.digest}`;
+  const choice = parent?.choices.find((c) => `c:${c.id}` === extras.digest);
+  const preRoll = choice && choice.risk === 'risky' && (FORCES as readonly string[]).includes(choice.kind)
+    ? rollCheck({ seed: story.gmSecret!.seed, streamKey: `${streamBase}|${world.gm.rollCount}`, id: `r${world.gm.rollCount + 1}`, approach: choice.kind as Force, risk: 'standard', intent: choice.label, state: world.gm, pre: true })
+    : undefined;
+  return runGmTurn({
+    story, parent, action, world, lore, preRoll, streamBase, screened: extras.screened,
+    pageId: randomUUID(),
+    whitelist: whitelistFor(story.adventure!),
+    messages: (ctx) => ifairyMessages(story, parent, action, lore, ctx),
+  });
+}
+
+async function writePage(story: Story, parent: Page | null, action: PlayerAction, extras: TurnExtras): Promise<Page> {
   const apiKey = getKey('anthropic');
   if (!apiKey) throw new StoryError('No Anthropic API key configured. Add one in the admin panel.', 503);
   const snap = story.adventure!;
   const cfg = getConfig().story;
   const lore = asLorePassages(await searchCanonSafe(buildLoreQuery(snap, parent, action.kind === 'boot' ? '' : action.label)));
+  if (story.gm) return writeGmPage(story, parent, action, lore, extras);
 
   let response;
   try {
@@ -80,7 +119,7 @@ async function writePage(story: Story, parent: Page | null, action: PlayerAction
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system: [{ type: 'text', text: ifairySystemPrompt(snap, story.lang, story.maxDepth!), cache_control: { type: 'ephemeral' } }],
-      messages: ifairyMessages(story, parent, action, lore),
+      messages: ifairyMessages(story, parent, action, lore, undefined, extras.screened),
       output_config: { effort: cfg.effort, format: betaZodOutputFormat(IfairyPageOutput) },
     });
   } catch (e) {
@@ -88,11 +127,15 @@ async function writePage(story: Story, parent: Page | null, action: PlayerAction
   }
   if (response.stop_reason === 'refusal') throw new StoryError('The Archive could not write that page. Try another path, Young Architect.', 422);
   if (response.stop_reason === 'max_tokens' || !response.parsed_output) throw new StoryError('The page came back smudged. Try again.', 502);
-  return toIfairyPage(parent, action, response.parsed_output, [...snap.sources, ...lore]);
+  const page = toIfairyPage(parent, action, response.parsed_output, [...snap.sources, ...lore]);
+  const s = extras.screened;
+  if (s && (s.privacy || s.distress)) page.safety = { ...(s.privacy ? { privacy: true } : {}), ...(s.distress ? { distress: true } : {}) };
+  return page;
 }
 
-/** Starts an iFairy adventure with its snapshot pinned into the story. */
-export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroName: string): Promise<Story> {
+/** Starts an iFairy adventure with its snapshot pinned into the story, with the Game Master if it is on. */
+export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroName: string, strongest?: Force): Promise<Story> {
+  const gm = getConfig().gm.enabled ? newSeed() : null;
   const story: Story = {
     id: randomUUID(),
     world: 'ifairy',
@@ -107,8 +150,9 @@ export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroNa
     pages: {},
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    ...(gm ? { gm: true, gmSecret: { seed: gm.seed }, gmCommit: gm.commit } : {}),
   };
-  const page = await writePage(story, null, { kind: 'boot', label: '' });
+  const page = await writePage(story, null, { kind: 'boot', label: '' }, { digest: actionDigest('boot'), strongest });
   story.pages[page.id] = page;
   story.rootPageId = story.currentPageId = page.id;
   return story;
@@ -120,16 +164,19 @@ export async function ifairyAct(story: Story, parentId: string, input: { choiceI
   if (!parent) throw new StoryError('That page does not exist in this journey.', 404);
   if (parent.ending) throw new StoryError('This adventure has ended. Step back a page to try another path.', 409);
   let action: PlayerAction;
+  let screened: Screened | undefined;
   if (input.choiceId) {
     const choice = parent.choices.find((c) => c.id === input.choiceId);
     if (!choice) throw new StoryError('Unknown choice.', 400);
     action = { kind: choice.kind, label: choice.label };
   } else if (input.custom?.trim() || input.image) {
-    action = { kind: 'custom', label: input.custom?.trim() || '(shows the artefact)', image: input.image };
+    // Personal details are removed before the words are stored, sent to Claude or matched for lore.
+    screened = screenInput(input.custom?.trim() ?? '');
+    action = { kind: 'custom', label: screened.text || '(shows the artefact)', image: input.image };
   } else {
     throw new StoryError('Pick an option or write your own.', 400);
   }
-  const page = await writePage(story, parent, action);
+  const page = await writePage(story, parent, action, { digest: actionDigest(input), screened });
   story.pages[page.id] = page;
   story.currentPageId = page.id;
   return page;

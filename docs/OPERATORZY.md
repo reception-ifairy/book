@@ -10,6 +10,8 @@ Kto lub co obsługuje każdą część systemu: modele AI, ludzie, endpointy ser
 |---|---|---|---|---|
 | **Struktura i narracja opowieści** | Anthropic (Claude) | `claude-opus-5-5`, effort `medium`, 12 stron do zakończenia | Panel → *Story engine* | `server/story/engine.ts`, `prompts.ts` |
 | **Narrator świata iFairy** (Architectus Magnus Realitas) | Anthropic (Claude) | ten sam model i effort | Panel → *Story engine* | `server/story/worlds/ifairy/` |
+| **AI Game Master** (świat iFairy) | Anthropic (Claude) + reguły w kodzie | wyłączony; model silnika, effort `low`, 4 rundy, 75 s | Panel → *Game Master* | `server/gm/` |
+| **Recenzja treści** (13+) | Anthropic (`claude-haiku-5-5`) | po ruchach własnymi słowami | Panel → *Game Master* → *Content review* | `server/gm/loop.ts` → `judgePage()` |
 | **Kanon iFairy** (przygody i lore na żywo) | iFairy Universe, API lore (`universe-ifairy`, :8793) | wyłączone; grant `if-ai`, adres loopback | Panel → *iFairy Universe* | `server/universe/` |
 | **Rozumienie obrazu** (artefakt gracza) | Anthropic (Claude) | ten sam model | zawsze włączone | `buildMessages()` |
 | **Ilustracje** | Gemini **albo** OpenAI (albo wyłączone) | Gemini `gemini-3.1-flash-image-preview` | Panel → *Illustrations* | `server/media.ts`, `providers/gemini.ts`, `providers/openai.ts` |
@@ -44,6 +46,14 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Wybory:** A i B z przypisaną siłą, C to zawsze „własnymi słowami” (pole własnego ruchu). Bez śmierci i klątw.
 - **Universe:** Sync pobiera przygody przez `GET /v1/ref/*` i sprawdza `chunk.id`; tura woła `POST /v1/search` tylko z terminami z listy dozwolonych (`server/universe/terms.ts`), bo Universe przesyła zapytanie do zewnętrznego modelu embeddingów. Odpowiedzi 400 z guardu danych osobowych są liczone w statusie panelu (powinno ich być zero).
 - **Odmowa** → 422 „The Archive could not write that page…”.
+
+### AI Game Master
+
+- **Narzędzia** (`server/gm/tools.ts`, wszystkie `strict`, stała kolejność): `roll_check`, `choose_outcome`, `grant_item`, `drop_item`, `adjust_meter` (±5), `search_canon` (tylko terminy kanonu), `add_canon_claim` (widoczność `public` · `party` · `gm_only`). Limity na stronę pilnuje Ledger; odrzucone wywołanie wraca jako błąd i niczego nie zmienia.
+- **Pętla** (`loop.ts`): `beta.messages.parse` z narzędziami i structured output w każdej rundzie, `tool_choice: auto`, a w ostatniej rundzie albo blisko terminu `none` (Opus 5.5 nie przyjmuje `any`/`tool`). Strona z błędem lintu albo negatywną recenzją dostaje jedną rundę naprawy; drugi raz zakazane imię albo pytanie o dane osobowe → 422.
+- **Bezpieczeństwo:** słowa gracza są ekranowane przed zapisem i wysłaniem (dane osobowe zamieniane na `[personal detail removed]`); sygnały niepokoju dają flagę dla narratora i kartę wsparcia w czytniku (treść karty do zatwierdzenia przez właściciela: Childline 0800 1111).
+- **Audyt:** `GET /api/admin/story/:id/audit` liczy kości od nowa z ziarna i porównuje stan każdej strony z rodzicem + zdarzeniami.
+- **Ewaluacje na żywo:** `npm run eval:gm` (klucz Anthropic, opcjonalnie `UNIVERSE_API_KEY`, `--model`, `--effort`, `--only`); scenariusze w `evals/gm/scenarios.json`, wyniki w `evals/results/` (gitignored). Nie są częścią CI.
 
 ### Ilustracje i głos
 
@@ -130,13 +140,14 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `GET /api/admin/config` | Konfiguracja + status kluczy (źródło, maska) + czy panel ma hasło |
 | `PUT /api/admin/config` | Zapis ról i limitów; każda sekcja i każde pole są opcjonalne i scalają się z zapisaną konfiguracją. `keys.{provider}` (także `universe`): tekst zapisuje klucz, `null` go usuwa |
 | `POST /api/admin/providers/:provider/models` | Test klucza (z formularza albo zapisanego) i lista modeli z tagami `text` / `image` / `tts` |
-| `POST /api/admin/probe/:role` | Test na żywo: `story`, `image` albo `tts` |
+| `POST /api/admin/probe/:role` | Test na żywo: `story`, `image`, `tts` albo `gm` (narzędzie + structured output na modelu GM) |
 | `GET /api/admin/artkit` | Sloty, plan, stan każdego obrazu, ustawienia, gotowość kluczy |
 | `POST /api/admin/artkit/plan` | Plan od Claude `{notes?}` (jeden naraz, 409 jeśli trwa) |
 | `PUT /api/admin/artkit/plan/:slot` | Edycja promptu i alt jednego slotu |
 | `POST /api/admin/artkit/generate` | Render `{slots?}`: wszystkie albo wybrane (409, jeśli render trwa; 503 bez klucza OpenAI) |
 | `POST /api/admin/artkit/publish` | Publikuje gotowe grafiki (wersja +1) |
 | `DELETE /api/admin/artkit/published` | Powrót do wbudowanego wyglądu |
+| `GET /api/admin/story/:id/audit` | Audyt historii z Game Masterem: kości z ziarna, stan stron ze zdarzeń |
 | `GET /api/admin/universe/status` | Ustawienia, status klucza, liczniki wywołań i błędów, podsumowanie katalogu z raportem |
 | `POST /api/admin/universe/test` | `{url?, key?, grant?}`: health + jedno prawdziwe wyszukiwanie (wychwytuje brak grantu) |
 | `POST /api/admin/universe/sync` | Synchronizacja katalogu przygód (jedna naraz, 409 jeśli trwa) |
@@ -166,7 +177,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `bun run test` / `test:watch` | Vitest |
 | `bun run check` | Typecheck + testy + build: to samo, co robi CI |
 
-**Testy** (`tests/`, 57 testów):
+**Testy** (`tests/`, 71 testów):
 - `engine.test.ts`:
   - normalizacja wartości spoza listy;
   - przycinanie statystyk i kanonu;
@@ -199,6 +210,12 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
   - Universe nie dostaje tekstu gracza; gra działa, gdy Universe leży;
   - ilustracja z zasadą wyglądu iFairies; odrzucenie prawdziwego imienia; limity strony iFairy;
   - historie sprzed 4.3 grają jako Grimm.
+- `gm.test.ts` (sztuczne API Anthropic z blokami `tool_use` i sztuczne Universe):
+  - kernel: deterministyczne i równomierne kości, pasma, modyfikatory, czysty reduktor;
+  - bezpieczeństwo: redakcja danych osobowych, niepokój, lint;
+  - pre-roll ryzykownej opcji, te same kości po cofnięciu, limity narzędzi, fakty `gm_only` niewidoczne w przeglądarce;
+  - ostatnia runda bez narzędzi, naprawa po lincie, wiadomości tylko dopisywane, recenzja Haiku z naprawą;
+  - audyt wykrywa podmienione kości; historie bez GM zostają w trybie narratora.
 - `artkit.test.ts` (sztuczne API Anthropic ze streamingiem i sztuczne API OpenAI):
   - plan pokrywa wszystkie sloty i odrzuca złe kolory;
   - składanie promptów (karta Ignisa tylko tam, gdzie Ignis; napisy tylko w karcie do udostępniania);

@@ -1,4 +1,5 @@
 import type { AdventureCard, AdventureSnapshot } from './universe';
+import type { PageGm } from './gm';
 
 export type Lang = 'en' | 'pl';
 export type Mood = 'neutral' | 'smug' | 'annoyed' | 'panic' | 'sincere' | 'hyped';
@@ -16,6 +17,8 @@ export interface Choice {
   id: string;
   label: string;
   kind: ChoiceKind;
+  /** iFairy Game Master: a risky option is rolled by the rules before the narrator writes the page. */
+  risk?: 'safe' | 'risky';
 }
 
 export interface Stats {
@@ -49,6 +52,10 @@ export interface Page {
   freeForm?: string;
   /** iFairy world: where the page happens and who is in it, used to pick the next lore lookup. */
   scene?: { location: string; present: string[] };
+  /** iFairy world: what the input screen noticed in the player's own words. */
+  safety?: { privacy?: boolean; distress?: boolean };
+  /** iFairy Game Master: this turn's rolls, events and the resulting state. */
+  gm?: PageGm;
 }
 
 /** A canon passage from the iFairy Universe, cited by its REF. */
@@ -75,10 +82,16 @@ export interface Story {
   adventure?: AdventureSnapshot;
   /** iFairy world: pinned at start so the system prompt stays the same for the whole story. */
   maxDepth?: number;
+  /** iFairy world: played with the Game Master (dice, events); pinned at start. */
+  gm?: boolean;
+  /** Server only: the dice seed. Never sent to the browser. */
+  gmSecret?: { seed: string };
+  /** sha256 of the dice seed, shown to players so the dice can be audited afterwards. */
+  gmCommit?: string;
 }
 
-/** A story as the browser sees it: the pinned adventure is reduced to its card. */
-export type PublicStory = Omit<Story, 'adventure'> & { adventure?: AdventureCard };
+/** A story as the browser sees it: the pinned adventure is reduced to its card, the dice seed removed. */
+export type PublicStory = Omit<Story, 'adventure' | 'gmSecret'> & { adventure?: AdventureCard };
 
 export const worldOf = (story: Pick<Story, 'world'>): World => story.world ?? 'grimm';
 

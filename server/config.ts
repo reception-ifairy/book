@@ -56,6 +56,17 @@ export const AppConfigSchema = z.object({
     url: z.string().url(),
     grant: z.string().min(1),
   }),
+  /** iFairy Game Master: dice and rules as tools, applied to stories started while it is on. */
+  gm: z.object({
+    enabled: z.boolean(),
+    /** Empty means the story engine's model. */
+    model: z.string(),
+    effort: z.enum(['low', 'medium', 'high']),
+    maxRounds: z.number().int().min(1).max(6),
+    turnBudgetMs: z.number().int().min(20000).max(110000),
+    /** A cheap second model reviews pages: never, only after the player's own words, or always. */
+    outputCheck: z.enum(['off', 'custom', 'all']),
+  }),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
@@ -67,6 +78,7 @@ const DEFAULTS: AppConfig = {
   limits: { actionsPerMinute: 12, imagesPerDay: 300 },
   artkit: { model: 'gpt-image-1', quality: 'medium' },
   universe: { enabled: false, url: process.env.UNIVERSE_API_URL || 'http://127.0.0.1:8793', grant: 'if-ai' },
+  gm: { enabled: false, model: '', effort: 'low', maxRounds: 4, turnBudgetMs: 75000, outputCheck: 'custom' },
 };
 
 let current: AppConfig = load();

@@ -1,7 +1,7 @@
 {
   "name": "ignis-grimm-protocol",
   "private": true,
-  "version": "4.3.0",
+  "version": "4.4.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "tsc --noEmit && vitest run && npm run build"
+    "check": "tsc --noEmit && vitest run && npm run build",
+    "eval:gm": "tsx evals/gm/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
