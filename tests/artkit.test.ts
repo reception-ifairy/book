@@ -56,7 +56,7 @@ const plan = {
   motifs: ['fairy lights', 'runes'],
   ignis_model_sheet: 'IGNIS: grimoire body, CRT head, fairy wings, ember antenna.',
   avoid: ['neon cyberpunk', 'gore'],
-  assets: ART_SLOTS.filter((s) => s.id !== 'icon-dumb').map((s) => ({ slot: s.id, prompt: `Prompt for ${s.id}`, alt: `Alt for ${s.id}` })),
+  assets: ART_SLOTS.filter((s) => s.id !== 'icon-gnosis').map((s) => ({ slot: s.id, prompt: `Prompt for ${s.id}`, alt: `Alt for ${s.id}` })),
 };
 
 describe('art kit', () => {
@@ -72,7 +72,7 @@ describe('art kit', () => {
     expect(res.status).toBe(200);
     const p = res.body.kit.plan;
     expect(p.assets).toHaveLength(ART_SLOTS.length);
-    expect(p.assets.find((a: any) => a.slot === 'icon-dumb').prompt).toContain('banana peel');
+    expect(p.assets.find((a: any) => a.slot === 'icon-gnosis').prompt).toContain('glowing heart');
     expect(p.palette).toEqual([{ name: 'Ember', hex: '#ff7a2f', role: 'accent' }]);
     expect(res.body.kit.notes).toBe('more gingerbread');
 
@@ -80,14 +80,14 @@ describe('art kit', () => {
     expect(req.body.stream).toBe(true);
     expect(req.body.output_config.effort).toBe('high');
     expect(req.body.messages[0].content).toContain('more gingerbread');
-    expect(req.body.messages[0].content).toContain('cover-wawel-dragon');
+    expect(req.body.messages[0].content).toContain('cover-world-sympathos');
   });
 
   it('builds image prompts with the style bible, IGNIS sheet only where IGNIS appears', async () => {
     const { body } = await call('GET', '/api/admin/artkit');
     const p = body.kit.plan;
     const hero = composePrompt(p, ART_SLOTS.find((s) => s.id === 'ignis-hero')!);
-    const cover = composePrompt(p, ART_SLOTS.find((s) => s.id === 'cover-red-hood')!);
+    const cover = composePrompt(p, ART_SLOTS.find((s) => s.id === 'cover-world-bleepworld')!);
     expect(hero).toContain('IGNIS model sheet');
     expect(hero).toContain('transparent background');
     expect(cover).not.toContain('IGNIS model sheet');
@@ -97,28 +97,28 @@ describe('art kit', () => {
   });
 
   it('lets the admin edit a prompt', async () => {
-    const res = await call('PUT', '/api/admin/artkit/plan/icon-sudo', { prompt: 'A glowing terminal with a wand, very shiny', alt: 'Terminal with wand' });
-    expect(res.body.kit.plan.assets.find((a: any) => a.slot === 'icon-sudo').prompt).toContain('very shiny');
+    const res = await call('PUT', '/api/admin/artkit/plan/icon-logos', { prompt: 'A glowing crystal with a tiny ruler, very shiny', alt: 'Crystal with a ruler' });
+    expect(res.body.kit.plan.assets.find((a: any) => a.slot === 'icon-logos').prompt).toContain('very shiny');
     expect((await call('PUT', '/api/admin/artkit/plan/nope', { prompt: 'long enough prompt', alt: 'x' })).status).toBe(404);
   });
 
   it('renders every slot with OpenAI using the right size and background', async () => {
-    openai.failWhen(/Prompt for cover-cinderella/);
+    openai.failWhen(/Prompt for cover-lab-coloratura/);
     expect((await call('POST', '/api/admin/artkit/generate', {})).status).toBe(200);
     expect((await call('POST', '/api/admin/artkit/generate', {})).status).toBe(409);
     const view = await waitForRender();
     expect(openai.requests).toHaveLength(ART_SLOTS.length);
-    const sent = (id: string) => openai.requests.find((r) => r.body.prompt.includes(`for ${id}`) || (id === 'icon-dumb' && r.body.prompt.includes('banana')))!.body;
-    expect(sent('icon-chaos')).toMatchObject({ model: 'gpt-image-1', size: '1024x1024', background: 'transparent', output_format: 'png', quality: 'medium' });
+    const sent = (id: string) => openai.requests.find((r) => r.body.prompt.includes(`for ${id}`) || (id === 'icon-gnosis' && r.body.prompt.includes('glowing heart')))!.body;
+    expect(sent('icon-mythos')).toMatchObject({ model: 'gpt-image-1', size: '1024x1024', background: 'transparent', output_format: 'png', quality: 'medium' });
     expect(sent('scene-workshop')).toMatchObject({ size: '1536x1024', background: 'opaque' });
-    expect(view.kit.assets['cover-cinderella'].status).toBe('failed');
-    expect(view.kit.assets['cover-cinderella'].error).toMatch(/^OpenAI: .*rejected by the safety system/);
-    expect(view.kit.assets['icon-chaos'].status).toBe('done');
+    expect(view.kit.assets['cover-lab-coloratura'].status).toBe('failed');
+    expect(view.kit.assets['cover-lab-coloratura'].error).toMatch(/^OpenAI: .*rejected by the safety system/);
+    expect(view.kit.assets['icon-mythos'].status).toBe('done');
 
     openai.failWhen(null);
-    await call('POST', '/api/admin/artkit/generate', { slots: ['cover-cinderella'] });
+    await call('POST', '/api/admin/artkit/generate', { slots: ['cover-lab-coloratura'] });
     const after = await waitForRender();
-    expect(after.kit.assets['cover-cinderella'].status).toBe('done');
+    expect(after.kit.assets['cover-lab-coloratura'].status).toBe('done');
   });
 
   it('publishes to players, serves the files and the favicon / share shortcuts, and can roll back', async () => {
@@ -126,9 +126,9 @@ describe('art kit', () => {
     expect(pub.body.kit.published.version).toBe(1);
     const kit = (await call('GET', '/api/artkit')).body;
     expect(Object.keys(kit.assets)).toHaveLength(ART_SLOTS.length);
-    expect(kit.alt['icon-chaos']).toBe('Alt for icon-chaos');
+    expect(kit.alt['icon-mythos']).toBe('Alt for icon-mythos');
 
-    const file = await fetch(base + kit.assets['icon-chaos']);
+    const file = await fetch(base + kit.assets['icon-mythos']);
     expect(file.status).toBe(200);
     expect(file.headers.get('content-type')).toBe('image/png');
     expect(file.headers.get('cache-control')).toContain('immutable');

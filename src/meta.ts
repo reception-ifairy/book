@@ -1,53 +1,37 @@
-import type { ChoiceKind, World } from '../shared/types';
+import type { ChoiceKind, EndingType, Phase } from '../shared/types';
 
-export const KIND: Record<ChoiceKind | 'custom', { label: string; color: string }> = {
-  sane: { label: 'Sane', color: 'var(--color-sane)' },
-  chaos: { label: 'Chaos', color: 'var(--color-chaos)' },
-  dumb: { label: 'Dumb', color: 'var(--color-dumb)' },
-  sudo: { label: 'sudo', color: 'var(--color-ember)' },
-  logos: { label: 'Logos', color: 'var(--color-logos)' },
-  mythos: { label: 'Mythos', color: 'var(--color-mythos)' },
-  gnosis: { label: 'Gnosis', color: 'var(--color-gnosis)' },
-  phantasia: { label: 'Phantasia', color: 'var(--color-phantasia)' },
-  custom: { label: 'Your move', color: 'var(--color-mana)' },
+/** The four forces, which in the Edu-Verse are also the four ways of learning. */
+export const KIND: Record<ChoiceKind | 'custom', { label: string; color: string; learn: string }> = {
+  logos: { label: 'Logos', color: 'var(--color-logos)', learn: 'patterns & reasoning' },
+  mythos: { label: 'Mythos', color: 'var(--color-mythos)', learn: 'stories & time' },
+  gnosis: { label: 'Gnosis', color: 'var(--color-gnosis)', learn: 'feelings & empathy' },
+  phantasia: { label: 'Phantasia', color: 'var(--color-phantasia)', learn: 'imagination & play' },
+  custom: { label: 'Your own words', color: 'var(--color-mana)', learn: 'your own idea' },
 };
 
-/** Words that change with the world: who narrates, what the meters mean, how endings are named. */
-export const WORLD_TEXT: Record<World, {
-  narrator: string;
-  writing: string;
-  busy: string;
-  customKind: string;
-  meters: { chaos: string; karma: string; mana: string };
-  emptyInventory: string;
-  endings: Partial<Record<string, string>>;
-}> = {
-  grimm: {
-    narrator: 'IGNIS',
-    writing: 'IGNIS is writing page',
-    busy: 'Compiling your next mistake…',
-    customKind: 'Your move',
-    meters: { chaos: 'Chaos', karma: 'Karma', mana: 'Mana' },
-    emptyInventory: 'Empty. Like your plan.',
-    endings: {},
-  },
-  ifairy: {
-    narrator: 'The Archivist',
-    writing: 'The Archivist is writing page',
-    busy: 'Consulting the Holographic Memory…',
-    customKind: 'Your own words',
-    meters: { chaos: 'Dissonance', karma: 'Harmony', mana: 'Etherium' },
-    emptyInventory: 'Nothing yet. The Archive is patient.',
-    endings: { canon: 'Resolution', subverted: 'Your own resolution', secret: 'Secret discovery' },
-  },
-};
+/** Words the reader shows: who narrates, what the meters mean, how endings are named. */
+export const TEXT = {
+  narrator: 'IGNIS',
+  writing: 'IGNIS is writing page',
+  busy: 'Tuning the portal to your idea…',
+  customKind: 'Your own words',
+  meters: { chaos: 'Dissonance', karma: 'Harmony', mana: 'Etherium' },
+  emptyInventory: 'Nothing yet. Every world hands you something.',
+} as const;
 
-export const ENDING: Record<string, { label: string; tone: 'ok' | 'warn' | 'danger' | 'ember' }> = {
-  canon: { label: 'Canon ending', tone: 'ok' },
-  subverted: { label: 'Subverted ending', tone: 'ember' },
-  cursed: { label: 'Cursed ending', tone: 'danger' },
-  secret: { label: 'Secret ending', tone: 'warn' },
-  death: { label: 'Garbage collected', tone: 'danger' },
+export const ENDING: Record<EndingType, { label: string; tone: 'ok' | 'warn' | 'danger' | 'ember' }> = {
+  canon: { label: 'World understood', tone: 'ok' },
+  subverted: { label: 'Your own world-model', tone: 'ember' },
+  secret: { label: 'Secret discovery', tone: 'warn' },
+};
+/** Pages from stories saved before an ending type existed fall back to this. */
+export const endingOf = (type: string) => ENDING[type as EndingType] ?? ENDING.canon;
+
+/** The 3-phase model of learning in the multi-verse. */
+export const PHASE: Record<Phase, { n: string; label: string; desc: string }> = {
+  entry: { n: 'I', label: 'Enter', desc: 'Step into a world whose laws are different, and test them.' },
+  translation: { n: 'II', label: 'Translate', desc: 'Map the strange law onto the science of our world.' },
+  personalisation: { n: 'III', label: 'Make it yours', desc: 'IGNIS adapts to how you learn; you build your own model.' },
 };
 
 export function ago(ts: number) {

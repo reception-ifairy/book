@@ -4,7 +4,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { getConfig, getKey } from '../config';
 import { anthropicClient, describeAnthropicError } from '../providers/anthropic';
 import { pick, StoryError, type PlayerAction } from '../story/engine';
-import { IfairyPageOutput, IFAIRY_ENDINGS, resolveLore } from '../story/worlds/ifairy/page';
+import { IfairyPageOutput, IFAIRY_ENDINGS, learningOf, resolveLore } from '../story/worlds/ifairy/page';
 import { ifairySystemPrompt } from '../story/worlds/ifairy/prompt';
 import { FORCES, type Page, type Story } from '../../shared/types';
 import type { CanonPassage, NpcCard } from '../../shared/universe';
@@ -26,7 +26,7 @@ const JUDGE_MODEL = 'claude-haiku-5-5';
 const Verdict = z.object({ ok: z.boolean(), issue: z.string().nullable() });
 
 /**
- * A second, cheap model reads the finished page against the 13+ profile. It never blocks a page on
+ * A second, cheap model reads the finished page against the young explorers profile. It never blocks a page on
  * its own failure to answer: an unreachable judge counts as a pass.
  */
 async function judgePage(client: ReturnType<typeof anthropicClient>, page: GmPageOutput, timeoutMs: number): Promise<string | null> {
@@ -34,12 +34,12 @@ async function judgePage(client: ReturnType<typeof anthropicClient>, page: GmPag
     const res = await client.beta.messages.parse({
       model: JUDGE_MODEL,
       max_tokens: 2000,
-      system: 'You review one page of an interactive story for readers aged 13 and up, set in the iFairy Universe. Fail it only for: sexual or adult content; graphic harm; frightening content that is not resolved constructively; mocking or insulting the reader; asking for or repeating personal details (name, age, school, location); real-world dangerous instructions; any god other than the forces Logos, Mythos, Gnosis, Phantasia and If-AI. Otherwise pass it. issue: one short sentence when it fails, otherwise null.',
+      system: 'You review one page of an interactive learning story for children from about 8 and young teens, set in the iFairy Quantum Edu-Verse. Fail it only for: sexual, romantic or adult content; graphic harm; frightening content that is not resolved constructively; mocking or insulting the reader; asking for or repeating personal details (name, age, school, location); real-world dangerous instructions; science or maths stated as fact about our world that is plainly wrong; any god other than the forces Logos, Mythos, Gnosis, Phantasia and If-AI. Otherwise pass it. issue: one short sentence when it fails, otherwise null.',
       messages: [{ role: 'user', content: JSON.stringify({ narration: page.narration, aside: page.narrator_aside, options: page.choices.map((c) => c.label), own_words_prompt: page.free_form_prompt, ending: page.ending }) }],
       output_config: { effort: 'low', format: betaZodOutputFormat(Verdict) },
     }, { timeout: timeoutMs, maxRetries: 0 });
     const v = res.parsed_output;
-    return v && !v.ok ? v.issue || 'The page does not fit the 13+ content profile.' : null;
+    return v && !v.ok ? v.issue || 'The page does not fit the young explorers content profile.' : null;
   } catch {
     return null;
   }
@@ -154,7 +154,7 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
 
   for (let round = 1; ; round++) {
     const remaining = deadline - Date.now();
-    if (remaining < FLOOR_MS) throw new StoryError('The Archive took too long to write this page. Try again.', 502);
+    if (remaining < FLOOR_MS) throw new StoryError('IGNIS took too long to write this page. Try again.', 502);
     const last = forceLast || round >= g.maxRounds || remaining < LAST_ROUND_MS;
     let res;
     try {
@@ -177,7 +177,7 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
     usage.output += res.usage.output_tokens;
     usage.cacheRead += res.usage.cache_read_input_tokens ?? 0;
     usage.cacheWrite += res.usage.cache_creation_input_tokens ?? 0;
-    if (res.stop_reason === 'refusal') throw new StoryError('The Archive could not write that page. Try another path, Young Architect.', 422);
+    if (res.stop_reason === 'refusal') throw new StoryError('IGNIS could not write that page. Try another path, Young Explorer.', 422);
     if (res.stop_reason === 'max_tokens') throw new StoryError('The page came back smudged. Try again.', 502);
     messages.push({ role: 'assistant', content: res.content as Anthropic.Beta.BetaContentBlockParam[] });
 
@@ -208,7 +208,7 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
     if (!issues.length && judged && deadline - Date.now() > FLOOR_MS) {
       const verdict = await judgePage(client, page, Math.min(15_000, deadline - Date.now() - FLOOR_MS));
       if (verdict) {
-        if (repaired) throw new StoryError('The Archive could not write that page. Try another path, Young Architect.', 422);
+        if (repaired) throw new StoryError('IGNIS could not write that page. Try another path, Young Explorer.', 422);
         issues.push(`Content review: ${verdict}`);
       }
     }
@@ -219,7 +219,7 @@ export async function runGmTurn(t: GmTurn): Promise<Page> {
       continue;
     }
     if (issues.some((i) => /may not appear|personal details/.test(i))) {
-      throw new StoryError('The Archive could not write that page. Try another path, Young Architect.', 422);
+      throw new StoryError('IGNIS could not write that page. Try another path, Young Explorer.', 422);
     }
     out = page;
     break;
@@ -264,6 +264,7 @@ function toGmPage(t: GmTurn, out: GmPageOutput, ledger: Ledger, usage: PageGm['u
     lore: resolveLore(out.lore_refs, ledger.passages),
     freeForm: ending ? undefined : out.free_form_prompt.replace(/^C\)\s*/, '').slice(0, 160),
     scene: { location: out.scene.location.slice(0, 80), present: out.scene.present.slice(0, 8).map((p) => p.slice(0, 60)) },
+    ...learningOf(out),
     ...(t.screened && (t.screened.privacy || t.screened.distress) ? { safety: { ...(t.screened.privacy ? { privacy: true } : {}), ...(t.screened.distress ? { distress: true } : {}) } } : {}),
     gm: { v: 1, rolls: ledger.rolls, events: ledger.events, state: gm, trace: ledger.trace, usage },
   };

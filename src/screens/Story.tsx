@@ -1,25 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, ArrowUp, BookMarked, Brain, GitFork, HeartHandshake, ImagePlus, Laugh, Mic, PenLine, ScrollText, Share2, ShieldCheck, Sparkles, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUp, BookMarked, Brain, GitFork, HeartHandshake, ImagePlus, Lightbulb, Mic, PenLine, ScrollText, Share2, Sparkles, Undo2, Volume2, VolumeX, X } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
-import { ArchivistAvatar } from '../components/ArchivistAvatar';
 import { DiceTray } from '../components/DiceTray';
 import { navigate } from '../App';
 import { SEGMENTS } from '../../shared/gm';
 import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
-import { api, rememberRun, type TaleCard } from '../api';
-import { coverStyle, ENDING, KIND, WORLD_TEXT } from '../meta';
+import { api, rememberRun } from '../api';
+import { coverStyle, endingOf, KIND, PHASE, TEXT } from '../meta';
 import { useArt } from '../artkit';
 import { Badge, Button, IconButton, Kbd, Meter, Sheet, SnowToggle, cx, useToast } from '../ui';
-import { SUDO_MANA_COST, worldOf, type Choice, type ChoiceKind, type LoreRef, type Mood, type Page, type PublicConfig, type PublicStory } from '../../shared/types';
+import type { Choice, ChoiceKind, LoreRef, Mood, Page, PublicConfig, PublicStory } from '../../shared/types';
 
-const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
-  sane: ShieldCheck,
-  chaos: Zap,
-  dumb: Laugh,
-  sudo: SquareTerminal,
+const KIND_ICON: Record<ChoiceKind | 'custom', typeof Brain> = {
   logos: Brain,
   mythos: ScrollText,
   gnosis: HeartHandshake,
@@ -29,12 +24,21 @@ const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
 
 /** The sound effect each kind of choice makes when picked. */
 const SFX: Record<ChoiceKind | 'custom', string> = {
-  sane: 'OK!', chaos: 'ZAP!', dumb: 'BONK!', sudo: 'SUDO!', logos: 'CLICK!', mythos: 'ONCE…', gnosis: 'AWW!', phantasia: 'SPARK!', custom: 'POOF!',
+  logos: 'CLICK!', mythos: 'ONCE…', gnosis: 'AWW!', phantasia: 'SPARK!', custom: 'POOF!',
 };
 
-/** IGNIS narrates Grimm Protocol; the Archivist narrates the iFairy world. */
-function Narrator({ ifairy, isTalking, mood, size, sparks }: { ifairy: boolean; isTalking: boolean; mood: Mood; size: number; sparks?: boolean }) {
-  return ifairy ? <ArchivistAvatar isTalking={isTalking} size={size} /> : <SVGCharacter isTalking={isTalking} mood={mood} size={size} sparks={sparks} />;
+/** IGNIS, the winged cyber-grimoire, narrates every world of the Edu-Verse. */
+function Narrator({ isTalking, mood, size, sparks }: { isTalking: boolean; mood: Mood; size: number; sparks?: boolean }) {
+  return <SVGCharacter isTalking={isTalking} mood={mood} size={size} sparks={sparks} />;
+}
+
+/** The explorer's Field Guide: every translation home earned along the path to this page, oldest first. */
+function fieldGuideOf(story: PublicStory, page: Page): { id: string; depth: number; note: string }[] {
+  const out: { id: string; depth: number; note: string }[] = [];
+  for (let p: Page | undefined = page; p; p = p.parentId ? story.pages[p.parentId] : undefined) {
+    if (p.fieldNote) out.unshift({ id: p.id, depth: p.depth, note: p.fieldNote });
+  }
+  return out;
 }
 
 /** Every canon passage cited along the path to this page, newest first, each once. */
@@ -115,7 +119,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   const [story, setStory] = useState<PublicStory | null>(null);
   const [loadError, setLoadError] = useState('');
   const [config, setConfig] = useState<PublicConfig | null>(null);
-  const [tale, setTale] = useState<TaleCard | null>(null);
   const [busy, setBusy] = useState(false);
   const [custom, setCustom] = useState('');
   const [attachment, setAttachment] = useState<Attachment | null>(null);
@@ -138,7 +141,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       .then((s) => {
         setStory(s);
         rememberRun(s);
-        if (!s.adventure) api.tales().then((ts) => setTale(ts.find((t) => t.id === s.taleId) ?? null)).catch(() => {});
       })
       .catch((e) => setLoadError(e.message));
     api.config().then(setConfig).catch(() => {});
@@ -214,7 +216,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   /** Fires the burst from the click point (or the card's center for keyboard picks), then sends. */
   const choose = (c: Choice, e?: { clientX: number; clientY: number }) => {
     if (!page || busy) return;
-    if (c.kind === 'sudo' && page.stats.mana < SUDO_MANA_COST) return toast('Not enough mana for sudo.', 'error');
     const el = document.querySelector(`[data-choice="${c.id}"]`);
     if (el) {
       const r = el.getBoundingClientRect();
@@ -233,7 +234,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     try {
       setStory(await api.goto(story.id, pageId));
       setShowMap(false);
-      toast('Rolled back. Your next move forks a new branch.');
+      toast('Rolled back. Your next move opens a new branch of reality.');
     } catch (e) {
       toast((e as Error).message, 'error');
     } finally {
@@ -241,7 +242,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     }
   };
 
-  /** If-AI Saga: the next act opens as a new story with this one's bonds, facts and items. */
+  /** The Seven Worlds: the next stage opens as a new story with this one's bonds, facts and items. */
   const nextChapter = async () => {
     if (!story) return;
     setBusy(true);
@@ -270,16 +271,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
   const share = async () => {
     if (!story || !page) return;
-    const W = WORLD_TEXT[worldOf(story)];
-    const head = story.adventure ?? tale;
-    const endingLabel = page.ending ? W.endings[page.ending.type] ?? ENDING[page.ending.type].label : '';
-    const meters = story.adventure
-      ? `${W.meters.karma.toLowerCase()} ${page.stats.karma} · ${W.meters.chaos.toLowerCase()} ${page.stats.chaos}`
-      : `canon ${page.canon}% · chaos ${page.stats.chaos} · karma ${page.stats.karma}`;
-    const text = `${story.adventure ? 'JOURNEY' : 'TIMELINE'} #${story.timeline} · ${head?.title[story.lang] ?? story.taleId}\n${page.ending ? `${endingLabel}: ${page.ending.title}\n` : ''}${meters}\n${W.narrator}: "${page.quip}"\n${location.href}`;
+    const head = story.adventure;
+    const endingLabel = page.ending ? endingOf(page.ending.type).label : '';
+    const meters = `${TEXT.meters.karma.toLowerCase()} ${page.stats.karma} · ${TEXT.meters.chaos.toLowerCase()} ${page.stats.chaos}`;
+    const notes = fieldGuideOf(story, page).length;
+    const text = `JOURNEY #${story.timeline} · ${head?.title[story.lang] ?? story.taleId}\n${page.ending ? `${endingLabel}: ${page.ending.title}\n` : ''}${meters}${notes ? ` · ${notes} field guide ${notes === 1 ? 'entry' : 'entries'}` : ''}\n${TEXT.narrator}: "${page.quip}"\n${location.href}`;
     try {
       await navigator.clipboard.writeText(text);
-      toast('Timeline card copied to clipboard.');
+      toast('Journey card copied to clipboard.');
     } catch {
       toast('Clipboard blocked. Copy the URL instead.', 'error');
     }
@@ -312,14 +311,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       <div className="min-h-screen grid place-items-center px-4 text-center">
         {loadError ? (
           <div>
-            <p className="font-serif text-2xl">This timeline does not exist.</p>
+            <p className="font-serif text-2xl">This journey cannot be opened.</p>
             <p className="text-muted mt-2">{loadError}</p>
-            <a href="#/" className="inline-block mt-6 text-ember hover:underline">Back to the tales</a>
+            <a href="#/" className="inline-block mt-6 text-ember hover:underline">Back to the worlds</a>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 text-muted">
             <SVGCharacter isTalking mood="neutral" size={120} />
-            <span className="eyebrow">Decrypting timeline…</span>
+            <span className="eyebrow">Opening the portal…</span>
           </div>
         )}
       </div>
@@ -327,18 +326,15 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   }
 
 
-  const ifairy = worldOf(story) === 'ifairy';
-  const W = WORLD_TEXT[worldOf(story)];
-  // The header and placeholders show the Grimm tale or the pinned iFairy adventure card.
-  const head = story.adventure ?? tale;
-  const codex = ifairy ? codexOf(story, page) : [];
-  const glitch = Math.max(0, (60 - page.canon) / 60);
-  // Getting garbage-collected leaves IGNIS seeing spirals, like the bonked robot in the workshop.
-  const ignisMood = busy || page.ending?.type === 'death' ? 'panic' : page.mood;
+  // The header and placeholders show the pinned world's card.
+  const head = story.adventure;
+  const codex = codexOf(story, page);
+  const guide = fieldGuideOf(story, page);
+  const ignisMood: Mood = busy ? 'hyped' : page.mood;
   const parent = page.parentId ? story.pages[page.parentId] : null;
   const canSend = !busy && (custom.trim().length > 0 || !!attachment);
   const forks = Object.values(story.pages).filter((p) => p.parentId && Object.values(story.pages).some((q) => q.parentId === p.parentId && q.id !== p.id)).length;
-  const ending = page.ending ? { ...ENDING[page.ending.type], label: W.endings[page.ending.type] ?? ENDING[page.ending.type].label } : null;
+  const ending = page.ending ? endingOf(page.ending.type) : null;
   const endingColor = ending ? { ok: 'var(--color-sane)', warn: 'var(--color-dumb)', danger: 'var(--color-danger)', ember: 'var(--color-ember)' }[ending.tone] : '';
 
   const illustration = config?.image ? (
@@ -366,7 +362,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
             {imageState === 'failed' ? (
               <div className="flex flex-col items-center gap-3 text-sm text-ink/80">
                 <motion.span className="text-6xl" animate={{ rotate: [0, -6, 6, 0] }} transition={{ duration: 2, repeat: Infinity }}>{head?.emoji}</motion.span>
-                <span>Illustration failed. Imagine harder.</span>
+                <span>The illustration slipped into another world. Imagine it for now.</span>
               </div>
             ) : (
               <>
@@ -396,22 +392,20 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
   const stats = (
     <>
-      {!ifairy && <Meter label="Canon" value={page.canon} color="var(--color-ink)" />}
-      {ifairy && <Meter label={W.meters.karma} value={page.stats.karma} min={-100} max={100} center color="var(--color-mythos)" />}
-      <Meter label={W.meters.chaos} value={page.stats.chaos} color={ifairy ? 'var(--color-gnosis)' : 'var(--color-chaos)'} />
-      {!ifairy && <Meter label="Karma" value={page.stats.karma} min={-100} max={100} center color="var(--color-dumb)" />}
-      <Meter label={W.meters.mana} value={page.stats.mana} color="var(--color-mana)" />
+      <Meter label={TEXT.meters.karma} value={page.stats.karma} min={-100} max={100} center color="var(--color-mythos)" />
+      <Meter label={TEXT.meters.chaos} value={page.stats.chaos} color="var(--color-gnosis)" />
+      <Meter label={TEXT.meters.mana} value={page.stats.mana} color="var(--color-mana)" />
     </>
   );
 
   const parentInventory = new Set(parent?.inventory ?? []);
 
   return (
-    <div style={{ ['--glitch' as string]: glitch }}>
+    <div>
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-[#3a2619] border-b-[3px] border-outline shadow-[0_6px_0_#00000033]">
         <div className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center gap-3">
-          <IconButton label="Back to tales" onClick={() => (location.hash = '/')}>
+          <IconButton label="Back to the worlds" onClick={() => (location.hash = '/')}>
             <ArrowLeft size={18} />
           </IconButton>
           <span
@@ -421,25 +415,23 @@ export function StoryScreen({ storyId }: { storyId: string }) {
             {head && !art.src(`cover-${head.id}`) && head.emoji}
           </span>
           <div className="min-w-0">
-            <div className={cx('font-serif font-bold text-lg truncate leading-tight', glitch > 0 && 'reality-tear')}>{head?.title[story.lang] ?? '…'}</div>
+            <div className="font-serif font-bold text-lg truncate leading-tight">{head?.title[story.lang] ?? '…'}</div>
             <div className="font-mono text-[11px] text-faint">#{story.timeline} · {story.heroName}</div>
           </div>
-          <div className={cx('hidden lg:grid gap-5 ml-auto mr-4', ifairy ? 'grid-cols-3 w-[340px]' : 'grid-cols-4 w-[440px]')}>{stats}</div>
+          <div className="hidden lg:grid gap-5 ml-auto mr-4 grid-cols-3 w-[340px]">{stats}</div>
           <div className="flex items-center gap-1 ml-auto lg:ml-0">
             <IconButton label={voiceOn ? 'Mute narration (V)' : 'Read aloud (V)'} active={voiceOn} onClick={() => setVoiceOn((v) => !v)}>
               {voiceOn ? <><Volume2 size={18} /><Equalizer /></> : <VolumeX size={18} />}
             </IconButton>
-            {ifairy && (
-              <IconButton label="Codex: canon cited so far" active={showCodex} onClick={() => setShowCodex(true)}>
-                <BookMarked size={18} />
-                {codex.length > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_6px_var(--color-gold)]" />}
-              </IconButton>
-            )}
+            <IconButton label="Codex: field guide and canon so far" active={showCodex} onClick={() => setShowCodex(true)}>
+              <BookMarked size={18} />
+              {(codex.length > 0 || guide.length > 0) && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_6px_var(--color-gold)]" />}
+            </IconButton>
             <IconButton label="Timeline map (M)" active={showMap} onClick={() => setShowMap(true)}>
               <GitFork size={18} />
               {forks > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-ember shadow-[0_0_6px_var(--color-ember)]" />}
             </IconButton>
-            <IconButton label="Copy timeline card" onClick={share}>
+            <IconButton label="Copy journey card" onClick={share}>
               <Share2 size={18} />
             </IconButton>
             <SnowToggle />
@@ -456,10 +448,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
           <div className="hidden lg:flex gap-5 items-start pt-2">
             <div className="shrink-0 -my-2">
-              <Narrator ifairy={ifairy} isTalking={busy || !done} mood={ignisMood} size={config?.image ? 96 : 130} />
+              <Narrator isTalking={busy || !done} mood={ignisMood} size={config?.image ? 96 : 130} />
             </div>
             <div className="bubble min-w-0 flex-1 px-4 py-3 mt-2">
-              <div className="eyebrow mb-1 !text-[#9c7f62]">{W.narrator} · {busy ? (ifairy ? 'writing' : 'compiling') : ifairy ? 'aside' : ignisMood}</div>
+              <div className="eyebrow mb-1 !text-[#9c7f62]">{TEXT.narrator} · {busy ? 'writing' : 'aside'}</div>
               <AnimatePresence mode="wait">
                 <motion.p
                   key={busy ? 'busy' : page.id}
@@ -468,7 +460,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                   animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                   exit={{ opacity: 0, y: -6 }}
                 >
-                  {busy ? W.busy : `“${page.quip}”`}
+                  {busy ? TEXT.busy : `“${page.quip}”`}
                 </motion.p>
               </AnimatePresence>
             </div>
@@ -506,7 +498,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                 </AnimatePresence>
               </motion.div>
             ) : (
-              <p className="text-sm text-faint">{W.emptyInventory}</p>
+              <p className="text-sm text-faint">{TEXT.emptyInventory}</p>
             )}
             {!!page.gm?.state.conditions.length && (
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -546,9 +538,12 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               <div aria-hidden className="absolute top-0 right-0 w-10 h-10 bg-[linear-gradient(225deg,var(--color-bg)_50%,#e9d4ac_50%)] border-l-[3px] border-b-[3px] border-outline rounded-bl-xl" />
               <div className="relative flex flex-wrap items-center gap-2 mb-5">
                 <span className="eyebrow">Page {page.depth + 1}</span>
-                {page.action && (
+                {page.phase && PHASE[page.phase] && (
+                  <span title={PHASE[page.phase].desc}><Badge tone="ember">Phase {PHASE[page.phase].n} · {PHASE[page.phase].label}</Badge></span>
+                )}
+                {page.action && page.action.kind !== 'boot' && (
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted max-w-full">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color, boxShadow: `0 0 6px ${KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color}` }} />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND[page.action.kind]?.color, boxShadow: `0 0 6px ${KIND[page.action.kind]?.color}` }} />
                     <span className="truncate">{page.action.label}</span>
                   </span>
                 )}
@@ -564,17 +559,28 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               )}
               </div>
 
+              {page.fieldNote && done && (
+                // Phase II made visible: the strange law translated into the science of our world.
+                <motion.div initial={{ opacity: 0, y: 8, rotate: -1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 20 }} className="card mt-4 p-4 flex gap-3 items-start !bg-[#fff6d6]" role="note">
+                  <span className="grid place-items-center w-9 h-9 shrink-0 rounded-full border-[2.5px] border-outline bg-gold text-outline shadow-[0_3px_0_var(--color-outline)]"><Lightbulb size={18} /></span>
+                  <span>
+                    <span className="block eyebrow">Field Guide · in our world</span>
+                    <span className="block font-serif font-semibold mt-0.5">{page.fieldNote}</span>
+                  </span>
+                </motion.div>
+              )}
+
               {page.safety?.distress && (
                 // Shown whenever the player's own words sounded upset, whatever the narrator wrote.
                 <div className="card mt-4 p-4 text-sm !bg-[#e8f4ff]" role="note">
-                  <div className="font-serif font-bold">The Archivist hopes you are all right.</div>
+                  <div className="font-serif font-bold">IGNIS hopes you are all right.</div>
                   <p className="text-muted mt-1">If something real is worrying you, please talk to a trusted adult. In the UK you can contact Childline free and in confidence: call 0800 1111 or visit childline.org.uk.</p>
                 </div>
               )}
 
               <div className="lg:hidden mt-6 flex items-center gap-4">
-                <Narrator ifairy={ifairy} isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
-                <p className="bubble flex-1 px-3 py-2 font-serif font-medium text-sm leading-snug">{busy ? W.busy : `“${page.quip}”`}</p>
+                <Narrator isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
+                <p className="bubble flex-1 px-3 py-2 font-serif font-medium text-sm leading-snug">{busy ? TEXT.busy : `“${page.quip}”`}</p>
               </div>
 
               {/* What happens next */}
@@ -584,14 +590,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                   <motion.div
                     key={`end-${page.id}`}
                     initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                    animate={page.ending.type === 'death' ? { opacity: 1, y: 0, scale: 1, x: [0, -12, 10, -8, 6, -3, 0] } : { opacity: 1, y: 0, scale: 1 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.7, delay: 0.1 }}
                     className="card p-6 sm:p-8 text-center relative overflow-visible"
                     style={{ boxShadow: `0 0 60px -20px ${endingColor}` }}
                   >
                     <div className="absolute inset-0 rounded-[17px] opacity-25" style={head ? coverStyle(head.hue) : undefined} />
                     <motion.div className="absolute inset-0 rounded-[17px]" style={{ background: endingColor }} initial={{ opacity: 0.5 }} animate={{ opacity: 0 }} transition={{ duration: 1.2, delay: 0.3 }} />
-                    <ComicBurst key={page.id} x="50%" y="38%" color={endingColor} word={page.ending.type === 'death' ? 'BONK!' : 'THE END!'} size={190} delay={0.45} />
+                    <ComicBurst key={page.id} x="50%" y="38%" color={endingColor} word="EUREKA!" size={190} delay={0.45} />
                     <div className="relative">
                       {art.src(`ending-${page.ending.type}`) && (
                         <motion.img
@@ -616,15 +622,15 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                         {page.ending.title}
                       </motion.h2>
                       <p className="text-sm text-muted mt-3">
-                        {Object.keys(story.pages).length} pages written in this {ifairy ? 'journey' : `timeline · canon ${page.canon}% intact`}
+                        {Object.keys(story.pages).length} pages written in this journey{guide.length ? ` · ${guide.length} field guide ${guide.length === 1 ? 'entry' : 'entries'}` : ''}
                       </p>
                       <div className="flex flex-wrap justify-center gap-2 mt-6">
                         {parent && (
                           <Button onClick={() => jump(parent.id)} disabled={busy}><Undo2 size={16} /> Roll back one page</Button>
                         )}
                         <Button onClick={() => setShowMap(true)}><GitFork size={16} /> Fork from the map</Button>
-                        {story.adventure?.kind === 'saga' && story.adventure.order < 8 && (
-                          <Button variant="primary" onClick={nextChapter} disabled={busy}>Continue to Act {['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][story.adventure.order - 1]}</Button>
+                        {story.adventure?.kind === 'world' && story.adventure.order < 7 && (
+                          <Button variant="primary" onClick={nextChapter} disabled={busy}>Continue to Stage {story.adventure.order + 1}</Button>
                         )}
                         <Button variant="primary" onClick={share}><Share2 size={16} /> Share ending</Button>
                       </div>
@@ -638,11 +644,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                       <ol className="space-y-2">
                         {picked?.kind === 'custom' && (
                           <motion.li initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                            <ChoiceCard index={null} kind="custom" label={picked.label} kindLabel={W.customKind} committed />
+                            <ChoiceCard index={null} kind="custom" label={picked.label} kindLabel={TEXT.customKind} committed />
                           </motion.li>
                         )}
                         {page.choices.map((c, i) => {
-                          const noMana = c.kind === 'sudo' && page.stats.mana < SUDO_MANA_COST;
                           const isPicked = picked?.id === c.id;
                           return (
                             <motion.li
@@ -653,14 +658,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                             >
                               <ChoiceCard
                                 index={i + 1}
-                                letter={ifairy ? 'AB'[i] : undefined}
+                                letter={'AB'[i]}
                                 id={c.id}
                                 kind={c.kind}
                                 label={c.label}
-                                disabled={noMana || busy}
+                                disabled={busy}
                                 committed={isPicked}
                                 onPick={(e) => choose(c, e)}
-                                title={noMana ? `Needs ${SUDO_MANA_COST} mana` : c.risk === 'risky' ? 'Risky: the dice decide how it goes' : undefined}
+                                title={c.risk === 'risky' ? 'Risky: the dice decide how it goes' : undefined}
                                 risky={c.risk === 'risky'}
                               >
                                 {burst?.target === c.id && <ComicBurst key={burst.key} x={burst.x} y={burst.y} color={burst.color} word={burst.word} size={96} />}
@@ -671,16 +676,16 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                       </ol>
 
                       {busy ? (
-                        <div className="mt-5"><WritingIndicator page={page.depth + 2} text={W.writing} /></div>
+                        <div className="mt-5"><WritingIndicator page={page.depth + 2} text={TEXT.writing} /></div>
                       ) : (
                         <>
                           {/* Composer */}
                           <div className="ring-flow card mt-5 transition-shadow">
                             {attachment && (
                               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex items-center gap-3 px-3 pt-3">
-                                <img src={attachment.preview} alt="Attached artifact" className="w-12 h-12 object-cover rounded-lg border-[2.5px] border-outline rotate-[-4deg] shadow-[2px_3px_0_var(--color-outline)]" />
-                                <span className="text-xs text-muted flex-1">Artifact attached. {W.narrator} will weave it into the story.</span>
-                                <IconButton label="Remove artifact" onClick={() => setAttachment(null)}><X size={16} /></IconButton>
+                                <img src={attachment.preview} alt="Attached image" className="w-12 h-12 object-cover rounded-lg border-[2.5px] border-outline rotate-[-4deg] shadow-[2px_3px_0_var(--color-outline)]" />
+                                <span className="text-xs text-muted flex-1">Image attached. {TEXT.narrator} will read it: a photo of your homework, or an artefact for the world.</span>
+                                <IconButton label="Remove image" onClick={() => setAttachment(null)}><X size={16} /></IconButton>
                               </motion.div>
                             )}
                             <textarea
@@ -694,16 +699,16 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                   if (canSend) sendCustom();
                                 } else if (e.key === 'Escape') inputRef.current?.blur();
                               }}
-                              placeholder={ifairy && page.freeForm ? `C) ${page.freeForm}` : 'Or write your own move…'}
+                              placeholder={page.freeForm ? `C) ${page.freeForm}` : 'Or write your own idea…'}
                               className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] font-semibold placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
                             />
                             <div className="flex items-center gap-1 px-2 pb-2">
-                              <IconButton label="Dictate your move" active={listening} onClick={listen}>
+                              <IconButton label="Dictate your idea" active={listening} onClick={listen}>
                                 <Mic size={18} />
                                 {listening && <Equalizer />}
                               </IconButton>
                               {config?.vision && (
-                                <IconButton label="Attach an artifact image" active={!!attachment} onClick={() => fileRef.current?.click()}><ImagePlus size={18} /></IconButton>
+                                <IconButton label="Attach an image: a photo of your homework or an artefact" active={!!attachment} onClick={() => fileRef.current?.click()}><ImagePlus size={18} /></IconButton>
                               )}
                               <span className="ml-auto mr-2 text-xs text-faint tabular-nums">{custom.length > 200 ? `${custom.length}/280` : ''}</span>
                               <motion.div animate={canSend ? { scale: 1 } : { scale: 0.9 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
@@ -712,7 +717,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                   size="sm"
                                   disabled={!canSend}
                                   onClick={sendCustom}
-                                  aria-label="Send move"
+                                  aria-label="Send your idea"
                                   className={cx('h-9 w-9 px-0', canSend && 'shadow-[0_0_22px_-2px_var(--color-ember)]')}
                                 >
                                   <ArrowUp size={18} />
@@ -751,8 +756,20 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       <Sheet open={showMap} onClose={() => setShowMap(false)} title="Timeline">
         <TimelineMap story={story} onJump={jump} busy={busy} />
       </Sheet>
-      {ifairy && (
-        <Sheet open={showCodex} onClose={() => setShowCodex(false)} title="Codex">
+      <Sheet open={showCodex} onClose={() => setShowCodex(false)} title="Codex">
+          <div className="eyebrow mb-2">Field Guide</div>
+          {guide.length ? (
+            <ol className="space-y-2 mb-6">
+              {guide.map((g) => (
+                <li key={g.id} className="card p-3 text-sm flex gap-2">
+                  <Lightbulb size={16} className="shrink-0 mt-0.5 text-ember" />
+                  <span><span className="font-semibold">{g.note}</span> <span className="text-faint text-xs">· page {g.depth + 1}</span></span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-faint mb-6">No entries yet. Translate a strange law into the science of our world and IGNIS will write it down here.</p>
+          )}
           {page.gm?.state.quest && (
             <>
               <div className="eyebrow mb-2">Quest</div>
@@ -808,7 +825,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               <div className="eyebrow mb-2">Canon</div>
             </>
           )}
-          <p className="text-sm text-muted mb-4">Canon passages from the iFairy Universe that the Archivist drew on along this path.</p>
+          <p className="text-sm text-muted mb-4">Passages IGNIS drew on along this path: the world's own page and the iFairy Universe canon.</p>
           {codex.length ? (
             <ul className="space-y-3">
               {codex.map((l) => (
@@ -820,10 +837,9 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-faint">No canon cited yet on this path.</p>
+            <p className="text-sm text-faint">No passages cited yet on this path.</p>
           )}
         </Sheet>
-      )}
     </div>
   );
 }
@@ -844,13 +860,13 @@ function ChoiceCard({
   children,
 }: {
   index: number | null;
-  /** iFairy options are lettered A and B, per the canon's choice block. */
+  /** Options are lettered A and B, per the canon's choice block. */
   letter?: string;
   id?: string;
   kind: ChoiceKind | 'custom';
   label: string;
   kindLabel?: string;
-  /** iFairy Game Master: picking this option rolls the dice. */
+  /** Game Master: picking this option rolls the dice. */
   risky?: boolean;
   disabled?: boolean;
   committed?: boolean;
@@ -889,7 +905,7 @@ function ChoiceCard({
         <span className="block text-[16px] font-bold leading-snug">{letter && <span className="mr-1.5 font-serif" style={{ color }}>{letter})</span>}{label}</span>
         <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide" style={{ color }}>
           {kindLabel}
-          {kind === 'sudo' && <span className="text-faint">· −{SUDO_MANA_COST} mana</span>}
+          {kind !== 'custom' && <span className="text-faint normal-case">· {KIND[kind].learn}</span>}
           {risky && <span className="text-faint normal-case">· 🎲 risky</span>}
         </span>
       </span>

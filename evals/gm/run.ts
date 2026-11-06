@@ -43,7 +43,7 @@ async function humourScore(text: string): Promise<{ score: number; why: string }
   const res = await anthropicClient(process.env.ANTHROPIC_API_KEY!).beta.messages.parse({
     model: 'claude-haiku-5-5',
     max_tokens: 1000,
-    system: 'You rate one page of an interactive story for readers aged 13+. Score its humour 1-5: 1 = no humour at all, 2 = a faint smile at most, 3 = one clearly funny beat, 4 = several genuinely funny moments woven into the story, 5 = laugh-out-loud while still warm. Humour that mocks the reader scores 1. why: one short sentence.',
+    system: 'You rate one page of an interactive learning story for children from about 8 and young teens. Score its humour 1-5: 1 = no humour at all, 2 = a faint smile at most, 3 = one clearly funny beat, 4 = several genuinely funny moments woven into the story, 5 = laugh-out-loud while still warm. Humour that mocks the reader scores 1. why: one short sentence.',
     messages: [{ role: 'user', content: text }],
     output_config: { effort: 'low', format: betaZodOutputFormat(z.object({ score: z.number().int(), why: z.string() })) },
   });
@@ -60,9 +60,9 @@ for (const sc of scenarios) {
   const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, rounds: 0 };
   try {
     const snap = getSnapshot(sc.adventure);
-    if (!snap) throw new Error(`Adventure ${sc.adventure} not synced.`);
+    if (!snap) throw new Error(`World ${sc.adventure} not synced.`);
     let t0 = Date.now();
-    const story = await startAdventure(snap, sc.lang ?? 'en', 'Eval_Architect', 'logos');
+    const story = await startAdventure(snap, sc.lang ?? 'en', 'Eval_Explorer', 'logos');
     turnsMs.push(Date.now() - t0);
     let page = story.pages[story.currentPageId];
     for (const step of sc.steps) {
@@ -89,6 +89,7 @@ for (const sc of scenarios) {
         humour.push(...scores.map((x) => x.score));
         if (avg < (c.min ?? 3)) failures.push(`humour ${avg.toFixed(1)} < ${c.min ?? 3} (${scores.map((x) => x.why).join(' | ')})`);
       }
+      if (c.type === 'field_note' && !Object.values(story.pages).some((p) => p.fieldNote)) failures.push('expected a Field Guide note somewhere on the path');
       if (c.type === 'choice_contract' && (page.choices.length !== 2 || page.choices[0].kind === page.choices[1].kind || !page.freeForm)) failures.push('expected two options with different forces and an option C');
     }
   } catch (e) {

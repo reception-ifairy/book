@@ -1,35 +1,27 @@
 import type { AdventureStructure } from '../../../shared/universe';
 import type { Clock, QuestNode } from '../../../shared/gm';
 
-/** Quest skeletons per story shape (Game Master guide, Part 5): nudges, never rails. */
+/** Quest skeletons per learning arc (the 3-phase model, the homework scaffold): nudges, never rails. */
 const TEMPLATES: Record<AdventureStructure, { id: string; title: string; climax?: boolean }[]> = {
-  'five-room': [
-    { id: 'entrance', title: 'Get past the entrance and its guardian' },
-    { id: 'puzzle', title: 'Solve the puzzle or win the conversation' },
-    { id: 'setback', title: 'Recover from the setback or see through the trick' },
-    { id: 'climax', title: 'Face the heart of the problem', climax: true },
-    { id: 'reward', title: 'Claim the reward or the revelation' },
+  'three-phase': [
+    { id: 'portal', title: 'Step through the portal and notice what is strange' },
+    { id: 'experiment', title: "Test the world's law: poke it, prod it, try it" },
+    { id: 'pattern', title: 'Work out how the law works, and why it differs from home' },
+    { id: 'translate', title: "Translate the law into our world's science", climax: true },
+    { id: 'make', title: 'Make it yours: a field guide entry, a drawing or a song' },
   ],
-  'monster-of-the-week': [
-    { id: 'hook', title: 'Find out which Traveller needs help' },
-    { id: 'clue1', title: 'Find the first clue' },
-    { id: 'clue2', title: 'Find the second clue' },
-    { id: 'resolution', title: 'Resolve it kindly', climax: true },
-    { id: 'wrap', title: 'Say goodbye to the district' },
-  ],
-  'campaign-act': [
-    { id: 'arrival', title: 'Step into the memory' },
-    { id: 'witness', title: 'Witness what happened' },
-    { id: 'help', title: 'Help where a helper is needed' },
-    { id: 'turning', title: 'Be there for the turning point', climax: true },
-    { id: 'keep', title: 'Keep the memory for the Archive' },
+  homework: [
+    { id: 'show', title: 'Bring the task through the portal: a photo or your own words' },
+    { id: 'understand', title: 'Find out what the task is really asking' },
+    { id: 'step', title: 'Take the next step yourself' },
+    { id: 'solve', title: 'Reach the answer with your own reasoning', climax: true },
+    { id: 'explain', title: 'Explain it back in your own words' },
   ],
 };
 
 const CLOCKS: Record<AdventureStructure, Clock[]> = {
-  'five-room': [{ id: 'dissonance', label: 'The dissonance spreads', value: 0, max: 6 }, { id: 'attention', label: 'The Council takes notice', value: 0, max: 4 }],
-  'monster-of-the-week': [{ id: 'trouble', label: 'Trouble in the district', value: 0, max: 4 }, { id: 'attention', label: 'The Council takes notice', value: 0, max: 4 }],
-  'campaign-act': [{ id: 'fading', label: 'The memory fades', value: 0, max: 6 }],
+  'three-phase': [{ id: 'wobble', label: "The world's law wobbles out of tune", value: 0, max: 6 }, { id: 'portal', label: 'The portal home flickers', value: 0, max: 6 }],
+  homework: [{ id: 'lantern', label: 'The Puzzle-Lantern dims', value: 0, max: 6 }],
 };
 
 export const questFor = (s: AdventureStructure): QuestNode[] => TEMPLATES[s].map((n, i) => ({ ...n, status: i === 0 ? 'active' : 'locked' }));

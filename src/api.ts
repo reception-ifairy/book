@@ -1,6 +1,6 @@
-import type { Page, PublicConfig, PublicStory, Tale, World } from '../shared/types';
+import type { Page, PublicConfig, PublicStory, World } from '../shared/types';
 import type { ArtKitState, ArtSlot } from '../shared/artkit';
-import type { AdventureCard } from '../shared/universe';
+import { isEduverse, type AdventureCard, type AdventureKind } from '../shared/universe';
 
 export interface ArtKitView {
   slots: ArtSlot[];
@@ -9,7 +9,6 @@ export interface ArtKitView {
   ready: { anthropic: boolean; openai: boolean };
 }
 
-export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
 export type WorldInfo = { id: World; ready: boolean; adventures?: number; canonVersion?: string | null; gm?: boolean };
 
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
@@ -25,10 +24,8 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
 
 export const api = {
   config: () => call<PublicConfig>('GET', '/api/config'),
-  tales: () => call<TaleCard[]>('GET', '/api/tales'),
   worlds: () => call<WorldInfo[]>('GET', '/api/worlds'),
   adventures: () => call<AdventureCard[]>('GET', '/api/adventures'),
-  start: (taleId: string, lang: string, heroName: string) => call<PublicStory>('POST', '/api/story', { taleId, lang, heroName }),
   startAdventure: (adventureId: string, lang: string, heroName: string, strongest?: string) =>
     call<PublicStory>('POST', '/api/story', { world: 'ifairy', adventureId, lang, heroName, strongest }),
   story: (id: string) => call<PublicStory>('GET', `/api/story/${id}`),
@@ -73,16 +70,19 @@ export interface SavedRun {
   updatedAt: number;
   pages: number;
   ending: string | null;
-  /** iFairy runs carry their own card, since the adventure list depends on the last sync. */
+  /** Runs carry their own card, since the world list depends on the last sync. */
   world?: World;
+  kind?: AdventureKind;
   title?: Record<string, string>;
   emoji?: string;
   hue?: number;
 }
 const RUNS_KEY = 'ignis.runs';
+/** Only Edu-Verse runs: journeys from the retired worlds are archived on the server, so they are forgotten here. */
 export function loadRuns(): SavedRun[] {
   try {
-    return JSON.parse(localStorage.getItem(RUNS_KEY) || '[]');
+    const runs: SavedRun[] = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]');
+    return runs.filter((r) => isEduverse(r.kind ? { kind: r.kind } : null) && r.title && r.emoji !== undefined && r.hue !== undefined);
   } catch {
     return [];
   }
@@ -98,7 +98,7 @@ export function rememberRun(story: PublicStory) {
       updatedAt: story.updatedAt,
       pages: Object.keys(story.pages).length,
       ending: current?.ending?.title ?? null,
-      ...(story.adventure ? { world: story.world, title: story.adventure.title, emoji: story.adventure.emoji, hue: story.adventure.hue } : {}),
+      ...(story.adventure ? { world: story.world, kind: story.adventure.kind, title: story.adventure.title, emoji: story.adventure.emoji, hue: story.adventure.hue } : {}),
     });
     localStorage.setItem(RUNS_KEY, JSON.stringify(runs.slice(0, 20)));
   } catch {

@@ -20,16 +20,16 @@ import { matchTerms } from '../universe/terms';
 const s = z.strictObject;
 const SCHEMAS = {
   roll_check: s({
-    approach: z.enum(FORCES).describe('The force the Young Architect calls on.'),
+    approach: z.enum(FORCES).describe('The force the Young Explorer calls on.'),
     risk: z.enum(['low', 'standard', 'high']).describe('How dangerous failure would be.'),
-    intent: z.string().describe('What the Young Architect is trying to do, in a few words.'),
+    intent: z.string().describe('What the Young Explorer is trying to do, in a few words.'),
     helper_npc: z.string().nullable().describe('npc_id of an NPC who helps; +1 if they trust the player (trust 2+), otherwise null.'),
   }),
   choose_outcome: s({
     roll_id: z.string(),
     option_ids: z.array(z.string()).describe('Exactly as many options of each kind as the roll asks for.'),
   }),
-  grant_item: s({ name: z.string().describe('Short canon-flavoured item name, max 60 characters.'), reason: z.string() }),
+  grant_item: s({ name: z.string().describe('Short item name the world gave, max 60 characters.'), reason: z.string() }),
   drop_item: s({ name: z.string().describe('Exact name of an item in the inventory.'), reason: z.string() }),
   adjust_meter: s({
     meter: z.enum(['harmony', 'dissonance', 'etherium']),
@@ -49,7 +49,7 @@ const SCHEMAS = {
   get_npc: s({ npc_id: z.string() }),
   npc_remember: s({
     npc_id: z.string(),
-    memory: z.string().describe('What this NPC will remember about the Young Architect, one short sentence.'),
+    memory: z.string().describe('What this NPC will remember about the Young Explorer, one short sentence.'),
     salience: z.enum(['1', '2', '3']).describe('3 for something they will never forget, 1 for a passing moment.'),
   }),
   update_relationship: s({
@@ -78,15 +78,15 @@ type ToolName = keyof typeof SCHEMAS;
 const DESCRIPTIONS: Record<ToolName, string> = {
   roll_check: 'Roll 2d6 + approach for an uncertain, risky action. Only when failure would be interesting. Returns the dice, the band and the outcome options to choose from. If a check was already rolled for the chosen option, this returns that roll.',
   choose_outcome: 'Pick the outcome options for a roll (bright: benefits; success-but: one cost and one benefit; twist: one GM move). Their effects are applied by the rules.',
-  grant_item: 'Give the Young Architect an item the story actually hands them.',
-  drop_item: 'Remove an item the Young Architect used up, gave away or lost.',
-  adjust_meter: 'Nudge a meter by a small amount when the story earns it without a roll (kindness, rest, disruption).',
+  grant_item: 'Give the Young Explorer an item the story actually hands them.',
+  drop_item: 'Remove an item the Young Explorer used up, gave away or lost.',
+  adjust_meter: 'Nudge a meter by a small amount when the story earns it without a roll (connecting ideas, kindness, puzzlement, rest).',
   search_canon: 'Look up canon passages about named places, beings or concepts. Returns L-handles you may cite.',
   add_canon_claim: 'Record a new fact this page establishes, so later pages stay consistent. Facts are append-only.',
-  get_npc: "An NPC's card: role, voice, what they know, how they regard the Young Architect, what they remember, and whether they hold a secret.",
-  npc_remember: 'Store something an NPC will remember about the Young Architect.',
-  update_relationship: "Shift how an NPC regards the Young Architect by one step on one axis, for something that happened on this page.",
-  reveal_secret: "Let an NPC share their secret, once they trust the Young Architect enough. Returns the secret to weave into the scene.",
+  get_npc: "An NPC's card: role, voice, what they know, how they regard the Young Explorer, what they remember, and whether they hold a secret.",
+  npc_remember: 'Store something an NPC will remember about the Young Explorer.',
+  update_relationship: "Shift how an NPC regards the Young Explorer by one step on one axis, for something that happened on this page.",
+  reveal_secret: "Let an NPC share their secret, once they trust the Young Explorer enough. Returns the secret to weave into the scene.",
   update_quest: 'Close the active quest goal as done or failed, or transform it into a new goal when the story turns.',
   schedule_consequence: 'Plant a consequence that comes back on a later page.',
   advance_time: 'Move the clock forward for travel, rest or a long task.',

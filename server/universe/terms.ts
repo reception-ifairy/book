@@ -1,5 +1,6 @@
 import type { AdventureSnapshot } from '../../shared/universe';
 import type { Page } from '../../shared/types';
+import { castName } from './seeds';
 
 /**
  * The only words the game ever sends to the Universe search. A lore query is assembled from
@@ -34,9 +35,9 @@ const ARTICLE = /^(?:an?|the)\s+/i;
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const wordRe = (term: string) => new RegExp(`(?<![\\p{L}\\p{N}])${escape(term)}(?![\\p{L}\\p{N}])`, 'iu');
 
-/** Canon terms for one adventure: the glossary, the world's vocabulary, its cast and its own lore terms. */
-export function whitelistFor(snap: Pick<AdventureSnapshot, 'cast' | 'loreTerms' | 'title' | 'kind'>): string[] {
-  const own = [...snap.cast, ...snap.loreTerms, ...(snap.kind === 'district' ? [snap.title.en] : [])]
+/** Canon terms for one world: the glossary, the canon's portal vocabulary, the world's cast and its own lore terms. */
+export function whitelistFor(snap: Pick<AdventureSnapshot, 'cast' | 'loreTerms'>): string[] {
+  const own = [...snap.cast.map(castName), ...snap.loreTerms]
     .map((t) => t.replace(ARTICLE, '').trim())
     .filter((t) => t.length > 2);
   return [...new Set([...GLOSSARY_TERMS, ...WORLD_TERMS, ...own])];
@@ -53,13 +54,12 @@ export function matchTerms(text: string, whitelist: string[]): string[] {
 
 /**
  * Terms for this turn's lore lookup: what the move mentions, then who and where the scene is,
- * then the adventure's own anchors. Capped at 8, and every entry comes from the whitelist.
+ * then the world's own anchors. Capped at 8, and every entry comes from the whitelist.
  */
 export function buildLoreQuery(snap: AdventureSnapshot, parent: Page | null, moveText: string): string[] {
   const whitelist = whitelistFor(snap);
   const scene = parent?.scene ? [parent.scene.location, ...parent.scene.present].join(' | ') : '';
   const anchors = parent ? snap.loreTerms.slice(0, 2) : snap.loreTerms.slice(0, 3);
-  const district = snap.kind === 'district' && !parent ? [snap.title.en.replace(ARTICLE, '')] : [];
-  const terms = [...matchTerms(moveText, whitelist), ...matchTerms(scene, whitelist), ...district, ...anchors];
+  const terms = [...matchTerms(moveText, whitelist), ...matchTerms(scene, whitelist), ...anchors];
   return [...new Set(terms)].filter((t) => whitelist.includes(t)).slice(0, 8);
 }

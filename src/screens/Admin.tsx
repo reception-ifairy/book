@@ -180,7 +180,7 @@ export function Admin() {
           <p className="text-sm text-muted mt-1 mb-5">{authError}</p>
           <input name="pw" type="password" placeholder="Admin password" className="field" autoFocus />
           <Button variant="primary" className="w-full mt-3">Unlock</Button>
-          <a href="#/" className="block text-center text-sm text-faint hover:text-ink mt-4">Back to the tales</a>
+          <a href="#/" className="block text-center text-sm text-faint hover:text-ink mt-4">Back to the worlds</a>
         </form>
       </div>
     );
@@ -227,7 +227,7 @@ export function Admin() {
           <span className="font-serif font-semibold">Sysadmin</span>
           <div className="ml-auto flex items-center gap-2">
             <SnowToggle />
-            <a href="#/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold"><ArrowLeft size={16} /> Back to tales</a>
+            <a href="#/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold"><ArrowLeft size={16} /> Back to the worlds</a>
           </div>
         </div>
       </header>
@@ -410,7 +410,7 @@ export function Admin() {
               />
             </Section>
 
-            <Section id="universe" title="iFairy Universe" desc="The second world: adventures and live canon from the iFairy Universe lore API. Stories pin the adventure they start with, so syncing never changes a running story.">
+            <Section id="universe" title="iFairy Universe" desc="The Quantum Edu-Verse is told in the iFairy canon: Sync freezes every world together with the canon rules, the iFairies and the visual lock, and live lore comes from the lore API. Journeys pin the world they start with, so syncing never changes a running journey.">
               <UniversePanel
                 client={client}
                 settings={cfg.universe}
@@ -421,7 +421,7 @@ export function Admin() {
               />
             </Section>
 
-            <Section id="gm" title="Game Master" desc="For the iFairy world: dice and rules run as tools in code, the model only chooses and narrates. Applies to stories started while it is on.">
+            <Section id="gm" title="Game Master" desc="Dice and rules run as tools in code, the model only chooses and narrates; quests follow the 3-phase learning arc. Applies to journeys started while it is on.">
               <div className="card p-5 space-y-5">
                 <Field label="Game Master" help="Stories keep the mode they started with.">
                   <ProviderPicker value={cfg.gm.enabled ? 'on' : 'off'} onChange={(v) => set('gm', 'enabled', v === 'on')} options={[['on', 'On'], ['off', 'Off']]} />
@@ -442,7 +442,7 @@ export function Admin() {
                 <Field label="Time budget (s)" help="Per page; keep it under the proxy timeout.">
                   <input type="number" min={20} max={110} value={Math.round(cfg.gm.turnBudgetMs / 1000)} onChange={(e) => set('gm', 'turnBudgetMs', Number(e.target.value) * 1000)} className="field w-28" />
                 </Field>
-                <Field label="Content review" help="Claude Haiku 5.5 reads finished pages against the 13+ profile.">
+                <Field label="Content review" help="Claude Haiku 5.5 reads finished pages against the young explorers profile.">
                   <ProviderPicker value={cfg.gm.outputCheck} onChange={(v) => set('gm', 'outputCheck', v)} options={[['custom', 'Own words'], ['all', 'Every page'], ['off', 'Off']]} />
                 </Field>
                 <Probe role="gm" state={probes.gm} onRun={() => probe('gm')} dirty={dirty} />

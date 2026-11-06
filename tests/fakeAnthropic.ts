@@ -1,24 +1,26 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
 
-/** A page as the story model would return it; tests override fields per call. */
+/** An Edu-Verse page as IGNIS would return it; tests override fields per call. */
 export const samplePage = (over: Record<string, unknown> = {}) => ({
-  narration: 'You step onto the *encrypted path*.',
-  ignis_quip: 'Bold. Wrong, but bold.',
-  mood: 'smug',
+  narration: 'The portal pops you into BleepWorld. A teapot sings, turns into a cloud, and *sneezes*.',
+  narrator_aside: 'I tried to alphabetise BleepWorld once. It turned the alphabet into soup.',
+  mood: 'hyped',
+  phase: 'entry',
+  field_note: null,
   choices: [
-    { label: 'Stay on the path', kind: 'sane' },
-    { label: 'Hack the wolf', kind: 'chaos' },
-    { label: 'Give the wolf your password', kind: 'dumb' },
-    { label: 'sudo rm -rf /wolf', kind: 'sudo' },
+    { label: 'Sort everything that hums into one pile', kind: 'logos' },
+    { label: 'Ask Blip and Blop how chaos feels', kind: 'gnosis' },
   ],
-  stat_changes: { chaos: 10, karma: 0, mana: 0 },
-  canon_delta: -5,
-  inventory_add: ['firewall.spell'],
+  free_form_prompt: 'Use your own words: invent a sorting rule, or try your own experiment.',
+  stat_changes: { harmony: 5, dissonance: 10, etherium: -5 },
+  inventory_add: ['a jar of quiet'],
   inventory_remove: [],
   ending: null,
-  image_prompt: 'A courier in a red hood',
-  story_summary: 'The courier set off.',
+  image_prompt: 'A small explorer stacking a neat glowing pile of humming objects',
+  story_summary: 'The explorer stepped into BleepWorld and met the chaos.',
+  lore_refs: ['C1', 'L1', 'X9'],
+  scene: { location: 'The Noisy Meadow', present: ['Blip and Blop', 'the Sorting Wind'] },
   artifact_description: null,
   ...over,
 });

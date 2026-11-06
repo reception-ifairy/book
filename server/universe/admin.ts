@@ -5,6 +5,7 @@ import { universe, universeStats, UniverseError, type Target } from './client';
 import { syncCatalogue } from './catalogue';
 import { getCatalogue, getSnapshot } from './store';
 import { ifairySystemPrompt } from '../story/worlds/ifairy/prompt';
+import type { AdventureKind } from '../../shared/universe';
 
 /** Admin endpoints for the Universe connection; mounted behind the admin guard. */
 export const universeAdmin = Router();
@@ -14,8 +15,11 @@ const fail = (res: Response, e: unknown) =>
 
 function summary() {
   const c = getCatalogue();
-  const counts = { hook: 0, saga: 0, district: 0 };
-  for (const id of Object.keys(c?.adventures ?? {})) counts[id.split('-')[0] as keyof typeof counts]++;
+  const counts: Record<AdventureKind, number> = { world: 0, lab: 0, homework: 0 };
+  for (const id of Object.keys(c?.adventures ?? {})) {
+    const kind = getSnapshot(id)?.kind;
+    if (kind) counts[kind]++;
+  }
   return c ? { canonVersion: c.canonVersion, builtAt: c.builtAt, syncedAt: c.syncedAt, counts, report: c.report } : null;
 }
 
@@ -57,7 +61,7 @@ universeAdmin.post('/sync', async (_req, res) => {
 /** The composed narrator prompt, so the owner can check it against the canon. */
 universeAdmin.get('/adventures/:id/prompt', (req, res) => {
   const snap = getSnapshot(req.params.id);
-  if (!snap) return res.status(404).json({ ok: false, error: 'Adventure not synced.' });
+  if (!snap) return res.status(404).json({ ok: false, error: 'World not synced.' });
   const lang = req.query.lang === 'pl' ? 'pl' : 'en';
-  res.json({ ok: true, version: snap.version, status: snap.status, prompt: ifairySystemPrompt(snap, lang, getConfig().story.maxDepth) });
+  res.json({ ok: true, version: snap.version, prompt: ifairySystemPrompt(snap, lang, getConfig().story.maxDepth) });
 });

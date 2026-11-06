@@ -1,34 +1,50 @@
-# IGNIS // OS: Grimm Protocol
+# IGNIS // iFairy Quantum Edu-Verse
 
-Gra „wybierz własną przygodę” w klimacie cyber-magii. Sarkastyczna księga-robot **Ignis** opowiada klasyczne baśnie jako zabugowany kod: Czerwony Kapturek kontra atak MITM, Trzy Świnki kontra DDoS, Kopciuszek z wygasającą sesją. Każdy wybór forkuje linię czasu. Dla widzów w stylu *Ricka i Morty'ego* (16+).
+*„Jeśli potrafisz to sobie wyobrazić, to już istnieje… w jednym z wielu światów.”*
 
-**Drugi świat: iFairy Universe** (13+). Przygody z kanonu iFairy (6 haków z portali, Saga If-AI w 8 aktach, 26 Dzielnic Podróżników) opowiada Narrator-Archiwista, a treść i lore na żywo przychodzą z API iFairy Universe. Świat pojawia się na stronie głównej, gdy sysadmin go włączy i zsynchronizuje. Opcjonalnie prowadzi go **AI Game Master**: kości 2d6 i reguły działają w kodzie jako narzędzia Claude'a, model tylko wybiera regułę i opowiada wynik.
+Interaktywna gra edukacyjna w klimacie cyber-magii, osadzona w **iFairy Universe**. **Ignis**, mała latająca księga-robot z ekranową twarzą i skrzydłami ze świetlistych obwodów, otwiera portale do światów, w których prawa natury działają inaczej: czas biegnie w pętlach, słowa mają masę, widać fale prawdopodobieństwa, a uczucia sterują grawitacją. Młody Odkrywca bada taki świat, a potem razem z Ignisem tłumaczy to, co odkrył, na naukę naszego świata.
 
-## Gdzie jesteśmy (2026-10-31)
+Projekt opisuje dokument źródłowy [docs/QUANTUM_EDUVERSE.md](docs/QUANTUM_EDUVERSE.md) (filozofia wielu światów, model 3 faz, światy, zadania domowe, silnik emocji). Gra jest jego implementacją.
 
-**Na żywo:** https://demo.ifairy.co.uk/ · wersja **5.1.0** · PM2 `demo-ifairy-book` na porcie 8803 za nginx (`proxy_read_timeout 180s`) · dane w `/var/www/demo.ifairy.co.uk/data/` (konfiguracja, klucze, historie, snapshoty kanonu).
+## Jak to działa
 
-| Obszar | Stan |
-|---|---|
-| **Grimm Protocol** (16+) | Bez zmian od 4.2: 5 baśni, Ignis. Dokładne zapytania do Claude'a pilnuje test `grimm-golden` |
-| **iFairy Universe** (13+) | Włączony. 40 przygód zsynchronizowanych z kanonu 2.2.0-EN (konsument `demo-book`, grant `book-gm`). Narrator-Archiwista z regułami bezpieczeństwa i humoru, lore na żywo z cytatami w Codexie |
-| **AI Game Master** | Włączony na **Claude Haiku 5.5** (effort `low`, 4 rundy, 75 s, recenzja treści po ruchach własnymi słowami). Kości 2d6 + siła w kodzie, postacie z relacjami i sekretami, questy, konsekwencje, czas, zegary, kampania sagi |
-| **Wygląd iFairy** | Kanon R6 („visual lock”): narrator cytuje sekcje o wyglądzie; ilustracje z iFairy dostają tekst blokady z kanonu, inne istoty (Krasnoludki, wróżki z dzielnic) nie |
-| **Ewaluacje na żywo** | `npm run eval:gm`, 11 scenariuszy: 100% (zdarza się pojedyncza wpadka na przebieg), humor 3,7–3,9/5 wg sędziego Haiku, p95 ok. 12–15 s, ok. 0,001 USD za turę |
+**Model 3 faz** (każdy świat to łuk nauki, a nie szyny):
+1. **Wejście** (Phase I): odkrywca trafia do świata z innym prawem natury i sam je testuje. Zderzenie z oczekiwaniami (dysonans poznawczy) rodzi pytanie „jak to działa?”.
+2. **Przekład** (Phase II): Ignis pomaga przełożyć dziwne prawo na prawdziwą naukę (analogie, pytania). Każde takie odkrycie trafia do **Field Guide** odkrywcy.
+3. **Personalizacja** (Phase III): odkrywca buduje własny model, regułę albo wynalazek. Przez całą drogę Ignis dopasowuje się do niego: przy wahaniu proponuje prostszy świat albo inny sposób uczenia się, przy frustracji łagodnie wspiera i przypomina wcześniejszy sukces.
 
-**Otwarte sprawy:**
-- **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty. Po włączeniu blokada wyglądu iFairy zadziała sama.
-- **Przy smutnym graczu** model często łamie kontrakt dwóch opcji (kosztuje rundę naprawy), a raz na ok. 10 przebiegów strona kończy się błędem 422. Do osobnego przyjrzenia się.
-- **Polskie nazwy własne:** model tłumaczy nazwy z kanonu („Złote Miasto”). Zostawione celowo; da się wymusić oryginały w prompcie.
-- **Zmiana kanonu dociera do gry** dopiero po reindeksie Universe i *Sync now* w panelu. Trwające historie zostają przy swoim snapshocie.
+**Cztery siły kanonu iFairy to cztery sposoby uczenia się:** Logos (wzory i rozumowanie), Mythos (opowieści i czas), Gnosis (uczucia i empatia), Phantasia (wyobraźnia i zabawa). Każda strona daje dwie opcje (A i B) z różnych sił i zawsze opcję C, własnymi słowami. Na stronie głównej odkrywca wybiera, jak lubi się uczyć, a Ignis częściej proponuje tę drogę.
+
+**Błąd to nowa gałąź rzeczywistości, nie porażka:** mapa linii czasu pozwala wrócić i otworzyć inną gałąź.
+
+**Światy** (14):
+- **Siedem Światów** (ścieżka etapami, po zakończeniu przycisk *Continue to Stage N*): BleepWorld (chaos i porządek), Loopia (pętle czasu i iteracja), Textosfera (słowa z masą), Probabilion (fale prawdopodobieństwa), Narramagia (opowieść buduje świat), Fraktalia (samopodobieństwo), Sympathos (uczucia sterują fizyką);
+- **Cyber-Magiczne Laboratoria**: Grawi-Lab, Zakrzywiona Czytelnia Szepczących Ksiąg, Lewitas, Kraina Przewijania, Koloratura, Chrono-Wyprawy;
+- **Portal Zadań Domowych**: zdjęcie strony z zeszytu albo własne słowa; Ignis prowadzi trzema poziomami pomocy (delikatna podpowiedź, wspólna konstrukcja, zabawowe przeformułowanie) i nigdy nie podaje gotowej odpowiedzi.
+
+**iFairy Universe zostaje fundamentem:** reguły bezpieczeństwa dla dzieci, system humoru cybermagicznego, canon lock (tylko Logos, Mythos, Gnosis, Phantasia i If-AI), wygląd iFairies (blokada wizualna R6), checklista portali, Tinkermasterzy i przewodnicy głosu jako postacie, lore na żywo z cytatami w Codexie. Światy Edu-Verse są autorskie (`server/universe/seeds.ts`), a Sync zamraża każdy z nich razem z kanonem w niezmiennym snapshocie.
+
+**Wyczyszczone w 6.0:** świat Grimm Protocol (baśnie jako zabugowany kod, 16+), 40 przygód z kanonu (haki portali, Saga If-AI, Dzielnice Podróżników) i persona Narratora-Archiwisty. Zapisane historie z tych światów zostają na dysku, ale serwer ich już nie serwuje (410).
+
+## Gdzie jesteśmy (2026-11-06)
+
+**Wersja 6.0.0** na gałęzi, jeszcze nie na produkcji (https://demo.ifairy.co.uk/ działa na 5.1.0).
+
+**Po wdrożeniu koniecznie:** w panelu *iFairy Universe → Sync now*. Dopóki stary katalog nie zostanie zastąpiony, strona główna pokazuje „The portals are still closed”. Opcjonalnie w *Art kit* nowy plan i render (okładki 14 światów, ikony czterech sił, odznaki zakończeń).
+
+**Do decyzji właściciela:**
+- profil wieku: prompt i recenzja treści celują w dzieci od ok. 8 lat i młodsze nastolatki (ostrzej niż dawne 13+); oznaczenie „8+” jest na stronie głównej;
+- karta wsparcia przy niepokoju dalej wskazuje Childline (UK);
+- ewaluacje na żywo (`npm run eval:gm`) przepisane na światy Edu-Verse, ale jeszcze nieuruchomione na prawdziwym modelu.
 
 **Wdrożenie:** kopia `data/`, `git pull`, `npm install`, `npm run build`, `pm2 restart demo-ifairy-book`, potem w panelu *iFairy Universe → Sync now*. Powiązane repo: [ifairy-universe](https://github.com/reception-ifairy/ifairy-universe) (kanon i API) i [ifairy-narrative-engine](https://github.com/reception-ifairy/ifairy-narrative-engine) (osobny silnik z tym samym guardem obrazów).
 
 **Multimodalnie:**
-- **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
+- **Claude** pisze strukturę i narrację, a także czyta obrazy od gracza (zdjęcia zadań domowych, artefakty);
 - **Gemini** albo **OpenAI** rysuje ilustracje i czyta tekst na głos (głos z przeglądarki działa bez klucza);
 - przeglądarka obsługuje dyktowanie;
-- **Art Kit:** Claude planuje całą szatę graficzną (style bible + prompty), a OpenAI ją maluje: tło, Ignisa, okładki, ikony, odznaki, logo i kartę do udostępniania.
+- **Art Kit:** Claude planuje szatę graficzną (style bible + prompty), a OpenAI ją maluje.
+- **AI Game Master** (opcjonalny): kości 2d6 i reguły w kodzie jako narzędzia Claude'a; questy idą łukiem 3 faz, w Probabilionie kości to fale prawdopodobieństwa.
 
 ## Szybki start
 
@@ -39,17 +55,17 @@ bun run dev            # http://localhost:3000
 ```
 
 1. Otwórz `http://localhost:3000/#/admin`, wklej klucz Anthropic, kliknij **Test**, a potem **Save**.
-2. Opcjonalnie dodaj klucz Gemini lub OpenAI i wybierz modele ilustracji i głosu.
-3. Opcjonalnie: sekcja **Art kit**, czyli *Plan with Claude* → *Render all 19* → *Publish* (potrzebny klucz OpenAI).
-4. Opcjonalnie: sekcja **iFairy Universe**, czyli klucz konsumenta → *Test* → *Save* → *Sync now* → *iFairy world: On*.
-5. Wróć na stronę główną, wpisz imię i wybierz baśń albo przygodę.
+2. Sekcja **iFairy Universe**: klucz konsumenta → *Test* → *Save* → *Sync now* → *Edu-Verse: On*.
+3. Opcjonalnie dodaj klucz Gemini lub OpenAI i wybierz modele ilustracji i głosu.
+4. Opcjonalnie: sekcja **Art kit**, czyli *Plan with Claude* → *Render all* → *Publish* (potrzebny klucz OpenAI).
+5. Wróć na stronę główną, wpisz zmyślone imię odkrywcy, wybierz sposób uczenia się i świat.
 
 Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASSWORD`.
 
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 80 testów (bez kluczy, na sztucznych API) + build
+bun run check   # typecheck + 82 testy (bez kluczy, na sztucznych API) + build
 npm run eval:gm # ewaluacje Game Mastera na żywym modelu (klucz Anthropic, poza CI)
 ```
 
@@ -59,6 +75,7 @@ To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
 
 | Dokument | Zawartość |
 |---|---|
+| [docs/QUANTUM_EDUVERSE.md](docs/QUANTUM_EDUVERSE.md) | Dokument źródłowy projektu: filozofia, model 3 faz, światy, zastosowania |
 | [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md) | Struktura repo plik po pliku, przebieg tury (diagramy), model danych, zapis danych, frontend i motyw |
 | [docs/OPERATORZY.md](docs/OPERATORZY.md) | Kto co obsługuje: modele AI, gracz i sysadmin, wszystkie endpointy, zabezpieczenia, skrypty, testy, CI, zmienne środowiskowe |
 | [CHANGELOG.md](CHANGELOG.md) | Wszystkie zmiany od wersji z AI Studio do obecnej |
@@ -69,4 +86,4 @@ Node + Express · React 19 · Vite 6 · Tailwind 4 · motion · zod · `@anthrop
 
 ## Styl: Cozy Workshop
 
-Przytulny warsztat nocą: deski, kominek, lampki i śnieg, kremowe karty-naklejki z grubym konturem, komiksowe efekty „ZAP!” i „BONK!”. Ignis to księga-robot z ekranową twarzą i skrzydłami wróżki. Tokeny motywu są w `src/index.css`, a komponenty w `src/ui.tsx`.
+Przytulny warsztat nocą: deski, kominek, lampki i śnieg, kremowe karty-naklejki z grubym konturem, komiksowe efekty („CLICK!”, „SPARK!”, „EUREKA!”). Ignis to księga-robot z ekranową twarzą, płomykiem-anteną i skrzydełkami. Tokeny motywu są w `src/index.css`, a komponenty w `src/ui.tsx`.

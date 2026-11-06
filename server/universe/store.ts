@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { DATA_DIR } from '../config';
-import { cardOf, type AdventureCard, type AdventureSnapshot } from '../../shared/universe';
+import { ADVENTURE_KINDS, cardOf, isEduverse, type AdventureCard, type AdventureSnapshot } from '../../shared/universe';
 
 const DIR = path.join(DATA_DIR, 'universe');
 const SNAP_DIR = path.join(DIR, 'snapshots');
 const CATALOGUE_FILE = path.join(DIR, 'catalogue.json');
 const KEEP_PER_ADVENTURE = 3;
 
-export type SyncStatus = 'new' | 'changed' | 'unchanged' | 'seed-only' | 'failed';
+export type SyncStatus = 'new' | 'changed' | 'unchanged' | 'failed';
 export interface SyncRow {
   id: string;
   status: SyncStatus;
@@ -16,12 +16,12 @@ export interface SyncRow {
   detail?: string;
 }
 
-/** What the last successful sync produced: which snapshot file is current for each adventure. */
+/** What the last successful sync produced: which snapshot file is current for each world. */
 export interface Catalogue {
   canonVersion: string;
   builtAt: string | null;
   syncedAt: number;
-  adventures: Record<string, { file: string; hash: string; version: string; status: AdventureSnapshot['status'] }>;
+  adventures: Record<string, { file: string; hash: string; version: string }>;
   report: SyncRow[];
 }
 
@@ -39,7 +39,13 @@ export function getCatalogue(): Catalogue | null {
   return catalogue;
 }
 
+/** The current snapshot of an Edu-Verse world. A catalogue synced before the Edu-Verse holds none. */
 export function getSnapshot(id: string): AdventureSnapshot | null {
+  const snap = readSnapshot(id);
+  return snap && isEduverse(snap) ? snap : null;
+}
+
+function readSnapshot(id: string): AdventureSnapshot | null {
   const entry = getCatalogue()?.adventures[id];
   if (!entry) return null;
   const hit = snapshots.get(entry.file);
@@ -53,13 +59,12 @@ export function getSnapshot(id: string): AdventureSnapshot | null {
   }
 }
 
-/** Cards in catalogue order: portal hooks, then the saga in act order, then the districts. */
+/** Cards in catalogue order: the Seven Worlds by stage, then the labs, then the Homework Portal. */
 export function listCards(): AdventureCard[] {
-  const KIND_ORDER = { hook: 0, saga: 1, district: 2 };
   return Object.keys(getCatalogue()?.adventures ?? {})
     .map(getSnapshot)
     .filter((s): s is AdventureSnapshot => !!s)
-    .sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.order - b.order)
+    .sort((a, b) => ADVENTURE_KINDS.indexOf(a.kind) - ADVENTURE_KINDS.indexOf(b.kind) || a.order - b.order)
     .map(cardOf);
 }
 

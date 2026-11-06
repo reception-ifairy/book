@@ -1,7 +1,22 @@
 # Historia zmian
 
-Wszystkie zmiany od pierwotnej aplikacji z Google AI Studio do obecnej gry **IGNIS // OS: Grimm Protocol**.
-Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
+Wszystkie zmiany od pierwotnej aplikacji z Google AI Studio do obecnej gry **IGNIS // iFairy Quantum Edu-Verse** (do 5.1.0: **IGNIS // OS: Grimm Protocol**).
+
+---
+
+## 6.0.0 · Quantum Edu-Verse: gra skupiona na projekcie z dokumentu
+
+Gra skupia się wyłącznie na projekcie z [docs/QUANTUM_EDUVERSE.md](docs/QUANTUM_EDUVERSE.md). Zostają iFairy Universe, Ignis (księga-robot ze skrzydełkami) i klimat cyber-magii; reszta pamięci opowieści jest wyczyszczona.
+
+- **Usunięte:** świat Grimm Protocol (5 baśni, sarkastyczny Ignis 16+, `shared/tales.ts`, `server/story/prompts.ts`, silnik Grimm, `GET /api/tales`, test `grimm-golden`), 40 przygód z kanonu (6 haków portali, 8 aktów Sagi If-AI, 26 Dzielnic Podróżników z kopiami `seed-only`) i persona Narratora-Archiwisty (awatar i fragmenty kanonu o jego tożsamości). Stare historie zostają na dysku, ale `GET/POST /api/story/:id…` zwraca dla nich 410, a przeglądarka zapomina je z listy rozgrywek. Katalog sprzed 6.0 nie serwuje żadnej przygody, dopóki sysadmin nie zrobi Sync.
+- **Światy Edu-Verse** (`server/universe/seeds.ts`, autorskie, nie węzły kanonu): Siedem Światów jako ścieżka etapami (BleepWorld, Loopia, Textosfera, Probabilion, Narramagia, Fraktalia, Sympathos), sześć Cyber-Magicznych Laboratoriów (Grawi-Lab, Zakrzywiona Czytelnia, Lewitas, Kraina Przewijania, Koloratura, Chrono-Wyprawy) i Portal Zadań Domowych. Każdy świat ma dominujące prawo, doświadczenie, przekład na naukę naszego świata i efekty nauki; obsada ma imiona i autorskie sekrety dla Game Mastera.
+- **Sync** zamraża każdy świat razem z kanonem, w którym jest opowiadany: reguły bezpieczeństwa, system humoru, struktura scen i blok wyborów, canon lock, wygląd iFairies i blokada wizualna R6, checklista portali, Tinkermasterzy i przewodnicy głosu. Własna strona świata to cytowalne źródło `C1` (`EDUVERSE:<id>`). Status `seed-only` zniknął.
+- **Narrator:** Ignis, skrzydlata cyber-księga i mentor Edu-Verse (nie iFairy), zwraca się do gracza „Young Explorer” / „Młody Odkrywco”. Prompt: filozofia wielu światów (wiele poprawnych dróg, błąd jako nowa gałąź), model 3 faz, profil treści dla dzieci od ok. 8 lat (poprawne fakty naukowe, bez niebezpiecznych eksperymentów w domu), silnik emocji (wahanie i frustracja obniżają trudność), instruktażowe komiczne pomyłki, rusztowanie zadań domowych bez podawania gotowej odpowiedzi, zdjęcie zadania czytane jako zadanie, a dane osobowe ze zdjęcia pomijane.
+- **Strona:** nowe pola `phase` (`entry` · `translation` · `personalisation`) i `field_note` (wpis do Field Guide: prawo świata przełożone na prawdziwą naukę); historia `style` (jak odkrywca lubi się uczyć) trafia do tury jako `LEARNING STYLE`.
+- **Game Master:** questy idą łukiem nauki (`three-phase`: portal → eksperyment → wzór → przekład [kulminacja] → zrób to po swojemu; `homework`: pokaż → zrozum → krok → rozwiązanie [kulminacja] → wyjaśnij), zegary „prawo świata się rozstraja” i „portal do domu migocze”; kampania sagi zamieniona w ścieżkę Siedmiu Światów (`next-chapter` przenosi więzi, fakty, przedmioty i styl uczenia się). Recenzja Haiku pilnuje profilu dla dzieci i oczywistych błędów naukowych.
+- **Frontend:** jedna strona główna Edu-Verse z Ignisem, paskiem trzech faz, wyborem „How do you like to learn?”, grupami światów, labów i portalu zadań; w czytniku Ignis zamiast Archiwisty, plakietka fazy, karta Field Guide pod narracją, Field Guide w Codexie, przycisk *Continue to Stage N*, etykiety sił jako sposobów uczenia się, zakończenia „World understood” · „Your own world-model” · „Secret discovery”.
+- **Art Kit:** okładki 14 światów, ikony czterech sił i trzy odznaki zakończeń zamiast okładek baśni i ikon `sane`/`chaos`/`dumb`/`sudo`; nowy brief dyrektora artystycznego.
+- **Testy:** 82 (sztuczne Anthropic, OpenAI i Universe), m.in. katalog i Sync światów, homework z obrazem, styl uczenia się, Field Guide, ścieżka Siedmiu Światów, archiwizacja starych historii. Ewaluacje na żywo przeniesione na światy Edu-Verse, plus dwa nowe scenariusze (zadanie domowe bez odpowiedzi, notatka Field Guide).
 
 ---
 

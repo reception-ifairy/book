@@ -1,6 +1,7 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { CORE_REFS, IMAGE_LOCK_REF, PORTALS_ROOT, SEEDS, TINKER_REFS, VOICE_REFS } from '../server/universe/seeds';
+import { CORE_REFS, IMAGE_LOCK_REF, PORTALS_ROOT, TINKER_REFS, VOICE_REFS } from '../server/universe/seeds';
+import { samplePage } from './fakeAnthropic';
 
 export const LOCK_TEXT = 'SUBJECT SPECIES RULE — overrides anything below.\n\nAn iFairy is NOT a fairy.\nCHEST — REQUIRED. A shaped Aperture opens onto a luminous core.';
 
@@ -22,8 +23,9 @@ const chunk = (id: string, ref: string | null, title: string, text: string): Chu
 };
 
 /**
- * Stand-in for the iFairy Universe lore API. REFs resolve only to the chunks below (the first two
- * roster districts are indexed, the rest 404 as before the Universe chunked districts).
+ * Stand-in for the iFairy Universe lore API. REFs resolve only to the chunks below: the canon the
+ * Edu-Verse is told in (narration, safety, humour, the iFairy form and lock, the portal checklist,
+ * the Tinkermasters and voice guides). The Edu-Verse worlds themselves are not canon nodes.
  */
 export async function startFakeUniverse() {
   const byRef = new Map<string, Chunk>();
@@ -31,11 +33,6 @@ export async function startFakeUniverse() {
   for (const c of CORE_REFS) add(c.ref, chunk(c.chunkId, c.ref.startsWith('REF:NARRATIVE_STYLE') ? c.ref : null, c.ref.split(':').slice(2).join(' '), `Canon text of ${c.ref}.`));
   add(IMAGE_LOCK_REF.ref, chunk(IMAGE_LOCK_REF.chunkId, null, 'Image Guard Rule — the Full iFairy Visual Lock', `Title: Image Guard Rule\nNote: iFairies only.\nText: ${LOCK_TEXT}`));
   add(PORTALS_ROOT.ref, chunk(PORTALS_ROOT.chunkId, null, 'PORTALS AND GUARDIANS', `Source Of Truth: spec.\nStory Hooks: ${HOOKS_LINE}\nConsistency Checklist: ${CHECKLIST_LINE}`));
-  for (const s of SEEDS.filter((s) => s.kind === 'saga')) {
-    add(s.source.ref, chunk(s.source.chunkId, s.order === 8 ? s.source.ref : null, s.title.en, `Saga text for act ${s.order}.`));
-    for (const c of s.source.children ?? []) add(c.ref, chunk(c.chunkId, null, c.chunkId.split('/').pop()!, `Child ${c.chunkId}.`));
-  }
-  for (const s of SEEDS.filter((s) => s.kind === 'district').slice(0, 2)) add(s.source.ref, chunk(s.source.chunkId, null, s.title.en, s.fallback!));
   const MASTERS = [['Axioma', 'Quaeron', 'Solvin'], ['Solace', 'Kindra', 'Amity'], ['Sagaris', 'Horan', 'Vantor'], ['Faber', 'Iridia', 'Ingra']];
   const DISTRICTS = [['District of Wisdom', 'Logos'], ['District of Compassion', 'Gnosis'], ['District of Time and Momentum', 'Mythos'], ['District of Creation', 'Phantasia']];
   TINKER_REFS.forEach((d, i) => {
@@ -97,24 +94,5 @@ export async function startFakeUniverse() {
   };
 }
 
-/** An iFairy page as the narrator would return it. */
-export const ifairyPage = (over: Record<string, unknown> = {}) => ({
-  narration: 'The Portal hums a pale, tired note. *Something on the far side is out of tune.*',
-  narrator_aside: 'Even the oldest Portals need a little tuning, Young Architect. So do I.',
-  mood: 'sincere',
-  choices: [
-    { label: 'Measure the dissonance pattern', kind: 'logos' },
-    { label: 'Ask the Engineer how it feels to her', kind: 'gnosis' },
-  ],
-  free_form_prompt: 'Use your own words: ask the Engineer anything, or try your own idea.',
-  stat_changes: { harmony: 5, dissonance: 10, etherium: -5 },
-  inventory_add: ['tuning glyph'],
-  inventory_remove: [],
-  ending: null,
-  image_prompt: 'A ring-shaped portal glowing pale grey',
-  story_summary: 'The Architect reached the faded Portal.',
-  lore_refs: ['C1', 'L1', 'X9'],
-  scene: { location: 'The Portal Ring', present: ['an Ontological Engineer', 'Portal Guardians'] },
-  artifact_description: null,
-  ...over,
-});
+/** An Edu-Verse page as IGNIS would return it (the same as the fake Anthropic's default page). */
+export const ifairyPage = samplePage;

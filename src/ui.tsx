@@ -248,8 +248,8 @@ export function Logo({ onClick }: { onClick?: () => void }) {
       </span>
       )}
       <span className="leading-none">
-        <span className="block font-serif font-bold text-lg tracking-tight">Grimm Protocol</span>
-        <span className="block font-pixel text-[11px] text-faint mt-0.5">IGNIS // OS</span>
+        <span className="block font-serif font-bold text-lg tracking-tight">Quantum Edu-Verse</span>
+        <span className="block font-pixel text-[11px] text-faint mt-0.5">IGNIS // iFairy</span>
       </span>
     </a>
   );

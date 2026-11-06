@@ -1,15 +1,19 @@
 import type { Lang } from './types';
 
-/** Where an adventure comes from in the canon. */
-export type AdventureKind = 'hook' | 'saga' | 'district';
-/** The story shape the narrator follows (Game Master guide, Part 1.1). */
-export type AdventureStructure = 'five-room' | 'campaign-act' | 'monster-of-the-week';
+/**
+ * Where a world sits in the Quantum Edu-Verse: one of the Seven Worlds (a path, stage by stage),
+ * a single-portal Cyber-Magical Lab, or the Homework Portal.
+ */
+export type AdventureKind = 'world' | 'lab' | 'homework';
+export const ADVENTURE_KINDS: readonly AdventureKind[] = ['world', 'lab', 'homework'];
+/** The learning arc the narrator follows: the 3-phase model, or the homework scaffold. */
+export type AdventureStructure = 'three-phase' | 'homework';
 
-/** What the home screen shows for an adventure. */
+/** What the home screen shows for a world. */
 export interface AdventureCard {
   id: string;
   kind: AdventureKind;
-  /** Position inside its kind: saga act number, roster index, hook number. */
+  /** Position inside its kind: the stage number of a world, the lab's place on the shelf. */
   order: number;
   emoji: string;
   hue: number;
@@ -20,7 +24,7 @@ export interface AdventureCard {
   version: string;
 }
 
-/** A canon passage the narrator may cite by its handle (C1, C2, …). */
+/** A passage the narrator may cite by its handle (C1, C2, …): the world's own page or the canon. */
 export interface CanonPassage {
   handle: string;
   ref: string;
@@ -28,23 +32,23 @@ export interface CanonPassage {
   text: string;
 }
 
-/** An NPC the Game Master can voice, from the canon or the adventure's cast. */
+/** An NPC the Game Master can voice, from the canon or the world's cast. */
 export interface NpcCard {
   id: string;
   name: string;
-  tier: 'ifairy' | 'traveller' | 'role';
+  tier: 'ifairy' | 'role';
   role: string;
   voice: string;
   /** What this NPC can plausibly know; they never voice facts beyond it. */
   knows: string[];
-  /** Authored for portal hooks; revealed only through reveal_secret once trust is high enough. */
+  /** Authored per world; revealed only through reveal_secret once trust is high enough. */
   secret?: { id: string; text: string; trust: number };
   ref?: string;
 }
 
-/** Everything the narrator needs for one adventure, frozen at sync time. */
+/** Everything the narrator needs for one world, frozen at sync time. */
 export interface AdventureSnapshot extends AdventureCard {
-  /** Canon text of the hook, saga act or district, as fetched from the Universe. */
+  /** The world as written in docs/QUANTUM_EDUVERSE.md: its law, the experience, the translation home and what it teaches. */
   premise: string;
   setting: string;
   cast: string[];
@@ -52,15 +56,13 @@ export interface AdventureSnapshot extends AdventureCard {
   loreTerms: string[];
   /** Visual anchor added to every illustration prompt. */
   art: string;
-  /** Canon passages quoted in the system prompt: the premise sources and the narrator's rules. */
+  /** Passages quoted in the system prompt: the world's own page, then the canon rules. */
   sources: CanonPassage[];
   /** The portal consistency checklist from PORTALS_AND_GUARDIANS. */
   checklist: string[];
   canonVersion: string;
-  /** "seed-only": the canon chunk was not addressable, so the premise comes from the seed's copy. */
-  status: 'ok' | 'seed-only';
   hash: string;
-  /** Game Master NPCs (5.0 snapshots). Secrets stay on the server with the snapshot. */
+  /** Game Master NPCs: the world's cast plus the canon iFairies. Secrets stay on the server with the snapshot. */
   npcs?: NpcCard[];
   /** The canon's iFairy visual lock, prepended to illustrations that show an iFairy. */
   imageLock?: { text: string; ref: string };
@@ -69,3 +71,7 @@ export interface AdventureSnapshot extends AdventureCard {
 export const cardOf = ({ id, kind, order, emoji, hue, title, tagline, structure, version }: AdventureCard): AdventureCard => ({
   id, kind, order, emoji, hue, title, tagline, structure, version,
 });
+
+/** Whether a story's pinned world belongs to the Edu-Verse; stories from retired worlds are archived. */
+export const isEduverse = (adventure: Pick<AdventureCard, 'kind'> | undefined | null): boolean =>
+  !!adventure && (ADVENTURE_KINDS as readonly string[]).includes(adventure.kind);

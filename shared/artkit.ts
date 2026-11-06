@@ -19,20 +19,35 @@ export interface ArtSlot {
   transparent: boolean;
 }
 
-const TALE_COVERS: [string, string, string][] = [
-  ['red-hood', 'Little Red Packet', 'a red-hooded courier carrying a glowing encrypted parcel through a snowy forest strung with fibre-optic fairy lights, a sly wolf in a hacker headset peeking from behind a tree'],
-  ['three-pigs', 'Three Little Firewalls', 'three cartoon pigs proudly in front of a straw hut, a stick shack and a brick server-house with blinking lights, a big bad wolf inflating his cheeks with a gust full of red error icons'],
-  ['hansel-gretel', 'Hansel & Gretel & Cookies', 'two kids following a trail of glowing cookie crumbs to a gingerbread cottage with candy-cane antennas, a sweet-looking witch with a data-harvesting ladle in the doorway'],
-  ['cinderella', 'Cinderella: Session Expired', 'a junior-developer Cinderella running down palace stairs at the stroke of midnight, a glass-slipper USB key left glowing on a step, a pumpkin hover-carriage glitching back into a pumpkin'],
-  ['wawel-dragon', 'The Wawel Dragon Exploit', 'Wawel castle on a snowy hill above the Vistula, a big goofy robot dragon with server-fan wings and a pixel-screen face about to swallow a woolly sheep stitched with glowing circuitry, a cobbler-pentester hiding behind a rock'],
+/** One cover per Edu-Verse world; ids match the world ids, so `cover-<world id>` finds it. */
+const WORLD_COVERS: [string, string, string][] = [
+  ['world-bleepworld', 'BleepWorld', 'a candy-coloured chaos landscape where floating objects, musical notes and shapes blink in and out at random, a small explorer stacking a neat glowing pile of sorted things'],
+  ['world-loopia', 'Loopia', 'a garden maze under a sky with a giant gentle clock, glowing footprints from earlier loops on the paths, a patient clockwork tortoise and a rooster'],
+  ['world-textosfera', 'Textosfera', 'a city of shimmering letters where sentences form bridges and towers, a heavy dark word-cloud drifting over glowing word-brick houses'],
+  ['world-probabilion', 'Probabilion', 'a meadow under shimmering rainbow probability waves rising from planted seeds, some waves bright and tall, others faint, a wobbly wave-creature professor'],
+  ['world-narramagia', 'Narramagia', 'a landscape drawing itself into being from glowing ink lines that flow from a giant feather quill, half-drawn mountains and a half-written castle'],
+  ['world-fraktalia', 'Fraktalia', 'fern-shaped trees made of smaller ferns, a dewdrop holding a tiny galaxy, branching lightning mirrored in crystal paths'],
+  ['world-sympathos', 'Sympathos', 'a soft pastel valley where flowers bloom and float upward around a happy cloud-sheep, a distant path turning gently steep under a small grey cloud'],
+  ['lab-gravi-lab', 'The Gravi-Lab', 'a bright round laboratory with a giant gravity dial, objects floating at different heights, small moons orbiting a glowing gravity well'],
+  ['lab-whispering-tomes', 'The Curved Reading Room', 'a cosy circular library whose floor and shelves curve upward like the inside of a wave, books fluttering like birds'],
+  ['lab-levitas', 'Levitas', 'a sky archipelago of floating islands, ideas drawn as glowing balloons lifting a little explorer, a sulking shiny pebble below'],
+  ['lab-rewind-realm', 'The Rewind Realm', 'a little town where rain falls upward and spilled milk leaps back into a cup, a long line of dominoes standing back up'],
+  ['lab-coloratura', 'Coloratura', 'a concert hall of floating colour waves and glowing musical notes arranged like fraction bars, a conductor whose baton splits into equal parts'],
+  ['lab-chrono-voyages', 'Chrono-Voyages', 'a softly glowing holographic reconstruction of a historical hall with translucent people of the past and documents unfolding layers of light'],
+  ['homework-portal', 'The Homework Portal', 'a cosy desk under a warm lamp where a homework page glows and opens into a small portal world, pencils floating like little rockets'],
+];
+
+const FORCE_ICONS: [string, string, string][] = [
+  ['logos', 'Logos', 'a glowing geometric crystal with a tiny ruler and a pattern of dots: patterns and reasoning'],
+  ['mythos', 'Mythos', 'an open scroll with a little clock and a spiral of story-light: stories and time'],
+  ['gnosis', 'Gnosis', 'two small hands holding a softly glowing heart: feelings and empathy'],
+  ['phantasia', 'Phantasia', 'a lightbulb bursting into stars and paint splashes: imagination and play'],
 ];
 
 const ENDINGS: [string, string, string][] = [
-  ['canon', 'Canon ending', 'an open storybook with a golden ribbon bookmark and a small check-mark rune'],
-  ['subverted', 'Subverted ending', 'a storybook spinning upside down with a swirling twist arrow'],
-  ['cursed', 'Cursed ending', 'a cracked glitching storybook leaking purple smoke and broken pixels'],
-  ['secret', 'Secret ending', 'a keyhole-shaped portal with a tiny glowing key and sparkles'],
-  ['death', 'Garbage collected', 'a cartoon trash can with a little ghost made of pixels floating out, dizzy stars around it'],
+  ['canon', 'World understood', 'a little portal with a golden check-mark rune and a field-guide page tucked into it'],
+  ['subverted', 'Your own world-model', 'a small planet the explorer built, with a hand-drawn flag and a twist arrow orbiting it'],
+  ['secret', 'Secret discovery', 'a keyhole-shaped portal with a tiny glowing key and sparkles'],
 ];
 
 export const ART_SLOTS: ArtSlot[] = [
@@ -41,7 +56,7 @@ export const ART_SLOTS: ArtSlot[] = [
     group: 'scene',
     label: 'Workshop backdrop',
     brief:
-      "IGNIS's cozy cyber-magic workshop at night: timber beams, a stone fireplace, shelves of glowing grimoires and gadgets, fairy-light garlands, a frosty window with falling snow. Leave the left half calm and darker so a headline can sit over it.",
+      "IGNIS's cozy cyber-magic workshop at night: timber beams, a stone fireplace, shelves of glowing grimoires and gadgets, fairy-light garlands, a frosty window with falling snow, and a shimmering round portal in the far wall with a glimpse of a strange world. Leave the left half calm and darker so a headline can sit over it.",
     usedIn: 'Full-width background behind the home screen hero, dimmed under the text.',
     size: '1536x1024',
     transparent: false,
@@ -50,7 +65,7 @@ export const ART_SLOTS: ArtSlot[] = [
     id: 'ignis-hero',
     group: 'character',
     label: 'IGNIS, hero pose',
-    brief: 'IGNIS the grimoire-robot flying toward the viewer, waving, smug pixel smile on its CRT face, wings spread.',
+    brief: 'IGNIS the grimoire-robot flying toward the viewer, waving, warm pixel smile on its screen face, wings spread, a tiny portal sparkling beside it.',
     usedIn: 'Home screen hero, about 260 px tall, floating next to the headline.',
     size: '1024x1024',
     transparent: true,
@@ -64,19 +79,24 @@ export const ART_SLOTS: ArtSlot[] = [
     size: '1024x1024',
     transparent: true,
   },
-  ...TALE_COVERS.map(([id, title, scene]) => ({
+  ...WORLD_COVERS.map(([id, title, scene]) => ({
     id: `cover-${id}`,
     group: 'cover' as const,
     label: `Cover: ${title}`,
-    brief: `Storybook cover scene for "${title}": ${scene}. One clear focal action, readable when cropped to a wide strip.`,
-    usedIn: 'Tale card header (wide strip, about 360x160 crop), saved-run thumbnails, the reader header and the empty illustration frame.',
+    brief: `Storybook cover scene for the Edu-Verse world "${title}": ${scene}. One clear focal idea, readable when cropped to a wide strip.`,
+    usedIn: 'World card header (wide strip, about 360x160 crop), saved-run thumbnails, the reader header and the empty illustration frame.',
     size: '1536x1024' as ArtSize,
     transparent: false,
   })),
-  { id: 'icon-sane', group: 'icon', label: 'Choice: sane', brief: 'A sturdy shield with a glowing rune check mark: the sensible move.', usedIn: 'Round icon on choice cards, 44 px.', size: '1024x1024', transparent: true },
-  { id: 'icon-chaos', group: 'icon', label: 'Choice: chaos', brief: 'A crackling lightning bolt bursting out of a tiny spellbook: the unhinged move.', usedIn: 'Round icon on choice cards, 44 px.', size: '1024x1024', transparent: true },
-  { id: 'icon-dumb', group: 'icon', label: 'Choice: dumb', brief: 'A cartoon banana peel with a dizzy face: the obviously terrible move.', usedIn: 'Round icon on choice cards, 44 px.', size: '1024x1024', transparent: true },
-  { id: 'icon-sudo', group: 'icon', label: 'Choice: sudo', brief: 'A glowing terminal window with a magic wand poking out of it: the rule-breaking power move.', usedIn: 'Round icon on choice cards, 44 px.', size: '1024x1024', transparent: true },
+  ...FORCE_ICONS.map(([id, label, scene]) => ({
+    id: `icon-${id}`,
+    group: 'icon' as const,
+    label: `Choice: ${label}`,
+    brief: `${scene[0].toUpperCase()}${scene.slice(1)}.`,
+    usedIn: 'Round icon on choice cards, 44 px.',
+    size: '1024x1024' as ArtSize,
+    transparent: true,
+  })),
   ...ENDINGS.map(([id, label, scene]) => ({
     id: `ending-${id}`,
     group: 'badge' as const,
@@ -99,7 +119,7 @@ export const ART_SLOTS: ArtSlot[] = [
     id: 'brand-share',
     group: 'brand',
     label: 'Share card',
-    brief: 'A wide social share image: IGNIS flying over an open glowing storybook from which tiny fairy-tale characters spill out, with the words "Grimm Protocol" in chunky cartoon lettering.',
+    brief: 'A wide social share image: IGNIS flying out of a shimmering portal, with little glimpses of strange worlds (probability waves, a fractal fern, floating letters) around it, and the words "Quantum Edu-Verse" in chunky cartoon lettering.',
     usedIn: 'Link preview image (og:image) when the game is shared.',
     size: '1536x1024',
     transparent: false,

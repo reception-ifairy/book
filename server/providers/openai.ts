@@ -4,7 +4,7 @@ import type { Media, ModelInfo } from './types';
 const client = (apiKey: string) => new OpenAI({ apiKey });
 
 const VOICE_DIRECTION =
-  'Voice of a sarcastic, glitchy cyber-magic grimoire narrating a twisted fairy tale. Dry, theatrical, slightly robotic.';
+  'Voice of a warm, playful cyber-magic grimoire guiding a young explorer through a world with strange laws of nature. Curious, gently funny, slightly robotic.';
 
 export async function listOpenAIModels(apiKey: string): Promise<ModelInfo[]> {
   const out: ModelInfo[] = [];

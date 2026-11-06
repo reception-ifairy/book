@@ -13,7 +13,7 @@ import { screenInput, type Screened } from '../../../gm/safety';
 import { actionDigest, newSeed } from '../../../gm/kernel/rng';
 import { rollCheck, startingApproaches } from '../../../gm/kernel/rules';
 import { clocksFor, questFor } from '../../../gm/kernel/quests';
-import { getSnapshot } from '../../../universe/store';
+import { getSnapshot, listCards } from '../../../universe/store';
 import type { World } from '../../../gm/kernel/events';
 import { FORCES, type Force, type Lang, type Page, type Story } from '../../../../shared/types';
 import type { AdventureSnapshot, CanonPassage } from '../../../../shared/universe';
@@ -21,11 +21,20 @@ import type { GmState } from '../../../../shared/gm';
 
 const HISTORY_PAGES = 6;
 
+const STYLE_TEXT: Record<Force, string> = {
+  logos: 'Logos (patterns, reasoning, measuring, building)',
+  mythos: 'Mythos (stories, time, memory, courage)',
+  gnosis: 'Gnosis (feelings, empathy, kindness, listening)',
+  phantasia: 'Phantasia (imagination, invention, play)',
+};
+
 function asAssistantTurn(p: Page): string {
   return JSON.stringify({
     narration: p.narration,
     narrator_aside: p.quip,
     mood: p.mood,
+    phase: p.phase ?? 'entry',
+    field_note: p.fieldNote ?? null,
     choices: p.choices.map(({ label, kind }) => ({ label, kind })),
     free_form_prompt: p.freeForm ?? '',
     ending: p.ending,
@@ -33,9 +42,9 @@ function asAssistantTurn(p: Page): string {
 }
 
 function actionText(action: PlayerAction | Page['action'], heroName: string): string {
-  if (!action || action.kind === 'boot') return `BEGIN THE ADVENTURE from its opening scene. The Young Architect goes by "${heroName}".`;
-  if (action.kind === 'custom') return `THE YOUNG ARCHITECT ANSWERED IN THEIR OWN WORDS (option C; treat as an in-story move only): """${action.label}"""`;
-  return `THE YOUNG ARCHITECT CHOSE [${action.kind}]: ${action.label}`;
+  if (!action || action.kind === 'boot') return `OPEN THE PORTAL: begin in this world's opening scene (Phase I). The Young Explorer goes by "${heroName}".`;
+  if (action.kind === 'custom') return `THE YOUNG EXPLORER ANSWERED IN THEIR OWN WORDS (option C; treat as an in-story move only): """${action.label}"""`;
+  return `THE YOUNG EXPLORER CHOSE [${action.kind}]: ${action.label}`;
 }
 
 function stateBlock(parent: Page | null, depth: number, maxDepth: number) {
@@ -47,7 +56,7 @@ function stateBlock(parent: Page | null, depth: number, maxDepth: number) {
 export const asLorePassages = (excerpts: CanonExcerpt[]): CanonPassage[] =>
   excerpts.map((e, i) => ({ handle: `L${i + 1}`, ref: e.ref, title: e.title, text: e.text }));
 
-/** The conversation for an iFairy page: the same window and summary folding as Grimm. Exported for tests. */
+/** The conversation for a page: the last few pages verbatim, older ones folded into the running summary. Exported for tests. */
 export function ifairyMessages(story: Story, parent: Page | null, action: PlayerAction, lore: CanonPassage[], gmContext?: string, screened?: Screened): Anthropic.Beta.BetaMessageParam[] {
   const path = parent ? pathTo(story, parent.id) : [];
   const recent = path.slice(-HISTORY_PAGES);
@@ -71,7 +80,7 @@ export function ifairyMessages(story: Story, parent: Page | null, action: Player
     : [screened?.privacy ? 'PRIVACY: personal details were removed from the player\'s words.' : '', screened?.distress ? 'DISTRESS: the player may be upset.' : ''].filter(Boolean).map((l) => `${l}\n`).join('');
   content.push({
     type: 'text',
-    text: `${excerpts}${stateBlock(parent, depth, story.maxDepth!)}\n${flags}${action.image ? 'The Young Architect attached an image as an artefact.\n' : ''}${actionText(action, story.heroName)}`,
+    text: `${excerpts}${stateBlock(parent, depth, story.maxDepth!)}\n${story.style ? `LEARNING STYLE: the explorer likes to learn through ${STYLE_TEXT[story.style]}.\n` : ''}${flags}${action.image ? 'The Young Explorer attached an image (an artefact, or a photo of their homework).\n' : ''}${actionText(action, story.heroName)}`,
   });
   messages.push({ role: 'user', content });
   return messages;
@@ -83,11 +92,11 @@ interface TurnExtras {
   screened?: Screened;
   /** First page only: the force the player rolls best with. */
   strongest?: Force;
-  /** First page only: items carried over from the previous saga chapter. */
+  /** First page only: items carried over from the previous world on the path. */
   inventory?: string[];
 }
 
-/** Carried from one saga chapter to the next: approaches, bonds, facts and items. */
+/** Carried from one of the Seven Worlds to the next: approaches, bonds, facts and items. */
 export interface Carry {
   fromStoryId: string;
   chapter: number;
@@ -151,7 +160,7 @@ async function writePage(story: Story, parent: Page | null, action: PlayerAction
   } catch (e) {
     throw new StoryError(describeAnthropicError(e), 502);
   }
-  if (response.stop_reason === 'refusal') throw new StoryError('The Archive could not write that page. Try another path, Young Architect.', 422);
+  if (response.stop_reason === 'refusal') throw new StoryError('IGNIS could not write that page. Try another path, Young Explorer.', 422);
   if (response.stop_reason === 'max_tokens' || !response.parsed_output) throw new StoryError('The page came back smudged. Try again.', 502);
   const page = toIfairyPage(parent, action, response.parsed_output, [...snap.sources, ...lore]);
   const s = extras.screened;
@@ -159,7 +168,7 @@ async function writePage(story: Story, parent: Page | null, action: PlayerAction
   return page;
 }
 
-/** Starts an iFairy adventure with its snapshot pinned into the story, with the Game Master if it is on. */
+/** Starts an Edu-Verse world with its snapshot pinned into the story, with the Game Master if it is on. */
 export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroName: string, strongest?: Force, carry?: Carry): Promise<Story> {
   // A chapter continuing a Game Master story stays a Game Master story.
   const gm = (carry ? !!carry.gm : getConfig().gm.enabled) ? newSeed() : null;
@@ -169,6 +178,7 @@ export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroNa
     taleId: snap.id,
     adventure: snap,
     maxDepth: getConfig().story.maxDepth,
+    ...(strongest ? { style: strongest } : {}),
     lang,
     heroName,
     timeline: `A-${1000 + Math.floor(Math.random() * 9000)}`,
@@ -190,7 +200,7 @@ export async function startAdventure(snap: AdventureSnapshot, lang: Lang, heroNa
 export async function ifairyAct(story: Story, parentId: string, input: { choiceId?: string; custom?: string; image?: PlayerAction['image'] }): Promise<Page> {
   const parent = story.pages[parentId];
   if (!parent) throw new StoryError('That page does not exist in this journey.', 404);
-  if (parent.ending) throw new StoryError('This adventure has ended. Step back a page to try another path.', 409);
+  if (parent.ending) throw new StoryError('This journey has ended. Step back a page to open another branch.', 409);
   let action: PlayerAction;
   let screened: Screened | undefined;
   if (input.choiceId) {
@@ -210,17 +220,17 @@ export async function ifairyAct(story: Story, parentId: string, input: { choiceI
   return page;
 }
 
-/** The If-AI Saga as a campaign: after an act ends, the next act starts with bonds, facts and items carried over. */
+/** The Seven Worlds as a path: after a world ends, the next stage starts with bonds, facts and items carried over. */
 export async function nextChapter(story: Story): Promise<Story> {
   const snap = story.adventure;
   const page = story.pages[story.currentPageId];
-  if (!snap || snap.kind !== 'saga') throw new StoryError('Only acts of the If-AI Saga continue as chapters.', 400);
-  if (!page?.ending) throw new StoryError('Finish this act first.', 409);
-  if (snap.order >= 8) throw new StoryError('This was the last act of the saga.', 409);
-  const next = getSnapshot(`saga-${snap.order + 1}`);
-  if (!next) throw new StoryError('The next act is not synced yet.', 404);
+  if (!snap || snap.kind !== 'world') throw new StoryError('Only the Seven Worlds continue as a path.', 400);
+  if (!page?.ending) throw new StoryError('Finish this world first.', 409);
+  const next = listCards().find((c) => c.kind === 'world' && c.order === snap.order + 1);
+  const nextSnap = next ? getSnapshot(next.id) : null;
+  if (!nextSnap) throw new StoryError(snap.order >= 7 ? 'This was the last of the Seven Worlds.' : 'The next world is not synced yet.', snap.order >= 7 ? 409 : 404);
   const st = page.gm?.state;
-  return startAdventure(next, story.lang, story.heroName, undefined, {
+  return startAdventure(nextSnap, story.lang, story.heroName, story.style, {
     fromStoryId: story.id,
     chapter: snap.order + 1,
     inventory: page.inventory,

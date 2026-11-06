@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
-import { worldOf, type Page, type PublicStory } from '../../shared/types';
-import { KIND, ENDING, WORLD_TEXT } from '../meta';
+import type { Page, PublicStory } from '../../shared/types';
+import { KIND, endingOf } from '../meta';
 import { cx } from '../ui';
 
 /** Every page ever generated in this run, as a tree of forks. Clicking a node rolls back to it. */
@@ -19,7 +19,7 @@ export function TimelineMap({ story, onJump, busy }: { story: PublicStory; onJum
   const Node = ({ page }: { page: Page }) => {
     const kids = children.get(page.id) ?? [];
     const current = page.id === story.currentPageId;
-    const color = page.action ? KIND[page.action.kind === 'boot' ? 'sane' : page.action.kind].color : 'var(--color-ember)';
+    const color = page.action && page.action.kind !== 'boot' ? (KIND[page.action.kind]?.color ?? 'var(--color-ember)') : 'var(--color-ember)';
     return (
       <motion.li className="relative" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(page.depth * 0.04, 0.5) }}>
         <button
@@ -41,7 +41,7 @@ export function TimelineMap({ story, onJump, busy }: { story: PublicStory; onJum
             <span className="block font-mono text-[11px] text-faint mt-0.5">
               page {page.depth + 1}
               {current && ' · you are here'}
-              {page.ending && ` · ${WORLD_TEXT[worldOf(story)].endings[page.ending.type] ?? ENDING[page.ending.type].label}: ${page.ending.title}`}
+              {page.ending && ` · ${endingOf(page.ending.type).label}: ${page.ending.title}`}
             </span>
           </span>
         </button>

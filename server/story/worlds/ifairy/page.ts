@@ -1,20 +1,22 @@
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { pick, type PlayerAction } from '../../engine';
-import { FORCES, type LoreRef, type Page, type Stats } from '../../../../shared/types';
+import { FORCES, PHASES, type LoreRef, type Page, type Stats } from '../../../../shared/types';
 import type { CanonPassage } from '../../../../shared/universe';
 
 const MOODS = ['neutral', 'smug', 'annoyed', 'panic', 'sincere', 'hyped'] as const;
-/** No deaths or curses in the iFairy world: setbacks are complications. */
+/** No deaths or curses in the Edu-Verse: setbacks are new branches of reality. */
 export const IFAIRY_ENDINGS = ['canon', 'subverted', 'secret'] as const;
 
 const oneOf = (values: readonly string[]) => z.string().describe(`One of: ${values.join(', ')}`);
 
-/** What Claude returns for every iFairy page. Stats are stored in the shared Stats shape (see toIfairyPage). */
+/** What Claude returns for every Edu-Verse page. Stats are stored in the shared Stats shape (see toIfairyPage). */
 export const IfairyPageOutput = z.object({
   narration: z.string(),
   narrator_aside: z.string(),
   mood: oneOf(MOODS),
+  phase: oneOf(PHASES),
+  field_note: z.string().nullable(),
   choices: z.array(z.object({ label: z.string(), kind: oneOf(FORCES) })),
   free_form_prompt: z.string(),
   stat_changes: z.object({ harmony: z.number().int(), dissonance: z.number().int(), etherium: z.number().int() }),
@@ -44,7 +46,13 @@ export function resolveLore(handles: string[], passages: CanonPassage[]): LoreRe
   return [...out.values()].slice(0, 3);
 }
 
-/** Turns Claude's raw iFairy page into a stored Page with the same clamps as Grimm. */
+/** The learning-arc fields every page carries, whoever wrote it (plain narrator or Game Master). */
+export const learningOf = (out: { phase: string; field_note?: string | null }): Pick<Page, 'phase' | 'fieldNote'> => {
+  const note = out.field_note?.trim();
+  return { phase: pick(PHASES, out.phase, 'entry'), ...(note ? { fieldNote: note.slice(0, 280) } : {}) };
+};
+
+/** Turns Claude's raw page into a stored Page: clamps the meters, caps the inventory, assigns ids. */
 export function toIfairyPage(parent: Page | null, action: PlayerAction, out: IfairyPageOutput, passages: CanonPassage[]): Page {
   const base = parent?.stats ?? IFAIRY_START_STATS;
   const d = out.stat_changes;
@@ -79,5 +87,6 @@ export function toIfairyPage(parent: Page | null, action: PlayerAction, out: Ifa
     lore: resolveLore(out.lore_refs, passages),
     freeForm: out.ending ? undefined : out.free_form_prompt.replace(/^C\)\s*/, '').slice(0, 160),
     scene: { location: out.scene.location.slice(0, 80), present: out.scene.present.slice(0, 8).map((p) => p.slice(0, 60)) },
+    ...learningOf(out),
   };
 }

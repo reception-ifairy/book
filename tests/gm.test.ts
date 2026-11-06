@@ -113,7 +113,7 @@ describe('playing with the Game Master', () => {
 
   it('starts with a committed seed, the chosen strongest force and the tools on the request', async () => {
     fake.enqueue(gmPage());
-    const res = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'hook-void-realm', lang: 'en', heroName: 'Nova', strongest: 'phantasia' });
+    const res = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'world-loopia', lang: 'en', heroName: 'Nova', strongest: 'phantasia' });
     expect(res.status).toBe(200);
     story = res.body;
     root = story.pages[story.currentPageId];
@@ -263,7 +263,7 @@ describe('playing with the Game Master', () => {
   it('keeps stories started without the Game Master as plain narrator stories', async () => {
     config.saveConfig({ ...config.getConfig(), gm: { ...config.getConfig().gm, enabled: false } });
     fake.enqueue(ifairyPage());
-    const res = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'saga-1', lang: 'en', heroName: 'Nova' });
+    const res = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'lab-gravi-lab', lang: 'en', heroName: 'Nova' });
     expect(res.body.gm).toBeUndefined();
     expect(lastBody().tools).toBeUndefined();
     config.saveConfig({ ...config.getConfig(), gm: { ...config.getConfig().gm, enabled: true } });

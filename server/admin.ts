@@ -120,11 +120,11 @@ admin.post('/probe/:role', async (req, res) => {
       case 'gm':
         return res.json({ ok: true, ...(await probeGm()) });
       case 'image': {
-        const img = await generateImage(`${IMAGE_STYLE}\nScene: a sarcastic floating spellbook with cartoon eyes and a glowing antenna, booting up in a dark server room.`);
+        const img = await generateImage(`${IMAGE_STYLE}\nScene: a small flying book-robot with a glowing screen face and wings of luminous circuitry, opening a shimmering portal in a cosy workshop.`);
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: `data:${img.mime};base64,${img.data.toString('base64')}` });
       }
       case 'tts': {
-        const audio = await generateSpeech('System boot complete. Greetings, meatbag. Your fairy tales are ready to be broken.');
+        const audio = await generateSpeech('Portals open. Hello, young explorer. Which world shall we visit today?');
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: audio ? `data:${audio.mime};base64,${audio.data.toString('base64')}` : null });
       }
       default:

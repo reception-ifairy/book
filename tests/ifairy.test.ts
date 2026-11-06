@@ -4,7 +4,7 @@ import path from 'path';
 import type { AddressInfo } from 'net';
 import type { Server } from 'http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { samplePage, startFakeAnthropic } from './fakeAnthropic';
+import { startFakeAnthropic } from './fakeAnthropic';
 import { startFakeOpenAI } from './fakeOpenAI';
 import { ifairyPage, LOCK_TEXT, startFakeUniverse, UNIVERSE_KEY } from './fakeUniverse';
 
@@ -48,14 +48,14 @@ const call = async (method: string, url: string, body?: unknown) => {
 const lastUserText = () => fake.requests.at(-1)!.body.messages.at(-1).content.at(-1).text as string;
 const start = (over: Record<string, unknown> = {}) => {
   fake.enqueue(ifairyPage());
-  return call('POST', '/api/story', { world: 'ifairy', adventureId: 'hook-void-realm', lang: 'en', heroName: 'Nova', ...over });
+  return call('POST', '/api/story', { world: 'ifairy', adventureId: 'world-bleepworld', lang: 'en', heroName: 'Nova', ...over });
 };
 
 describe('connecting the Universe', () => {
-  it('keeps the iFairy world closed until the Archive is synced', async () => {
+  it('keeps the Edu-Verse closed until it is synced', async () => {
     const worlds = (await call('GET', '/api/worlds')).body;
     expect(worlds.find((w: any) => w.id === 'ifairy')).toMatchObject({ ready: false, adventures: 0 });
-    const res = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'hook-void-realm', lang: 'en', heroName: 'Nova' });
+    const res = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'world-bleepworld', lang: 'en', heroName: 'Nova' });
     expect(res.status).toBe(404);
     expect(fake.requests).toHaveLength(0);
   });
@@ -70,16 +70,21 @@ describe('connecting the Universe', () => {
     expect(fakeU.requests.at(-1)!.url).toBe('/v1/search');
 
     const sync = await call('POST', '/api/admin/universe/sync');
-    expect(sync.body.catalogue.counts).toEqual({ hook: 6, saga: 8, district: 26 });
+    expect(sync.body.catalogue.counts).toEqual({ world: 7, lab: 6, homework: 1 });
     const worlds = (await call('GET', '/api/worlds')).body;
-    expect(worlds.find((w: any) => w.id === 'ifairy')).toMatchObject({ ready: true, adventures: 40, canonVersion: '2.2.0-EN' });
+    expect(worlds.find((w: any) => w.id === 'ifairy')).toMatchObject({ ready: true, adventures: 14, canonVersion: '2.2.0-EN' });
     const cards = (await call('GET', '/api/adventures')).body;
-    expect(cards[0]).toMatchObject({ id: 'hook-void-realm', kind: 'hook' });
+    expect(cards[0]).toMatchObject({ id: 'world-bleepworld', kind: 'world', order: 1, structure: 'three-phase' });
     expect(cards[0]).not.toHaveProperty('premise');
 
-    const preview = await call('GET', '/api/admin/universe/adventures/saga-1/prompt?lang=pl');
-    expect(preview.body.prompt).toContain('Architectus Magnus Realitas');
-    expect(preview.body.prompt).toContain('"Młody Architekcie"');
+    const preview = await call('GET', '/api/admin/universe/adventures/world-loopia/prompt?lang=pl');
+    expect(preview.body.prompt).toContain('You are IGNIS, the winged cyber-grimoire of the iFairy Quantum Edu-Verse');
+    expect(preview.body.prompt).toContain('"Młody Odkrywco"');
+    expect(preview.body.prompt).toContain('(Pętlandia)');
+    expect(preview.body.prompt).toContain('Phase II, Translation to our world');
+    expect(preview.body.prompt).not.toContain('Architectus Magnus Realitas');
+    const homework = await call('GET', '/api/admin/universe/adventures/homework-portal/prompt?lang=en');
+    expect(homework.body.prompt).toContain('Never just hand over the final answer.');
   });
 
   it('keeps Universe settings when other sections are saved, and merges partial sections', async () => {
@@ -95,10 +100,10 @@ describe('connecting the Universe', () => {
   });
 });
 
-describe('playing an iFairy adventure', () => {
+describe('playing an Edu-Verse world', () => {
   let story: any;
 
-  it('starts with the canon narrator and pins the adventure into the story', async () => {
+  it('starts with IGNIS and pins the world into the story', async () => {
     const res = await start();
     expect(res.status).toBe(200);
     story = res.body;
@@ -107,16 +112,19 @@ describe('playing an iFairy adventure', () => {
     const root = story.pages[story.currentPageId];
     expect(root.choices.map((c: any) => c.kind)).toEqual(['logos', 'gnosis']);
     expect(root.freeForm).toMatch(/^Use your own words/);
-    // C1 is the hook's own canon passage, L1 the first live excerpt; the unknown X9 is dropped.
-    expect(root.lore.map((l: any) => l.ref)).toEqual(['REF:PORTALS_AND_GUARDIANS:story_hooks', 'REF:GLOSSARY:terms[9]']);
+    expect(root.phase).toBe('entry');
+    // C1 is the world's own page, L1 the first live excerpt; the unknown X9 is dropped.
+    expect(root.lore.map((l: any) => l.ref)).toEqual(['EDUVERSE:world-bleepworld', 'REF:GLOSSARY:terms[9]']);
     expect(root.stats).toEqual({ chaos: 10, karma: 5, mana: 55 });
 
     const req = fake.requests.at(-1)!.body;
     const system = req.system[0].text as string;
-    expect(system).toContain('Architectus Magnus Realitas');
-    expect(system).toContain('A Portal is tuned (by accident or design)');
+    expect(system).toContain('You are IGNIS');
+    expect(system).toContain('Dominant law: The Principle of Utter Chaos');
+    expect(system).toContain('One of the Seven Worlds: BleepWorld (stage 1 of 7)');
     expect(system).toContain("Use 'Narrative Portals', not 'Portal Hearts'.");
     expect(system).not.toContain('meatbag');
+    expect(system).not.toContain('Grimm');
     expect(system).not.toContain('Nexus of iFairy civilisation'); // live excerpts never go into the cached prompt
     expect(lastUserText()).toContain('<canon_excerpts');
     expect(lastUserText()).toContain('[L1] REF:GLOSSARY:terms[9] — Golden City');
@@ -128,16 +136,18 @@ describe('playing an iFairy adventure', () => {
     expect(JSON.stringify(got)).not.toContain("Use 'Narrative Portals', not 'Portal Hearts'.");
     expect(JSON.stringify(got)).not.toContain('Canon text of REF:NARRATIVE_STYLE:safety');
     const saved = JSON.parse(fs.readFileSync(path.join(DATA, 'stories', `${story.id}.json`), 'utf8'));
-    expect(saved.adventure.premise).toMatch(/^A Portal is tuned/);
+    expect(saved.adventure.premise).toMatch(/^Dominant law: The Principle of Utter Chaos/);
   });
 
   it('keeps the system prompt byte-identical across turns, and sends the Universe only canon terms', async () => {
     const firstSystem = fake.requests.at(-1)!.body.system[0].text;
     const root = story.pages[story.currentPageId];
-    fake.enqueue(ifairyPage({ scene: { location: 'The Golden City', present: ['Portal Guardians'] } }));
+    const note = 'In our world, scientists sort living things into groups by what they have in common.';
+    fake.enqueue(ifairyPage({ scene: { location: 'The Golden City', present: ['the Sorting Wind'] }, phase: 'translation', field_note: note }));
     const step = await call('POST', `/api/story/${story.id}/act`, { pageId: root.id, choiceId: root.choices[0].id });
     expect(step.status).toBe(200);
-    expect(step.body.page.action).toEqual({ kind: 'logos', label: 'Measure the dissonance pattern' });
+    expect(step.body.page.action).toEqual({ kind: 'logos', label: 'Sort everything that hums into one pile' });
+    expect(step.body.page).toMatchObject({ phase: 'translation', fieldNote: note });
     expect(fake.requests.at(-1)!.body.system[0].text).toBe(firstSystem);
 
     fake.enqueue(ifairyPage());
@@ -166,27 +176,27 @@ describe('playing an iFairy adventure', () => {
   });
 
   it('puts the canon visual lock in front of a picture with an iFairy, and only then', async () => {
-    // The opening page shows only the portal: no iFairy, no lock.
+    // The opening page shows only BleepWorld: no iFairy, no lock.
     const plain = await call('POST', `/api/story/${story.id}/page/${story.rootPageId}/image`, {});
     expect(plain.status).toBe(200);
     expect(plain.body.guard).toEqual({ guard: 'not_applicable' });
-    expect(fakeO.requests.at(-1)!.body.prompt).toContain('ring-shaped Narrative Portal');
+    expect(fakeO.requests.at(-1)!.body.prompt).toContain('candy-coloured landscape');
     expect(fakeO.requests.at(-1)!.body.prompt).not.toContain('SUBJECT SPECIES RULE');
 
     const cur = (await call('GET', `/api/story/${story.id}`)).body;
-    fake.enqueue(ifairyPage({ image_prompt: 'An iFairy Navigator lights the ring with their wings' }));
+    fake.enqueue(ifairyPage({ image_prompt: 'An iFairy Navigator lights the meadow with their wings' }));
     const step = await call('POST', `/api/story/${story.id}/act`, { pageId: cur.currentPageId, custom: 'I ask the Navigator for help' });
     const img = await call('POST', `/api/story/${story.id}/page/${step.body.page.id}/image`, {});
     expect(img.status).toBe(200);
     expect(img.body.guard).toMatchObject({ guard: 'ifairy_visual_lock', canonVersion: '2.2.0-EN' });
     const prompt = fakeO.requests.at(-1)!.body.prompt as string;
     expect(prompt.startsWith(`${LOCK_TEXT}\n\nSUBJECT:\n`)).toBe(true);
-    expect(prompt).toContain('An iFairy Navigator lights the ring');
+    expect(prompt).toContain('An iFairy Navigator lights the meadow');
   });
 
-  it('never gives Krasnoludki the iFairy lock, and refuses an iFairy picture without it', async () => {
-    fake.enqueue(ifairyPage({ image_prompt: 'Krasnoludki with lanterns in the Underground Halls' }));
-    const halls = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'district-underground-halls', lang: 'en', heroName: 'Nova' });
+  it('never gives IGNIS or Krasnoludki the iFairy lock, and refuses an iFairy picture without it', async () => {
+    fake.enqueue(ifairyPage({ image_prompt: 'IGNIS, a small flying book-robot with a glowing screen face, an ember antenna and wings of luminous circuitry, waves at two Krasnoludki holding idea-balloons' }));
+    const halls = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'lab-levitas', lang: 'en', heroName: 'Nova' });
     const img = await call('POST', `/api/story/${halls.body.id}/page/${halls.body.rootPageId}/image`, {});
     expect(img.body.guard).toEqual({ guard: 'not_applicable' });
     expect(fakeO.requests.at(-1)!.body.prompt).not.toContain('SUBJECT SPECIES RULE');
@@ -204,15 +214,15 @@ describe('playing an iFairy adventure', () => {
     expect(fs.existsSync(file)).toBe(true);
   });
 
-  it('refuses a real-looking name, and an adventure that is not synced', async () => {
-    const bad = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'hook-void-realm', lang: 'en', heroName: 'my name is Tom' });
+  it('refuses a real-looking name, and a world that is not synced', async () => {
+    const bad = await call('POST', '/api/story', { world: 'ifairy', adventureId: 'world-bleepworld', lang: 'en', heroName: 'my name is Tom' });
     expect(bad.status).toBe(400);
-    expect(bad.body.error).toMatch(/made-up Architect name/);
+    expect(bad.body.error).toMatch(/made-up explorer name/);
     expect((await call('POST', '/api/story', { world: 'ifairy', adventureId: 'nope', lang: 'en', heroName: 'Nova' })).status).toBe(404);
   });
 
-  it('caps an iFairy page: no deaths, at most three options, forces only', async () => {
-    const res = await start({ adventureId: 'saga-1' });
+  it('caps a page: no deaths, at most three options, forces only', async () => {
+    const res = await start({ adventureId: 'lab-chrono-voyages' });
     const root = res.body.pages[res.body.currentPageId];
     fake.enqueue(ifairyPage({ ending: { type: 'death', title: 'Gone' }, choices: [{ label: 'x', kind: 'sudo' }] }));
     const end = await call('POST', `/api/story/${res.body.id}/act`, { pageId: root.id, choiceId: root.choices[0].id });
@@ -222,19 +232,21 @@ describe('playing an iFairy adventure', () => {
   });
 });
 
-describe('stories from before the iFairy world', () => {
-  it('load and play as Grimm Protocol with no migration', async () => {
-    const legacy = {
-      id: 'legacy-story-0001', taleId: 'red-hood', lang: 'en', heroName: 'Mo', timeline: 'G-2000', rootPageId: 'p1', currentPageId: 'p1',
-      pages: { p1: { ...samplePage(), id: 'p1', parentId: null, depth: 0, action: null, quip: 'Hi.', choices: [{ id: 'c1', label: 'Go', kind: 'sane' }], ending: null, imagePrompt: '', imageUrl: null, audioUrl: null, stats: { chaos: 0, karma: 0, mana: 60 }, canon: 100, inventory: [], summary: 's', createdAt: 1 } },
-      createdAt: 1, updatedAt: 1,
-    };
-    fs.mkdirSync(path.join(DATA, 'stories'), { recursive: true });
-    fs.writeFileSync(path.join(DATA, 'stories', 'legacy-story-0001.json'), JSON.stringify(legacy));
-    expect((await call('GET', '/api/story/legacy-story-0001')).body.world).toBeUndefined();
-    fake.enqueue(samplePage());
-    const res = await call('POST', '/api/story/legacy-story-0001/act', { pageId: 'p1', choiceId: 'c1' });
+describe('the Homework Portal', () => {
+  it('sends the photo of the task first and tells IGNIS it may be homework', async () => {
+    const res = await start({ adventureId: 'homework-portal', strongest: 'logos' });
     expect(res.status).toBe(200);
-    expect(fake.requests.at(-1)!.body.system[0].text).toContain('You are IGNIS // OS');
+    const system = fake.requests.at(-1)!.body.system[0].text as string;
+    expect(system).toContain('The Homework Portal: The Homework Portal');
+    expect(system).toContain('Gentle Nudge');
+    expect(lastUserText()).toContain('LEARNING STYLE: the explorer likes to learn through Logos');
+    fake.enqueue(ifairyPage({ artifact_description: 'a worksheet of fraction sums', phase: 'entry' }));
+    const photo = { mime: 'image/jpeg', data: Buffer.from('fake jpeg').toString('base64') };
+    const step = await call('POST', `/api/story/${res.body.id}/act`, { pageId: res.body.currentPageId, custom: 'Can you help me with this?', image: photo });
+    expect(step.status).toBe(200);
+    const last = fake.requests.at(-1)!.body.messages.at(-1).content;
+    expect(last[0]).toMatchObject({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg' } });
+    expect(last.at(-1).text).toContain('photo of their homework');
+    expect(step.body.page.inventory).toContain('🖼 a worksheet of fraction sums');
   });
 });

@@ -1,5 +1,5 @@
 /**
- * The iFairy content profile (13+) in code: personal details are removed from the player's own
+ * The iFairy young explorers content profile in code: personal details are removed from the player's own
  * words before anything stores or sends them, distress is flagged for a warmer narrator and a
  * support card, and every page is linted before the player sees it.
  */
@@ -38,7 +38,7 @@ export function screenInput(text: string): Screened {
   return { text: out, privacy: out !== text, distress: DISTRESS.some((re) => re.test(text)) };
 }
 
-/** Retired source-gods (canon lock) and mythological deities the Travellers Roster excludes. */
+/** Retired source-gods (canon lock) and mythological deities the canon excludes. */
 const BANNED_NAMES = [
   'Omoikane', 'Tara', 'Moros', 'Anansi', 'Hephaestus', 'TinkerMaster', 'Zeus', 'Athena', 'Poseidon', 'Hades', 'Apollo', 'Aphrodite', 'Ares', 'Hermes', 'Kronos', 'Cronus',
   'Odin', 'Thor', 'Freyja', 'Freya', 'Loki', 'Perun', 'Veles', 'Svarog', 'Jade Emperor', 'Amaterasu', 'Ra', 'Osiris', 'Isis', 'Anubis',

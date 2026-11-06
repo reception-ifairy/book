@@ -1,6 +1,6 @@
 {
-  "name": "IGNIS // OS: Grimm Protocol",
-  "description": "A choose-your-own-story game where a sarcastic cyber-grimoire retells classic fairy tales as buggy legacy code. Claude writes the story structure; Gemini or OpenAI render illustrations and narration.",
+  "name": "IGNIS // iFairy Quantum Edu-Verse",
+  "description": "An interactive learning game in the iFairy Universe: IGNIS, a winged cyber-grimoire, guides young explorers through portals into worlds with different laws of nature (the 3-phase model: enter, translate, make it yours). Claude writes the journey; Gemini or OpenAI render illustrations and narration.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

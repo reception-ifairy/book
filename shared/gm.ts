@@ -56,7 +56,7 @@ export interface CanonClaim {
 export type Axis = 'affinity' | 'trust' | 'respect';
 export type QuestStatus = 'locked' | 'active' | 'done' | 'failed' | 'transformed';
 
-/** How an NPC regards the Young Architect; each axis runs -3..3. */
+/** How an NPC regards the Young Explorer; each axis runs -3..3. */
 export interface NpcState {
   affinity: number;
   trust: number;

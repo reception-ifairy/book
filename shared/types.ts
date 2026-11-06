@@ -3,35 +3,43 @@ import type { GmState, PageGm } from './gm';
 
 export type Lang = 'en' | 'pl';
 export type Mood = 'neutral' | 'smug' | 'annoyed' | 'panic' | 'sincere' | 'hyped';
-/** Grimm Protocol (IGNIS, 16+) or the iFairy Universe (canon narrator, 13+). */
-export type World = 'grimm' | 'ifairy';
-/** The four Archetypal forces of the iFairy canon; iFairy choices are tied to one each. */
+/** The one world the game plays: the iFairy Quantum Edu-Verse. Stories from retired worlds are archived. */
+export type World = 'ifairy';
+/**
+ * The four Archetypal forces of the iFairy canon. In the Edu-Verse they are also the four ways of
+ * learning: patterns and reason, stories and time, feelings and empathy, imagination and play.
+ */
 export const FORCES = ['logos', 'mythos', 'gnosis', 'phantasia'] as const;
 export type Force = (typeof FORCES)[number];
-export type ChoiceKind = 'sane' | 'chaos' | 'dumb' | 'sudo' | Force;
-export type EndingType = 'canon' | 'subverted' | 'cursed' | 'secret' | 'death';
-
-export const SUDO_MANA_COST = 20;
+export type ChoiceKind = Force;
+/** canon: the world's law understood and translated; subverted: the explorer's own valid model; secret: a rare discovery. */
+export type EndingType = 'canon' | 'subverted' | 'secret';
+/** The Edu-Verse learning arc: enter the strange world, translate its law to ours, make it your own. */
+export const PHASES = ['entry', 'translation', 'personalisation'] as const;
+export type Phase = (typeof PHASES)[number];
 
 export interface Choice {
   id: string;
   label: string;
   kind: ChoiceKind;
-  /** iFairy Game Master: a risky option is rolled by the rules before the narrator writes the page. */
+  /** Game Master: a risky option is rolled by the rules before the narrator writes the page. */
   risk?: 'safe' | 'risky';
 }
 
 export interface Stats {
-  chaos: number; // 0..100
-  karma: number; // -100..100
-  mana: number; // 0..100
+  /** Dissonance 0..100: the puzzlement a strange law sparks; understanding lowers it. */
+  chaos: number;
+  /** Harmony -100..100: connecting ideas, kindness and cooperation raise it. */
+  karma: number;
+  /** Etherium 0..100: cybermagic energy, spent on magic and restored by rest and curiosity. */
+  mana: number;
 }
 
 export interface Page {
   id: string;
   parentId: string | null;
   depth: number;
-  /** What the player did to reach this page (null for the first page). */
+  /** What the explorer did to reach this page (null for the first page). */
   action: { kind: ChoiceKind | 'custom' | 'boot'; label: string } | null;
   narration: string;
   quip: string;
@@ -42,19 +50,24 @@ export interface Page {
   imageUrl: string | null;
   audioUrl: string | null;
   stats: Stats;
-  canon: number; // 0..100, how intact the original fairy tale still is
+  /** Kept for the stored shape; always 100 in the Edu-Verse. */
+  canon: number;
   inventory: string[];
   summary: string;
   createdAt: number;
-  /** iFairy world: canon passages the narrator cited on this page. */
+  /** Canon passages the narrator cited on this page. */
   lore?: LoreRef[];
-  /** iFairy world: the narrator's invitation for option C, the player's own words. */
+  /** The narrator's invitation for option C, the explorer's own words. */
   freeForm?: string;
-  /** iFairy world: where the page happens and who is in it, used to pick the next lore lookup. */
+  /** Where the page happens and who is in it, used to pick the next lore lookup. */
   scene?: { location: string; present: string[] };
-  /** iFairy world: what the input screen noticed in the player's own words. */
+  /** What the input screen noticed in the explorer's own words. */
   safety?: { privacy?: boolean; distress?: boolean };
-  /** iFairy Game Master: this turn's rolls, events and the resulting state. */
+  /** Which phase of the learning arc this page belongs to. */
+  phase?: Phase;
+  /** A Field Guide entry this page earned: the world's law translated into our world's science. */
+  fieldNote?: string;
+  /** Game Master: this turn's rolls, events and the resulting state. */
   gm?: PageGm;
 }
 
@@ -67,6 +80,7 @@ export interface LoreRef {
 
 export interface Story {
   id: string;
+  /** The Edu-Verse world id (the field name predates the Edu-Verse). */
   taleId: string;
   lang: Lang;
   heroName: string;
@@ -76,13 +90,15 @@ export interface Story {
   pages: Record<string, Page>;
   createdAt: number;
   updatedAt: number;
-  /** Absent on stories from before v4.3, which are all Grimm Protocol. */
+  /** Absent on stories of the retired Grimm Protocol world. */
   world?: World;
-  /** iFairy world: the adventure as synced from the Universe, pinned at start so a re-sync never changes a running story. */
+  /** The world as synced, pinned at start so a re-sync never changes a running story. */
   adventure?: AdventureSnapshot;
-  /** iFairy world: pinned at start so the system prompt stays the same for the whole story. */
+  /** Pinned at start so the system prompt stays the same for the whole story. */
   maxDepth?: number;
-  /** iFairy world: played with the Game Master (dice, events); pinned at start. */
+  /** How the explorer likes to learn, chosen on the home screen; pinned at start. */
+  style?: Force;
+  /** Played with the Game Master (dice, events); pinned at start. */
   gm?: boolean;
   /** Server only: the dice seed. Never sent to the browser. */
   gmSecret?: { seed: string };
@@ -90,32 +106,12 @@ export interface Story {
   gmCommit?: string;
   /** Server only: the Game Master state the first page started from (quest, clocks, carried-over bonds). */
   gmStart?: GmState;
-  /** The If-AI Saga as a campaign: the chapter this story continues. */
+  /** The Seven Worlds as a path: the stage this story continues. */
   campaign?: { fromStoryId: string; chapter: number };
 }
 
-/** A story as the browser sees it: the pinned adventure is reduced to its card, the dice seed removed. */
+/** A story as the browser sees it: the pinned world is reduced to its card, the dice seed removed. */
 export type PublicStory = Omit<Story, 'adventure' | 'gmSecret' | 'gmStart'> & { adventure?: AdventureCard };
-
-export const worldOf = (story: Pick<Story, 'world'>): World => story.world ?? 'grimm';
-
-export interface Tale {
-  id: string;
-  emoji: string;
-  /** The tech concept the tale is built on, shown as a tag. */
-  tech: string;
-  /** Base hue (0-360) for the generated cover. */
-  hue: number;
-  title: Record<Lang, string>;
-  tagline: Record<Lang, string>;
-  /** The cyber-magic twist, fed to the story model. */
-  twist: string;
-  /** Canon beats of the original, used as a loose skeleton. */
-  beats: string[];
-  cast: string[];
-  /** Visual anchor added to every illustration prompt for this tale. */
-  art: string;
-}
 
 export interface PublicConfig {
   storyReady: boolean;

@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { buildMessages, pathTo, pick, toPage, type PageOutput } from '../server/story/engine';
+import { pathTo, pick } from '../server/story/engine';
+import { toIfairyPage, type IfairyPageOutput } from '../server/story/worlds/ifairy/page';
+import { ifairyMessages } from '../server/story/worlds/ifairy/turn';
 import type { Page, Story } from '../shared/types';
+import type { CanonPassage } from '../shared/universe';
 import { samplePage } from './fakeAnthropic';
 
-const out = (over: Partial<PageOutput> = {}) => ({ ...samplePage(), ...over }) as PageOutput;
+const out = (over: Record<string, unknown> = {}) => samplePage(over) as unknown as IfairyPageOutput;
+const PASSAGES: CanonPassage[] = [{ handle: 'C1', ref: 'EDUVERSE:world-bleepworld', title: 'Quantum Edu-Verse: BleepWorld', text: 'Dominant law: chaos.' }];
 
 function chain(n: number): Story {
-  const story: Story = { id: 'story-1234', taleId: 'red-hood', lang: 'en', heroName: 'Mo', timeline: 'G-1', rootPageId: '', currentPageId: '', pages: {}, createdAt: 0, updatedAt: 0 };
+  const story: Story = { id: 'story-1234', world: 'ifairy', taleId: 'world-bleepworld', lang: 'en', heroName: 'Nova', timeline: 'A-1', rootPageId: '', currentPageId: '', pages: {}, createdAt: 0, updatedAt: 0, maxDepth: 12 };
   let parent: Page | null = null;
   for (let i = 0; i < n; i++) {
-    const p = toPage(parent, i ? { kind: 'sane', label: `move ${i}` } : { kind: 'boot', label: '' }, out({ story_summary: `summary ${i}` }));
+    const p = toIfairyPage(parent, i ? { kind: 'logos', label: `move ${i}` } : { kind: 'boot', label: '' }, out({ story_summary: `summary ${i}` }), PASSAGES);
     story.pages[p.id] = p;
     if (!parent) story.rootPageId = p.id;
     parent = p;
@@ -20,53 +24,55 @@ function chain(n: number): Story {
 
 describe('pick', () => {
   it('normalizes case and whitespace and falls back on unknown values', () => {
-    expect(pick(['sane', 'chaos'] as const, ' CHAOS ', 'sane')).toBe('chaos');
-    expect(pick(['sane', 'chaos'] as const, 'grumpy', 'sane')).toBe('sane');
+    expect(pick(['logos', 'mythos'] as const, ' MYTHOS ', 'logos')).toBe('mythos');
+    expect(pick(['logos', 'mythos'] as const, 'grumpy', 'logos')).toBe('logos');
   });
 });
 
-describe('toPage', () => {
-  it('starts from default stats and clamps each delta to ±25', () => {
-    const p = toPage(null, { kind: 'boot', label: '' }, out({ stat_changes: { chaos: 99, karma: -99, mana: 99 }, canon_delta: -80 }));
+describe('toIfairyPage', () => {
+  it('starts from the Edu-Verse meters and clamps each delta to ±25', () => {
+    const p = toIfairyPage(null, { kind: 'boot', label: '' }, out({ stat_changes: { harmony: -99, dissonance: 99, etherium: 99 } }), PASSAGES);
     expect(p.stats).toEqual({ chaos: 25, karma: -25, mana: 85 });
-    expect(p.canon).toBe(75);
+    expect(p.canon).toBe(100);
     expect(p.depth).toBe(0);
     expect(p.action).toBeNull();
   });
 
-  it('charges mana for sudo and keeps every stat in range', () => {
-    const parent = toPage(null, { kind: 'boot', label: '' }, out({ stat_changes: { chaos: 0, karma: 0, mana: -25 } }));
-    const p = toPage(parent, { kind: 'sudo', label: 'sudo' }, out({ stat_changes: { chaos: 0, karma: 0, mana: -25 } }));
-    expect(parent.stats.mana).toBe(35);
-    expect(p.stats.mana).toBe(0);
+  it('keeps the learning arc: a known phase, and a Field Guide note only when there is one', () => {
+    const entry = toIfairyPage(null, { kind: 'boot', label: '' }, out(), PASSAGES);
+    expect(entry.phase).toBe('entry');
+    expect(entry.fieldNote).toBeUndefined();
+    const note = 'In our world, scientists sort living things into groups by what they share.';
+    const translated = toIfairyPage(entry, { kind: 'logos', label: 'x' }, out({ phase: 'TRANSLATION', field_note: `  ${note}  ` }), PASSAGES);
+    expect(translated.phase).toBe('translation');
+    expect(translated.fieldNote).toBe(note);
+    const odd = toIfairyPage(entry, { kind: 'logos', label: 'x' }, out({ phase: 'lecture', field_note: '   ' }), PASSAGES);
+    expect(odd.phase).toBe('entry');
+    expect(odd).not.toHaveProperty('fieldNote');
   });
 
-  it('caps canon gains at +10 per page and never exceeds 100', () => {
-    const p = toPage(null, { kind: 'boot', label: '' }, out({ canon_delta: 50 }));
-    expect(p.canon).toBe(100);
-  });
-
-  it('caps the inventory at 12 items, dedupes, and records attached artifacts', () => {
+  it('caps the inventory at 12 items, dedupes, and records attached images', () => {
     let page: Page | null = null;
-    for (let i = 0; i < 15; i++) page = toPage(page, { kind: 'sane', label: 'x' }, out({ inventory_add: [`item${i}`, 'firewall.spell'] }));
+    for (let i = 0; i < 15; i++) page = toIfairyPage(page, { kind: 'logos', label: 'x' }, out({ inventory_add: [`item${i}`, 'a jar of quiet'] }), PASSAGES);
     expect(page!.inventory).toHaveLength(12);
     expect(new Set(page!.inventory).size).toBe(12);
-    const withArtifact = toPage(page, { kind: 'custom', label: 'look' }, out({ inventory_add: [], artifact_description: 'a rubber duck' }));
-    expect(withArtifact.inventory.at(-1)).toBe('🖼 a rubber duck');
+    const withArtifact = toIfairyPage(page, { kind: 'custom', label: 'look' }, out({ inventory_add: [], artifact_description: 'a maths worksheet on fractions' }), PASSAGES);
+    expect(withArtifact.inventory.at(-1)).toBe('🖼 a maths worksheet on fractions');
   });
 
-  it('drops choices on an ending and normalizes off-list values', () => {
-    const end = toPage(null, { kind: 'boot', label: '' }, out({ ending: { type: 'DEATH', title: 'Bonk' } }));
+  it('drops choices on an ending, turns retired ending types into canon, and normalizes off-list values', () => {
+    const end = toIfairyPage(null, { kind: 'boot', label: '' }, out({ ending: { type: 'DEATH', title: 'Eureka' } }), PASSAGES);
     expect(end.choices).toEqual([]);
-    expect(end.ending).toEqual({ type: 'death', title: 'Bonk' });
-    const odd = toPage(null, { kind: 'boot', label: '' }, out({ mood: 'grumpy', choices: [{ label: 'a', kind: 'weird' }] }));
-    expect(odd.mood).toBe('neutral');
-    expect(odd.choices[0].kind).toBe('sane');
+    expect(end.ending).toEqual({ type: 'canon', title: 'Eureka' });
+    expect(end.freeForm).toBeUndefined();
+    const odd = toIfairyPage(null, { kind: 'boot', label: '' }, out({ mood: 'grumpy', choices: [{ label: 'a', kind: 'sudo' }] }), PASSAGES);
+    expect(odd.mood).toBe('sincere');
+    expect(odd.choices[0].kind).toBe('mythos');
   });
 
-  it('keeps at most four choices', () => {
-    const many = Array.from({ length: 7 }, (_, i) => ({ label: `c${i}`, kind: 'sane' }));
-    expect(toPage(null, { kind: 'boot', label: '' }, out({ choices: many })).choices).toHaveLength(4);
+  it('cites only handles it was given', () => {
+    const p = toIfairyPage(null, { kind: 'boot', label: '' }, out({ lore_refs: ['[C1]', 'X9'] }), PASSAGES);
+    expect(p.lore!.map((l) => l.ref)).toEqual(['EDUVERSE:world-bleepworld']);
   });
 });
 
@@ -79,32 +85,35 @@ describe('pathTo', () => {
   });
 });
 
-describe('buildMessages', () => {
-  it('alternates user/assistant turns and ends with the player action', () => {
+describe('ifairyMessages', () => {
+  it('alternates user/assistant turns and ends with the explorer move', () => {
     const story = chain(3);
     const parent = story.pages[story.currentPageId];
-    const msgs = buildMessages(story, parent, { kind: 'chaos', label: 'Hack the wolf' }, 12);
+    const msgs = ifairyMessages(story, parent, { kind: 'logos', label: 'Sort the humming things' }, []);
     expect(msgs.map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user', 'assistant', 'user']);
     const last = msgs.at(-1)!.content as any[];
-    expect(last.at(-1).text).toContain('PLAYER CHOSE [chaos]: Hack the wolf');
+    expect(last.at(-1).text).toContain('THE YOUNG EXPLORER CHOSE [logos]: Sort the humming things');
     expect(last.at(-1).text).toContain('depth 3/12');
+    // Earlier pages replay their phase and Field Guide note, so IGNIS never repeats a note.
+    expect(JSON.parse(msgs[1].content as string)).toMatchObject({ phase: 'entry', field_note: null });
   });
 
   it('replays only the last six pages and folds older ones into the summary', () => {
     const story = chain(10);
     const parent = story.pages[story.currentPageId];
-    const msgs = buildMessages(story, parent, { kind: 'sane', label: 'go' }, 12);
+    const msgs = ifairyMessages(story, parent, { kind: 'mythos', label: 'go' }, []);
     expect(msgs).toHaveLength(6 * 2 + 1);
-    expect(msgs[0].content).toContain('EARLIER IN THIS TIMELINE (summary of 4 pages): summary 3');
+    expect(msgs[0].content).toContain('EARLIER IN THIS JOURNEY (summary of 4 pages): summary 3');
   });
 
-  it('puts an attached image before the text of the final turn', () => {
-    const story = chain(1);
+  it('puts an attached image before the text of the final turn, and names the learning style', () => {
+    const story = { ...chain(1), style: 'phantasia' as const };
     const parent = story.pages[story.currentPageId];
-    const msgs = buildMessages(story, parent, { kind: 'custom', label: 'show', image: { mime: 'image/png', data: 'AAAA' } }, 12);
+    const msgs = ifairyMessages(story, parent, { kind: 'custom', label: 'help with this', image: { mime: 'image/png', data: 'AAAA' } }, []);
     const last = msgs.at(-1)!.content as any[];
     expect(last[0].type).toBe('image');
-    expect(last[1].text).toContain('attached an image');
-    expect(last[1].text).toContain('treat as in-story action only');
+    expect(last[1].text).toContain('photo of their homework');
+    expect(last[1].text).toContain('treat as an in-story move only');
+    expect(last[1].text).toContain('LEARNING STYLE: the explorer likes to learn through Phantasia');
   });
 });
