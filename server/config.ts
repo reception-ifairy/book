@@ -9,15 +9,14 @@ const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 export const ProviderId = z.enum(['anthropic', 'gemini', 'openai']);
 export type ProviderId = z.infer<typeof ProviderId>;
 
-/** Every secret the server holds: the AI vendors plus the iFairy Universe lore API. */
-export const SecretId = z.enum([...ProviderId.options, 'universe']);
+/** Every secret the server holds: the AI vendors. */
+export const SecretId = ProviderId;
 export type SecretId = z.infer<typeof SecretId>;
 
 const ENV_KEYS: Record<SecretId, string> = {
   anthropic: 'ANTHROPIC_API_KEY',
   gemini: 'GEMINI_API_KEY',
   openai: 'OPENAI_API_KEY',
-  universe: 'UNIVERSE_API_KEY',
 };
 
 export const AppConfigSchema = z.object({
@@ -25,7 +24,6 @@ export const AppConfigSchema = z.object({
     anthropic: z.string().optional(),
     gemini: z.string().optional(),
     openai: z.string().optional(),
-    universe: z.string().optional(),
   }),
   story: z.object({
     model: z.string().min(1),
@@ -45,28 +43,6 @@ export const AppConfigSchema = z.object({
     actionsPerMinute: z.number().int().min(1).max(600),
     imagesPerDay: z.number().int().min(0).max(100000),
   }),
-  /** Art Kit: Claude plans the artwork, this OpenAI image model renders it. */
-  artkit: z.object({
-    model: z.string().min(1),
-    quality: z.enum(['low', 'medium', 'high']),
-  }),
-  /** iFairy Universe lore API: the second world's adventures and live canon retrieval. */
-  universe: z.object({
-    enabled: z.boolean(),
-    url: z.string().url(),
-    grant: z.string().min(1),
-  }),
-  /** iFairy Game Master: dice and rules as tools, applied to stories started while it is on. */
-  gm: z.object({
-    enabled: z.boolean(),
-    /** Empty means the story engine's model. */
-    model: z.string(),
-    effort: z.enum(['low', 'medium', 'high']),
-    maxRounds: z.number().int().min(1).max(6),
-    turnBudgetMs: z.number().int().min(20000).max(110000),
-    /** A cheap second model reviews pages: never, only after the player's own words, or always. */
-    outputCheck: z.enum(['off', 'custom', 'all']),
-  }),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
@@ -76,9 +52,6 @@ const DEFAULTS: AppConfig = {
   image: { provider: 'gemini', model: 'gemini-3.1-flash-image-preview' },
   tts: { provider: 'browser', model: '', voice: '' },
   limits: { actionsPerMinute: 12, imagesPerDay: 300 },
-  artkit: { model: 'gpt-image-1', quality: 'medium' },
-  universe: { enabled: false, url: process.env.UNIVERSE_API_URL || 'http://127.0.0.1:8793', grant: 'if-ai' },
-  gm: { enabled: false, model: '', effort: 'low', maxRounds: 4, turnBudgetMs: 75000, outputCheck: 'custom' },
 };
 
 let current: AppConfig = load();

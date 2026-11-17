@@ -1,110 +1,99 @@
 import { describe, expect, it } from 'vitest';
-import { buildMessages, pathTo, pick, toPage, type PageOutput } from '../server/story/engine';
-import type { Page, Story } from '../shared/types';
+import { buildMessages, pick, settle, startStats, toPage, type PageOutput, type Turn } from '../server/story/engine';
+import { systemPrompt } from '../server/story/prompt';
+import { TWISTS } from '../server/story/twists';
+import { MISSIONS, missionOf, missionXp } from '../shared/arb';
+import type { Agent, Story } from '../shared/types';
+import { createAgent } from '../server/arb/agents';
 import { samplePage } from './fakeAnthropic';
 
-const out = (over: Partial<PageOutput> = {}) => ({ ...samplePage(), ...over }) as PageOutput;
+const out = (over: Record<string, unknown> = {}) => samplePage(over) as unknown as PageOutput;
+const mission = missionOf('kapturek-ciastka')!;
+const start = startStats({ stress: 10, coffee: 60 }, mission, false);
+const startTurn: Turn = { kind: 'start', label: '', roll: null };
 
-function chain(n: number): Story {
-  const story: Story = { id: 'story-1234', taleId: 'red-hood', lang: 'en', heroName: 'Mo', timeline: 'G-1', rootPageId: '', currentPageId: '', pages: {}, createdAt: 0, updatedAt: 0 };
-  let parent: Page | null = null;
-  for (let i = 0; i < n; i++) {
-    const p = toPage(parent, i ? { kind: 'sane', label: `move ${i}` } : { kind: 'boot', label: '' }, out({ story_summary: `summary ${i}` }));
-    story.pages[p.id] = p;
-    if (!parent) story.rootPageId = p.id;
-    parent = p;
-  }
-  story.currentPageId = parent!.id;
-  return story;
+function makeStory(): Story {
+  return { id: 'story-1234', agentId: 'agent-1234', missionId: mission.id, lang: 'pl', codename: 'Sowa', caseNo: 'ARB/2026/B-7/0001', rootPageId: '', currentPageId: '', pages: {}, createdAt: 0, updatedAt: 0 };
 }
 
-describe('pick', () => {
-  it('normalizes case and whitespace and falls back on unknown values', () => {
-    expect(pick(['sane', 'chaos'] as const, ' CHAOS ', 'sane')).toBe('chaos');
-    expect(pick(['sane', 'chaos'] as const, 'grumpy', 'sane')).toBe('sane');
-  });
-});
-
 describe('toPage', () => {
-  it('starts from default stats and clamps each delta to ±25', () => {
-    const p = toPage(null, { kind: 'boot', label: '' }, out({ stat_changes: { chaos: 99, karma: -99, mana: 99 }, canon_delta: -80 }));
-    expect(p.stats).toEqual({ chaos: 25, karma: -25, mana: 85 });
-    expect(p.canon).toBe(75);
-    expect(p.depth).toBe(0);
-    expect(p.action).toBeNull();
+  it('applies clamped deltas to the starting stats and keeps the choices', () => {
+    const page = toPage(null, start, startTurn, out({ stat_changes: { coherence: 99, stress: -99, coffee: -3 } }), 12);
+    expect(start.coherence).toBe(64);
+    expect(page.stats).toEqual({ coherence: 84, stress: 0, coffee: 57, stamps: 2 });
+    expect(page.choices).toHaveLength(4);
+    expect(page.choices[1]).toMatchObject({ kind: 'improwizacja', risky: true });
+    expect(page.action).toBeNull();
+    expect(page.evidence).toEqual(['okruszek ciastka']);
   });
 
-  it('charges mana for sudo and keeps every stat in range', () => {
-    const parent = toPage(null, { kind: 'boot', label: '' }, out({ stat_changes: { chaos: 0, karma: 0, mana: -25 } }));
-    const p = toPage(parent, { kind: 'sudo', label: 'sudo' }, out({ stat_changes: { chaos: 0, karma: 0, mana: -25 } }));
-    expect(parent.stats.mana).toBe(35);
-    expect(p.stats.mana).toBe(0);
+  it('normalizes off-list values, keeps one stamped option and spends a stamp', () => {
+    const parent = toPage(null, start, startTurn, out(), 12);
+    const page = toPage(parent, start, { kind: 'pieczatka', label: 'Pieczątka', roll: null }, out({
+      cat_mood: 'ECSTATIC',
+      choices: [
+        { label: 'A', kind: 'PIECZATKA', risky: false },
+        { label: 'B', kind: 'pieczatka', risky: false },
+        { label: 'C', kind: 'teleport', risky: true },
+      ],
+    }), 12);
+    expect(page.catMood).toBe('mruczy');
+    expect(page.choices.map((c) => c.kind)).toEqual(['pieczatka', 'procedura']);
+    expect(page.stats.stamps).toBe(1);
+    expect(page.depth).toBe(1);
+    expect(pick(['a', 'b'] as const, ' B ', 'a')).toBe('b');
   });
 
-  it('caps canon gains at +10 per page and never exceeds 100', () => {
-    const p = toPage(null, { kind: 'boot', label: '' }, out({ canon_delta: 50 }));
-    expect(p.canon).toBe(100);
-  });
+  it('ends the case in code when coherence hits zero or the last page is reached', () => {
+    const broken = toPage(null, start, startTurn, out({ stat_changes: { coherence: -20, stress: 0, coffee: 0 } }), 12);
+    let p = broken;
+    for (let i = 0; i < 3 && !p.ending; i++) p = toPage(p, start, { kind: 'improwizacja', label: 'x', roll: null }, out({ stat_changes: { coherence: -20, stress: 0, coffee: 0 } }), 12);
+    expect(p.ending?.type).toBe('paradoks');
+    expect(p.choices).toEqual([]);
 
-  it('caps the inventory at 12 items, dedupes, and records attached artifacts', () => {
-    let page: Page | null = null;
-    for (let i = 0; i < 15; i++) page = toPage(page, { kind: 'sane', label: 'x' }, out({ inventory_add: [`item${i}`, 'firewall.spell'] }));
-    expect(page!.inventory).toHaveLength(12);
-    expect(new Set(page!.inventory).size).toBe(12);
-    const withArtifact = toPage(page, { kind: 'custom', label: 'look' }, out({ inventory_add: [], artifact_description: 'a rubber duck' }));
-    expect(withArtifact.inventory.at(-1)).toBe('🖼 a rubber duck');
-  });
-
-  it('drops choices on an ending and normalizes off-list values', () => {
-    const end = toPage(null, { kind: 'boot', label: '' }, out({ ending: { type: 'DEATH', title: 'Bonk' } }));
-    expect(end.choices).toEqual([]);
-    expect(end.ending).toEqual({ type: 'death', title: 'Bonk' });
-    const odd = toPage(null, { kind: 'boot', label: '' }, out({ mood: 'grumpy', choices: [{ label: 'a', kind: 'weird' }] }));
-    expect(odd.mood).toBe('neutral');
-    expect(odd.choices[0].kind).toBe('sane');
-  });
-
-  it('keeps at most four choices', () => {
-    const many = Array.from({ length: 7 }, (_, i) => ({ label: `c${i}`, kind: 'sane' }));
-    expect(toPage(null, { kind: 'boot', label: '' }, out({ choices: many })).choices).toHaveLength(4);
-  });
-});
-
-describe('pathTo', () => {
-  it('walks from the root to the given page', () => {
-    const story = chain(4);
-    const path = pathTo(story, story.currentPageId);
-    expect(path.map((p) => p.depth)).toEqual([0, 1, 2, 3]);
-    expect(path[0].id).toBe(story.rootPageId);
+    const late = toPage({ ...broken, depth: 10, stats: { ...broken.stats, coherence: 80 } }, start, { kind: 'procedura', label: 'x', roll: null }, out(), 12);
+    expect(late.ending).toMatchObject({ type: 'z-przypisami' });
   });
 });
 
 describe('buildMessages', () => {
-  it('alternates user/assistant turns and ends with the player action', () => {
-    const story = chain(3);
-    const parent = story.pages[story.currentPageId];
-    const msgs = buildMessages(story, parent, { kind: 'chaos', label: 'Hack the wolf' }, 12);
-    expect(msgs.map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user', 'assistant', 'user']);
-    const last = msgs.at(-1)!.content as any[];
-    expect(last.at(-1).text).toContain('PLAYER CHOSE [chaos]: Hack the wolf');
-    expect(last.at(-1).text).toContain('depth 3/12');
+  it('names the agent once, replays the path and states the K20 result as final', () => {
+    const story = makeStory();
+    const agent = { xp: 400, specialization: 'europa' as const };
+    const root = toPage(null, start, startTurn, out(), 12);
+    story.pages[root.id] = root;
+    const roll = { die: 14, modifier: 3, total: 17, dc: 10, outcome: 'sukces' as const, parts: [] };
+    const msgs = buildMessages(story, agent, root, { kind: 'improwizacja', label: 'Zaskocz wilka', roll }, start, 12);
+    expect(msgs).toHaveLength(3);
+    expect(msgs[0].content).toContain('codename "Sowa", rank Agent Terenowy');
+    const last = msgs.at(-1)!.content as string;
+    expect(last).toContain('AGENT CHOSE [improwizacja]: Zaskocz wilka');
+    expect(last).toContain('K20 TEST: rolled 14 + 3 = 17 vs DC 10 → SUKCES');
+    expect(last).toContain('page 2/12');
   });
 
-  it('replays only the last six pages and folds older ones into the summary', () => {
-    const story = chain(10);
-    const parent = story.pages[story.currentPageId];
-    const msgs = buildMessages(story, parent, { kind: 'sane', label: 'go' }, 12);
-    expect(msgs).toHaveLength(6 * 2 + 1);
-    expect(msgs[0].content).toContain('EARLIER IN THIS TIMELINE (summary of 4 pages): summary 3');
+  it('keeps the system prompt identical per mission and language, with the secret inside', () => {
+    expect(systemPrompt(mission, 'pl', 12)).toBe(systemPrompt(mission, 'pl', 12));
+    expect(systemPrompt(mission, 'pl', 12)).toContain('Polish');
+    expect(systemPrompt(mission, 'en', 12)).toContain(TWISTS[mission.id]);
+    for (const m of MISSIONS) expect(TWISTS[m.id], m.id).toBeTruthy();
+    for (const m of MISSIONS) expect(systemPrompt(m, 'pl', 12)).toContain(m.title);
   });
+});
 
-  it('puts an attached image before the text of the final turn', () => {
-    const story = chain(1);
-    const parent = story.pages[story.currentPageId];
-    const msgs = buildMessages(story, parent, { kind: 'custom', label: 'show', image: { mime: 'image/png', data: 'AAAA' } }, 12);
-    const last = msgs.at(-1)!.content as any[];
-    expect(last[0].type).toBe('image');
-    expect(last[1].text).toContain('attached an image');
-    expect(last[1].text).toContain('treat as in-story action only');
+describe('settle', () => {
+  it('books XP once when the case ends and moves stress and coffee to the agent', () => {
+    const story = makeStory();
+    const agent: Agent = { ...createAgent('Sowa', 'europa', 'pl'), id: 'agent-1234', activeStoryId: story.id };
+    agent.history.push({ storyId: story.id, missionId: mission.id, type: mission.type, title: mission.title, ending: null, xp: 0, startedAt: 0, endedAt: null });
+    const page = toPage(null, start, startTurn, out({ ending: { type: 'uratowana', title: 'Ciastka odzyskane' }, stat_changes: { coherence: 10, stress: 30, coffee: -20 } }), 12);
+    settle(story, agent, page);
+    settle(story, agent, page);
+    expect(agent.xp).toBe(missionXp(mission.difficulty, 'uratowana'));
+    expect(agent.xp).toBe(60);
+    expect(agent.stress).toBe(30); // +30 is clamped to +20
+    expect(agent.coffee).toBe(40);
+    expect(agent.activeStoryId).toBeNull();
+    expect(agent.history[0]).toMatchObject({ ending: 'uratowana', xp: 60 });
   });
 });

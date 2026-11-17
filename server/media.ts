@@ -12,7 +12,7 @@ function requireKey(provider: 'gemini' | 'openai') {
 }
 
 export const IMAGE_STYLE =
-  'Cozy cartoon storybook illustration in a modern animated-series style: bold clean dark ink outlines, flat cel shading with soft gradients, warm palette of honey wood, cream, candy red, pine green and gold, glowing fairy lights and fireplace light, expressive slapstick poses, comic impact stars and motion lines when something goes wrong. Magic is technological: little robots with pixel-screen faces and fairy wings, glowing runes on gadgets. Square composition with a clear focal character. No text, no letters, no watermark.';
+  'Cozy cartoon storybook illustration in a modern animated-series style: bold clean dark ink outlines, flat cel shading with soft gradients, warm palette of honey wood, cream paper, stamp red, pine green and gold. The world of a magical bureaucratic agency that rescues fairy tales: field agents with clipboards, stacks of forms, rubber stamps, glowing portals, fairy-tale characters behaving slightly absurdly. Expressive slapstick poses, comic motion lines when something goes wrong. Square composition with a clear focal character. No text, no letters, no watermark.';
 
 /** Runs a provider call, turning its failure into a short ProviderError naming the provider. */
 async function viaProvider<T>(provider: string, call: () => Promise<T>): Promise<T> {

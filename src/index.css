@@ -2,9 +2,9 @@
 @import "tailwindcss";
 
 /*
- * Cozy Workshop: a cartoon cabin at night. Dark wood walls lit by a fireplace and fairy lights;
- * everything you read or press sits on cream "sticker" paper with a bold ink outline.
- * Robots with pixel-screen faces and fairy wings = the cyber-magic.
+ * Agency Office: a cartoon records office after hours. Dark wood panelling lit by a desk lamp;
+ * every file, form and button sits on cream "sticker" paper with a bold ink outline and a hard
+ * shadow, like something freshly stamped.
  *
  * Two contexts share the same token names: the wood wall (default) and paper (.card / .paper).
  * Components only use tokens, so they read correctly on either.
@@ -41,15 +41,9 @@
   --color-chaos: #8b63e6;
   --color-dumb: #e0a10f;
   --color-mana: #2f9fd8;
-  /* The four Archetypal forces of the iFairy world. */
-  --color-logos: #3f8fd8;
-  --color-mythos: #d99a12;
-  --color-gnosis: #d0558f;
-  --color-phantasia: #8b63e6;
   --color-danger: #d8423b;
   --color-ok: #3f9f5f;
 
-  --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
 @layer base {
@@ -226,25 +220,6 @@
     paint-order: stroke fill;
   }
 
-  .caret::after {
-    content: '';
-    display: inline-block;
-    width: 0.55ch;
-    height: 1.05em;
-    margin-left: 3px;
-    vertical-align: -0.12em;
-    border-radius: 2px;
-    background: var(--color-ember);
-    animation: blink 0.9s step-end infinite;
-  }
-
-  .skeleton {
-    background: linear-gradient(90deg, var(--color-raised) 0%, var(--color-line) 50%, var(--color-raised) 100%);
-    background-size: 200% 100%;
-    animation: var(--animate-shimmer);
-    border-radius: 10px;
-  }
-
   /* Comic speech bubble with a tail on the left. */
   .bubble {
     position: relative;
@@ -276,24 +251,6 @@
   45% { opacity: 0.75; }
   70% { opacity: 0.95; }
 }
-
-/* The less canon is left, the more reality tears: chromatic split scales with --glitch (0..1). */
-.reality-tear {
-  animation: tear 5s infinite;
-}
-@keyframes tear {
-  0%, 94%, 100% { transform: none; text-shadow: none; }
-  95% { transform: translateX(calc(var(--glitch) * -3px)); text-shadow: calc(var(--glitch) * 3px) 0 #ff5c6c99, calc(var(--glitch) * -3px) 0 #6fb7ff99; }
-  97% { transform: translateX(calc(var(--glitch) * 2px)); }
-}
-
-@keyframes blink { 50% { opacity: 0; } }
-@keyframes shimmer { to { background-position: -200% 0; } }
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-.floating { animation: float 6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -352,27 +309,6 @@
 }
 .btn-shine:hover::after { left: 130%; }
 
-/* Animated rainbow-ember rim when the composer has focus. */
-@property --angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-.ring-flow:focus-within {
-  border-color: transparent;
-  background:
-    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
-    conic-gradient(from var(--angle), var(--color-ember), var(--color-chaos), var(--color-mana), var(--color-sane), var(--color-ember)) border-box;
-  box-shadow: 0 0 32px -8px color-mix(in srgb, var(--color-ember) 45%, transparent);
-  animation: spin-angle 5s linear infinite;
-}
-@keyframes spin-angle { to { --angle: 360deg; } }
-
-/* Chosen card while the next page is being written. */
-.commit-glow {
-  box-shadow: 4px 5px 0 var(--color-outline), 0 0 0 4px var(--k), 0 0 36px 2px var(--k);
-  animation: commit-pulse 1.2s ease-in-out infinite;
-}
-@keyframes commit-pulse {
-  50% { box-shadow: 4px 5px 0 var(--color-outline), 0 0 0 6px var(--k), 0 0 56px 8px var(--k); }
-}
-
 /* Live status dots. */
 .dot-live { position: relative; }
 .dot-live::after {
@@ -384,163 +320,6 @@
   animation: ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 @keyframes ping { 75%, 100% { transform: scale(2.8); opacity: 0; } }
-
-/* Embers drifting up from IGNIS. */
-.ember-spark {
-  position: absolute;
-  bottom: 25%;
-  left: var(--x);
-  width: var(--s, 3px);
-  height: var(--s, 3px);
-  border-radius: 9999px;
-  background: #ffc27a;
-  box-shadow: 0 0 6px 1px var(--color-ember), 0 0 12px 2px #ff7a2f66;
-  opacity: 0;
-  pointer-events: none;
-  animation: rise var(--d, 3s) ease-in var(--delay, 0s) infinite;
-}
-@keyframes rise {
-  0% { transform: translate(0, 0) scale(1); opacity: 0; }
-  12% { opacity: 1; }
-  100% { transform: translate(var(--drift, 0px), calc(var(--h, 110px) * -1)) scale(0.2); opacity: 0; }
-}
-
-/* Sound bars on the read-aloud button. */
-.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
-.eq span { width: 3px; height: 100%; border-radius: 2px; background: currentColor; transform-origin: bottom; animation: eq 0.9s ease-in-out infinite; }
-.eq span:nth-child(2) { animation-delay: -0.3s; }
-.eq span:nth-child(3) { animation-delay: -0.6s; }
-@keyframes eq { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
-
-/* Headline glitch on "unpatched." */
-.glitch-text { position: relative; text-shadow: 0 0 24px #ff7a2f55; }
-.glitch-text::before,
-.glitch-text::after {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-}
-.glitch-text::before { color: var(--color-mana); animation: glitch-a 6s infinite; }
-.glitch-text::after { color: var(--color-chaos); animation: glitch-b 6s infinite; }
-@keyframes glitch-a {
-  0%, 90%, 100% { opacity: 0; transform: none; clip-path: inset(0 0 0 0); }
-  91% { opacity: 0.8; transform: translate(-3px, 1px); clip-path: inset(10% 0 55% 0); }
-  93% { opacity: 0.8; transform: translate(3px, -1px); clip-path: inset(60% 0 8% 0); }
-  95% { opacity: 0; }
-}
-@keyframes glitch-b {
-  0%, 91%, 100% { opacity: 0; transform: none; clip-path: inset(0 0 0 0); }
-  92% { opacity: 0.7; transform: translate(3px, 0); clip-path: inset(35% 0 30% 0); }
-  94% { opacity: 0.7; transform: translate(-2px, 1px); clip-path: inset(5% 0 70% 0); }
-  96% { opacity: 0; }
-}
-
-/* Rotating rune ring while an illustration renders. */
-@keyframes spin-slow { to { transform: rotate(360deg); } }
-.spin-slow { animation: spin-slow 12s linear infinite; }
-.spin-rev { animation: spin-slow 8s linear infinite reverse; }
-
-/* Scanline sweeping over a rendering image. */
-@keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
-.scanline::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 0%, #ff7a2f22 48%, #ffc27a55 50%, #ff7a2f22 52%, transparent 100%);
-  animation: scan 2.4s linear infinite;
-}
-
-/* Slow drift on finished illustrations. */
-@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.06) translate(-1%, -1%); } }
-.kenburns { animation: kenburns 18s ease-in-out 1.4s infinite alternate; }
-
-/* ---------- Cozy workshop decor ---------- */
-
-.bulb {
-  width: 9px;
-  height: 13px;
-  margin-left: -4.5px;
-  border-radius: 50% 50% 45% 45%;
-  background: var(--c);
-  border: 1.5px solid #1a120d;
-  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--c) 70%, transparent), 0 0 24px 6px color-mix(in srgb, var(--c) 30%, transparent);
-  animation: twinkle 2.4s ease-in-out infinite;
-}
-.bulb::before {
-  content: '';
-  position: absolute;
-  top: -5px;
-  left: 1px;
-  width: 4px;
-  height: 5px;
-  border-radius: 1px;
-  background: #3b2c22;
-}
-@keyframes twinkle {
-  0%, 100% { opacity: 1; filter: brightness(1.1); }
-  50% { opacity: 0.45; filter: brightness(0.7); box-shadow: 0 0 4px 1px color-mix(in srgb, var(--c) 40%, transparent); }
-}
-
-.flake {
-  position: absolute;
-  top: -10px;
-  border-radius: 9999px;
-  background: #fff;
-  box-shadow: 0 0 4px #ffffffaa;
-  animation-name: snowfall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-@keyframes snowfall {
-  to { transform: translate(var(--drift), 105vh); }
-}
-
-/* Snow piled on top of a card. Doubled selector so it beats .spotlight::before on the same element. */
-.snowcap { position: relative; }
-.snowcap.snowcap::before {
-  content: '';
-  position: absolute;
-  inset: auto;
-  opacity: 1;
-  border-radius: 0;
-  left: 10px;
-  right: 10px;
-  top: -9px;
-  height: 14px;
-  background:
-    radial-gradient(14px 9px at 12% 70%, #fff 98%, transparent) ,
-    radial-gradient(18px 11px at 32% 60%, #fff 98%, transparent),
-    radial-gradient(12px 8px at 55% 75%, #fff 98%, transparent),
-    radial-gradient(20px 12px at 78% 60%, #fff 98%, transparent),
-    linear-gradient(#fff, #fff) 0 100% / 100% 6px no-repeat;
-  filter: drop-shadow(0 2px 0 #241913) drop-shadow(0 -1px 0 #241913);
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* Hard sticker press for clickable cards. */
-.sticker {
-  border: 3px solid var(--color-outline);
-  border-radius: 18px;
-  box-shadow: 4px 5px 0 var(--color-outline);
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.sticker:not(:disabled):hover { transform: translate(-1px, -3px) rotate(-0.4deg); box-shadow: 6px 9px 0 var(--color-outline); }
-.sticker:not(:disabled):active { transform: translate(3px, 4px); box-shadow: 1px 1px 0 var(--color-outline); }
-
-/* Wooden picture frame around illustrations. */
-.frame {
-  border-radius: 20px;
-  padding: 10px;
-  background:
-    repeating-linear-gradient(45deg, #00000014 0 3px, transparent 3px 9px),
-    linear-gradient(145deg, #a8693f, #6e3f22);
-  border: 3px solid var(--color-outline);
-  box-shadow: 5px 6px 0 var(--color-outline), inset 0 2px 0 #ffffff33;
-}
-.frame > * { border: 3px solid var(--color-outline); border-radius: 12px; }
 
 /* Comic impact: pop in past full size, settle, then vanish. Debris arcs out and falls. */
 .comic-pop { animation: comic-pop 0.95s ease-out both; }
@@ -556,4 +335,11 @@
   0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 1; }
   55% { transform: translate(calc(var(--dx) * 0.8), var(--dy)) rotate(calc(var(--rot) * 0.6)) scale(1); opacity: 1; }
   100% { transform: translate(var(--dx), calc(var(--dy) + 40px)) rotate(var(--rot)) scale(1); opacity: 0; }
+}
+
+/* On cream paper the heavy outline swallows dark letters: keep only a soft offset shadow. */
+.card .toon-title,
+.paper .toon-title {
+  -webkit-text-stroke: 0;
+  text-shadow: 3px 3px 0 var(--color-line);
 }

@@ -1,8 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, CheckCircle2, AlertTriangle, Snowflake } from 'lucide-react';
-import { setSnow, useSnow } from './prefs';
-import { useArt } from './artkit';
+import { X, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -234,34 +232,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** A tiny pixel-screen face, the same language as IGNIS. */
+/** The agency stamp: ARB in an inked seal, tilted like it was applied in a hurry. */
 export function Logo({ onClick }: { onClick?: () => void }) {
-  const mark = useArt().src('brand-mark');
   return (
     <a href="#/" onClick={onClick} className="flex items-center gap-2.5 group">
-      {mark ? (
-        <img src={mark} alt="" className="w-11 h-11 object-contain drop-shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-6 group-hover:scale-110" />
-      ) : (
-      <span className="relative grid place-items-center w-10 h-9 rounded-lg bg-screen border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-6 group-hover:scale-105">
-        <span className="font-pixel text-pixel text-sm leading-none [text-shadow:0_0_6px_var(--color-pixel)] group-hover:hidden">^‿^</span>
-        <span className="font-pixel text-gold text-sm leading-none [text-shadow:0_0_6px_var(--color-gold)] hidden group-hover:inline">&gt;‿&lt;</span>
+      <span className="relative grid place-items-center w-11 h-11 rounded-full bg-candy border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] -rotate-12 transition-transform group-hover:rotate-0 group-hover:scale-105">
+        <span className="absolute inset-[3px] rounded-full border-2 border-dashed border-[#fff6e2]/70" />
+        <span className="font-comic text-[17px] leading-none text-[#fff6e2] tracking-wider">ARB</span>
       </span>
-      )}
       <span className="leading-none">
-        <span className="block font-serif font-bold text-lg tracking-tight">Grimm Protocol</span>
-        <span className="block font-pixel text-[11px] text-faint mt-0.5">IGNIS // OS</span>
+        <span className="block font-serif font-bold text-lg tracking-tight">Agencja Ratowania Bajek</span>
+        <span className="block font-pixel text-[11px] text-faint mt-0.5">Narratoriusz 2.0 · Biuro Interwencji Narracyjnej</span>
       </span>
     </a>
   );
 }
 
 export { cx };
-
-export function SnowToggle() {
-  const on = useSnow();
-  return (
-    <IconButton label={on ? 'Stop the snow' : 'Let it snow'} active={on} onClick={() => setSnow(!on)}>
-      <Snowflake size={18} className={on ? 'spin-slow' : ''} />
-    </IconButton>
-  );
-}

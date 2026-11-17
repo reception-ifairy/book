@@ -2,17 +2,16 @@ import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { getConfig, getKey } from './config';
-import { act, pathTo, startStory, StoryError } from './story/engine';
+import { act, pathTo, settle, startMission, StoryError } from './story/engine';
 import { getStory, readMedia, saveMedia, saveStory } from './story/store';
 import { extFor, mimeFromUrl, generateImage, generateSpeech, IMAGE_STYLE, ModalityUnavailable } from './media';
-import { getTale, TALES } from '../shared/tales';
-import { FORCES, worldOf, type PublicConfig } from '../shared/types';
+import { MINI_GAME_IDS, missionOf, rankOf, SPECIALIZATION_IDS, trainingXp } from '../shared/arb';
+import type { Agent, PublicConfig } from '../shared/types';
 import { ProviderError, type Media } from './providers/types';
-import { publicStory } from './story/public';
-import { ifairyAct, nextChapter, startAdventure } from './story/worlds/ifairy/turn';
-import { getCatalogue, getSnapshot, listCards } from './universe/store';
-import { looksPersonal } from './universe/pii';
-import { showsIFairy, withLock } from './universe/image-lock';
+import { brew, createAgent, getAgent, refresh, saveAgent } from './arb/agents';
+import { assignMission } from './arb/narratomat';
+import { addComment, commentsFor, entryOf, listFor } from './arb/archive';
+import { randomUUID } from 'crypto';
 
 export const api = Router();
 
@@ -21,31 +20,40 @@ const actionLimiter = rateLimit({
   limit: () => getConfig().limits.actionsPerMinute,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { error: 'Too many reality forks per minute. Even IGNIS needs to cool its CPU.' },
+  message: { error: 'Za dużo wniosków na minutę. Nawet Narratoriusz musi ostudzić pieczątkę.' },
 });
+
+/** Cheap, frequent calls (dashboard, coffee, notes, training, comments) get a looser limit. */
+const deskLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Zwolnij. Biurko się przegrzewa.' } });
 
 let imageDay = '';
 let imagesToday = 0;
 function takeImageBudget() {
   const today = new Date().toISOString().slice(0, 10);
   if (today !== imageDay) [imageDay, imagesToday] = [today, 0];
-  if (imagesToday >= getConfig().limits.imagesPerDay) throw new ModalityUnavailable('Daily illustration budget spent.');
+  if (imagesToday >= getConfig().limits.imagesPerDay) throw new ModalityUnavailable('Dzienny budżet ilustracji wyczerpany.');
   imagesToday++;
 }
 
 function fail(res: Response, e: unknown) {
-  if (e instanceof z.ZodError) return res.status(400).json({ error: e.issues[0]?.message ?? 'Invalid request.' });
+  if (e instanceof z.ZodError) return res.status(400).json({ error: e.issues[0]?.message ?? 'Niepoprawny wniosek.' });
   if (e instanceof StoryError) return res.status(e.status).json({ error: e.message });
   if (e instanceof ModalityUnavailable) return res.status(503).json({ error: e.message });
   if (e instanceof ProviderError) return res.status(502).json({ error: e.message });
   console.error(e);
-  return res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown failure.' });
+  return res.status(500).json({ error: e instanceof Error ? e.message : 'Nieznana awaria.' });
 }
 
 const loadStory = (req: Request) => {
   const story = getStory(String(req.params.id));
-  if (!story) throw new StoryError('Timeline not found.', 404);
+  if (!story) throw new StoryError('Nie znaleziono akt sprawy.', 404);
   return story;
+};
+
+const loadAgent = (id: string): Agent => {
+  const agent = getAgent(id);
+  if (!agent) throw new StoryError('Nie znaleziono agenta. Przepustka mogła wygasnąć.', 404);
+  return refresh(agent);
 };
 
 api.get('/config', (_req, res) => {
@@ -54,84 +62,205 @@ api.get('/config', (_req, res) => {
     storyReady: !!getKey('anthropic'),
     image: cfg.image.provider !== 'off' && !!cfg.image.model && !!getKey(cfg.image.provider),
     tts: cfg.tts.provider !== 'browser' && cfg.tts.model && getKey(cfg.tts.provider) ? cfg.tts.provider : 'browser',
-    vision: true,
   };
   res.json(body);
 });
 
-api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, tech, hue, title, tagline }) => ({ id, emoji, tech, hue, title, tagline }))));
+/* ------------------------------------------------------------- Agents */
 
-const ifairyOn = () => getConfig().universe.enabled;
-
-/** Which worlds can be played right now. */
-api.get('/worlds', (_req, res) => {
-  const adventures = ifairyOn() ? listCards().length : 0;
-  res.json([
-    { id: 'grimm', ready: !!getKey('anthropic') },
-    { id: 'ifairy', ready: !!getKey('anthropic') && adventures > 0, adventures, canonVersion: getCatalogue()?.canonVersion ?? null, gm: getConfig().gm.enabled },
-  ]);
+const Register = z.object({
+  codename: z.string().trim().min(2, 'Kryptonim musi mieć co najmniej 2 znaki.').max(24, 'Kryptonim: maksymalnie 24 znaki.'),
+  specialization: z.enum(SPECIALIZATION_IDS),
+  lang: z.enum(['pl', 'en']).default('pl'),
 });
 
-api.get('/adventures', (_req, res) => res.json(ifairyOn() ? listCards() : []));
-
-const AdventureStart = z.object({
-  world: z.literal('ifairy'),
-  adventureId: z.string(),
-  lang: z.enum(['en', 'pl']),
-  heroName: z
-    .string()
-    .trim()
-    .min(1, 'Choose an Architect name.')
-    .max(24)
-    .refine((n) => !looksPersonal(n), 'Use a made-up Architect name, not personal details.'),
-  /** Game Master: the force the player rolls best with. */
-  strongest: z.enum(FORCES).optional(),
-});
-
-const StartBody = z.object({
-  taleId: z.string(),
-  lang: z.enum(['en', 'pl']),
-  heroName: z.string().trim().min(1, 'Name your debugger.').max(24),
-});
-
-api.post('/story', actionLimiter, async (req, res) => {
+api.post('/agent', deskLimiter, (req, res) => {
   try {
-    if (req.body?.world === 'ifairy') {
-      const { adventureId, lang, heroName, strongest } = AdventureStart.parse(req.body);
-      const snap = ifairyOn() ? getSnapshot(adventureId) : null;
-      if (!snap) throw new StoryError('Adventure not found. The Archive may need a sync in the admin panel.', 404);
-      const story = await startAdventure(snap, lang, heroName, strongest);
-      saveStory(story);
-      return res.json(publicStory(story));
+    const { codename, specialization, lang } = Register.parse(req.body);
+    const agent = createAgent(codename, specialization, lang);
+    saveAgent(agent);
+    res.json(agent);
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+api.get('/agent/:id', (req, res) => {
+  try {
+    res.json(loadAgent(String(req.params.id)));
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+api.post('/agent/:id/coffee', deskLimiter, (req, res) => {
+  try {
+    const agent = loadAgent(String(req.params.id));
+    const result = brew(agent);
+    saveAgent(agent);
+    res.json({ agent, result });
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+/** NarratoMat 5000: the current offer stays until it expires; a reroll costs one of today's two. */
+api.post('/agent/:id/narratomat', deskLimiter, (req, res) => {
+  try {
+    const agent = loadAgent(String(req.params.id));
+    const { reroll } = z.object({ reroll: z.boolean().default(false) }).parse(req.body ?? {});
+    if (agent.offer && reroll) {
+      if (agent.rerolls.left < 1) throw new StoryError('Limit „Zaproponuj innego Agenta” na dziś wyczerpany. Wróć jutro albo wypełnij formularz R-2 (w budowie).', 409);
+      agent.rerolls.left--;
+      agent.offer = assignMission(agent);
+    } else if (!agent.offer) {
+      agent.offer = assignMission(agent);
     }
-    const { taleId, lang, heroName } = StartBody.parse(req.body);
-    const story = await startStory(taleId, lang, heroName);
+    saveAgent(agent);
+    res.json(agent);
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+api.post('/agent/:id/mission', actionLimiter, async (req, res) => {
+  try {
+    const agent = loadAgent(String(req.params.id));
+    const { missionId } = z.object({ missionId: z.string() }).parse(req.body);
+    const offer = agent.offer;
+    if (!offer || (offer.missionId !== missionId && !offer.alternatives.includes(missionId))) {
+      throw new StoryError('Tej misji nie ma na Twoim biurku. Poproś NarratoMat o przydział.', 409);
+    }
+    const mission = missionOf(missionId);
+    if (!mission) throw new StoryError('Nieznana misja.', 404);
+    const story = await startMission(agent, mission, agent.lang, offer.paradox);
     saveStory(story);
+    agent.offer = null;
+    agent.activeStoryId = story.id;
+    agent.history.push({ storyId: story.id, missionId, type: mission.type, title: mission.title, ending: null, xp: 0, startedAt: story.createdAt, endedAt: null });
+    agent.history = agent.history.slice(-50);
+    saveAgent(agent);
     res.json(story);
   } catch (e) {
     fail(res, e);
   }
 });
 
-api.get('/story/:id', (req, res) => {
+const Training = z.object({ game: z.enum(MINI_GAME_IDS), score: z.number().min(0).max(100) });
+
+api.post('/agent/:id/training', deskLimiter, (req, res) => {
   try {
-    res.json(publicStory(loadStory(req)));
+    const agent = loadAgent(String(req.params.id));
+    const { game, score } = Training.parse(req.body);
+    const prev = agent.training[game];
+    const rounded = Math.round(score);
+    const newBest = !prev || rounded > prev.best;
+    const xp = trainingXp(rounded, newBest);
+    agent.training[game] = { best: Math.max(prev?.best ?? 0, rounded), plays: (prev?.plays ?? 0) + 1, lastAt: Date.now() };
+    agent.xp += xp;
+    agent.stress = Math.max(0, agent.stress - 3);
+    saveAgent(agent);
+    res.json({ agent, xp, newBest });
   } catch (e) {
     fail(res, e);
   }
 });
 
-const MAX_IMAGE_B64 = 5 * 1024 * 1024 * (4 / 3);
+const Note = z.object({
+  x: z.number().min(0).max(1000),
+  y: z.number().min(0).max(640),
+  text: z.string().trim().min(1, 'Notatka jest pusta.').max(200, 'Notatka: maksymalnie 200 znaków.'),
+});
+
+api.post('/agent/:id/notes', deskLimiter, (req, res) => {
+  try {
+    const agent = loadAgent(String(req.params.id));
+    const note = Note.parse(req.body);
+    if (agent.notes.length >= 30) throw new StoryError('Na mapie zmieści się 30 notatek. Usuń którąś.', 409);
+    agent.notes.push({ id: randomUUID().slice(0, 8), ...note, createdAt: Date.now() });
+    saveAgent(agent);
+    res.json(agent);
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+api.delete('/agent/:id/notes/:noteId', deskLimiter, (req, res) => {
+  try {
+    const agent = loadAgent(String(req.params.id));
+    agent.notes = agent.notes.filter((n) => n.id !== req.params.noteId);
+    saveAgent(agent);
+    res.json(agent);
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+/* ------------------------------------------------------------ Archive */
+
+const clearanceOf = (agentId: unknown) => {
+  const agent = typeof agentId === 'string' ? getAgent(agentId) : undefined;
+  if (!agent) throw new StoryError('Archiwum wymaga przepustki agenta.', 401);
+  return { agent, clearance: rankOf(agent.xp).rank.clearance };
+};
+
+api.get('/archive', (req, res) => {
+  try {
+    res.json(listFor(clearanceOf(req.query.agent).clearance));
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+api.get('/archive/:entryId', (req, res) => {
+  try {
+    const { clearance } = clearanceOf(req.query.agent);
+    const entry = entryOf(String(req.params.entryId));
+    if (!entry) throw new StoryError('Nie ma takiego wpisu. Może trafił do Biblioteki Zapomnianych Opowieści.', 404);
+    if (entry.clearance > clearance) throw new StoryError(`[UTAJNIONE] Ten wpis wymaga poziomu dostępu ${entry.clearance}.`, 403);
+    res.json({ entry, comments: commentsFor(entry.id) });
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+const Comment = z.object({
+  agentId: z.string(),
+  text: z.string().trim().min(3, 'Komentarz jest za krótki.').max(400, 'Komentarz: maksymalnie 400 znaków.'),
+  rating: z.number().int().min(1).max(5),
+  warning: z.boolean().default(false),
+});
+
+api.post('/archive/:entryId/comments', deskLimiter, (req, res) => {
+  try {
+    const { agentId, text, rating, warning } = Comment.parse(req.body);
+    const { agent, clearance } = clearanceOf(agentId);
+    const entry = entryOf(String(req.params.entryId));
+    if (!entry) throw new StoryError('Nie ma takiego wpisu.', 404);
+    if (entry.clearance > clearance) throw new StoryError('Nie możesz komentować wpisu, którego nie wolno Ci czytać.', 403);
+    res.json(addComment(entry.id, agent.codename, text, rating, warning));
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+/* ------------------------------------------------------------ Missions */
+
+api.get('/story/:id', (req, res) => {
+  try {
+    res.json(loadStory(req));
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
 const ActBody = z.object({
   pageId: z.string(),
   choiceId: z.string().optional(),
-  custom: z.string().max(280, 'Keep it under 280 characters, novelist.').optional(),
-  image: z
-    .object({ mime: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']), data: z.string().max(MAX_IMAGE_B64, 'Artifact image is too large (max 5 MB).') })
-    .optional(),
+  custom: z.string().max(280, 'Maksymalnie 280 znaków. To akta, nie powieść.').optional(),
 });
 
-/** Stories with a page being written right now; a second action waits its turn instead of double-spending. */
+/** Cases with a page being written right now; a second move waits instead of double-rolling. */
 const writing = new Set<string>();
 
 api.post('/story/:id/act', actionLimiter, async (req, res) => {
@@ -139,41 +268,18 @@ api.post('/story/:id/act', actionLimiter, async (req, res) => {
   try {
     const story = loadStory(req);
     const { pageId, ...input } = ActBody.parse(req.body);
-    if (writing.has(story.id)) throw new StoryError('IGNIS is still writing the last page. Patience, meatbag.', 409);
+    if (writing.has(story.id)) throw new StoryError('Narratoriusz jeszcze pisze poprzednią stronę.', 409);
     writing.add((locked = story.id));
-    const page = worldOf(story) === 'ifairy' ? await ifairyAct(story, pageId, input) : await act(story, pageId, input);
+    const agent = loadAgent(story.agentId);
+    const page = await act(story, agent, pageId, input);
+    settle(story, agent, page);
     saveStory(story);
-    const pub = publicStory(story);
-    res.json({ page: pub.pages[page.id], story: pub });
+    saveAgent(agent);
+    res.json({ page, story, agent });
   } catch (e) {
     fail(res, e);
   } finally {
     if (locked) writing.delete(locked);
-  }
-});
-
-/** If-AI Saga: start the next act as a new story, carrying bonds, facts and items over. */
-api.post('/story/:id/next-chapter', actionLimiter, async (req, res) => {
-  try {
-    const story = await nextChapter(loadStory(req));
-    saveStory(story);
-    res.json(publicStory(story));
-  } catch (e) {
-    fail(res, e);
-  }
-});
-
-/** Rolling back just moves the cursor; the next action from that page forks a new branch. */
-api.post('/story/:id/goto', (req, res) => {
-  try {
-    const story = loadStory(req);
-    const { pageId } = z.object({ pageId: z.string() }).parse(req.body);
-    if (!story.pages[pageId]) throw new StoryError('Page not found.', 404);
-    story.currentPageId = pageId;
-    saveStory(story);
-    res.json(publicStory(story));
-  } catch (e) {
-    fail(res, e);
   }
 });
 
@@ -183,25 +289,17 @@ api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
   try {
     const story = loadStory(req);
     const page = story.pages[String(req.params.pageId)];
-    if (!page) throw new StoryError('Page not found.', 404);
+    if (!page) throw new StoryError('Nie ma takiej strony.', 404);
     if (page.imageUrl) return res.json({ url: page.imageUrl });
-
-    // iFairy world: a picture with an iFairy in it gets the canon visual lock, or none at all.
-    const snap = worldOf(story) === 'ifairy' ? story.adventure! : null;
-    const locked = !!snap && showsIFairy(`${snap.art}\n${page.imagePrompt}`, snap);
-    if (locked && !snap!.imageLock) throw new StoryError('The canon visual lock for iFairies is not in this adventure, so this scene cannot be illustrated. Re-sync the Archive.', 503);
-    const guard = locked ? { guard: 'ifairy_visual_lock', ref: snap!.imageLock!.ref, canonVersion: snap!.canonVersion } : { guard: 'not_applicable' };
-
     let job = inflight.get(page.id);
     if (!job) {
       takeImageBudget();
-      const setting = snap ? snap.art : getTale(story.taleId)!.art;
-      // The earliest illustrated page on this path anchors how the hero and cast look.
+      const setting = missionOf(story.missionId)?.art ?? '';
+      // The earliest illustrated page on this path anchors how the agent and cast look.
       const anchor = pathTo(story, page.id).find((p) => p.imageUrl && p.id !== page.id);
       const anchorData = anchor?.imageUrl ? readMedia(anchor.imageUrl) : null;
       const refs: Media[] = anchorData ? [{ mime: mimeFromUrl(anchor!.imageUrl!), data: anchorData }] : [];
-      const base = `${IMAGE_STYLE}\nSetting: ${setting}.\nScene: ${page.imagePrompt}${refs.length ? '\nKeep the characters looking exactly as in the reference image.' : ''}`;
-      const prompt = locked ? withLock(snap!.imageLock!.text, base) : base;
+      const prompt = `${IMAGE_STYLE}\nSetting: ${setting}.\nScene: ${page.imagePrompt}${refs.length ? '\nKeep the characters looking exactly as in the reference image.' : ''}`;
       job = generateImage(prompt, refs).then((img) => {
         const url = saveMedia(story.id, `${page.id}.${extFor(img.mime)}`, img.data);
         page.imageUrl = url;
@@ -213,7 +311,7 @@ api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
         imagesToday = Math.max(0, imagesToday - 1); // failed renders don't spend the budget
       });
     }
-    res.json({ url: await job, ...(snap ? { guard } : {}) });
+    res.json({ url: await job });
   } catch (e) {
     fail(res, e);
   }
@@ -223,9 +321,9 @@ api.post('/story/:id/page/:pageId/speech', actionLimiter, async (req, res) => {
   try {
     const story = loadStory(req);
     const page = story.pages[String(req.params.pageId)];
-    if (!page) throw new StoryError('Page not found.', 404);
+    if (!page) throw new StoryError('Nie ma takiej strony.', 404);
     if (page.audioUrl) return res.json({ url: page.audioUrl });
-    const audio = await generateSpeech(`${page.narration.replace(/[*_#`]/g, '')}\n\n${page.quip}`);
+    const audio = await generateSpeech(`${page.narration.replace(/[*_#`]/g, '')}\n\n${page.catNote}`);
     if (!audio) return res.json({ url: null });
     page.audioUrl = saveMedia(story.id, `${page.id}.${extFor(audio.mime)}`, audio.data);
     saveStory(story);

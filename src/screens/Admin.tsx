@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, Dices, FlaskConical, Gauge, Globe2, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
-import { ArtKitPanel } from './ArtKitPanel';
-import { UniversePanel } from './UniversePanel';
+import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { adminApi } from '../api';
-import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
-import { StringLights } from '../components/Effects';
+import { Badge, Button, Logo, StatusDot, cx, useToast } from '../ui';
 
 type Provider = 'anthropic' | 'gemini' | 'openai';
 type Model = { id: string; label?: string; tags: ('text' | 'image' | 'tts')[] };
@@ -27,13 +24,10 @@ const NAV = [
   { id: 'story', label: 'Story engine', icon: BookOpen },
   { id: 'image', label: 'Illustrations', icon: ImageIcon },
   { id: 'tts', label: 'Voice', icon: Mic2 },
-  { id: 'artkit', label: 'Art kit', icon: Palette },
-  { id: 'universe', label: 'iFairy Universe', icon: Globe2 },
-  { id: 'gm', label: 'Game Master', icon: Dices },
   { id: 'limits', label: 'Limits', icon: Gauge },
 ];
 
-const PW_KEY = 'ignis.adminPw';
+const PW_KEY = 'arb.adminPw';
 const session = {
   get: () => {
     try {
@@ -52,7 +46,7 @@ const session = {
 };
 
 /** The editable settings sections; everything else in the config view is status from the server. */
-const ROLE_SECTIONS = ['story', 'image', 'tts', 'limits', 'artkit', 'universe', 'gm'] as const;
+const ROLE_SECTIONS = ['story', 'image', 'tts', 'limits'] as const;
 const sectionsOf = (c: any) => Object.fromEntries(ROLE_SECTIONS.map((k) => [k, c[k]]));
 const rolesOf = (c: any) => c && JSON.stringify(sectionsOf(c));
 
@@ -180,7 +174,7 @@ export function Admin() {
           <p className="text-sm text-muted mt-1 mb-5">{authError}</p>
           <input name="pw" type="password" placeholder="Admin password" className="field" autoFocus />
           <Button variant="primary" className="w-full mt-3">Unlock</Button>
-          <a href="#/" className="block text-center text-sm text-faint hover:text-ink mt-4">Back to the tales</a>
+          <a href="#/" className="block text-center text-sm text-faint hover:text-ink mt-4">Back to the agency</a>
         </form>
       </div>
     );
@@ -226,17 +220,14 @@ export function Admin() {
           <span className="text-faint">/</span>
           <span className="font-serif font-semibold">Sysadmin</span>
           <div className="ml-auto flex items-center gap-2">
-            <SnowToggle />
-            <a href="#/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold"><ArrowLeft size={16} /> Back to tales</a>
+            <a href="#/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold"><ArrowLeft size={16} /> Back to the agency</a>
           </div>
         </div>
       </header>
-      {/* Hung under the bar but scrolls away with the page, so it never covers what you're reading. */}
-      <div className="relative h-0 z-20"><StringLights count={24} /></div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8">
         <h1 className="toon-title text-4xl sm:text-5xl text-ink">Console</h1>
-        <p className="text-muted mt-3">Wire up the models behind IGNIS. Claude writes the story; Gemini or OpenAI paint and speak.</p>
+        <p className="text-muted mt-3">Wire up the models behind Narratoriusz. Claude writes the case files; Gemini or OpenAI paint and speak.</p>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
           {overview.map((o) => (
@@ -357,7 +348,7 @@ export function Admin() {
               </div>
             </Section>
 
-            <Section id="image" title="Illustrations" desc="Each page gets an image from Claude's brief, drawn in the cozy cartoon-workshop style.">
+            <Section id="image" title="Illustrations" desc="Each page gets an image from Claude's brief, drawn in the cozy cartoon agency style.">
               <div className="card p-5 space-y-5">
                 <Field label="Provider">
                   <ProviderPicker value={cfg.image.provider} onChange={(v) => set('image', 'provider', v)} options={[['gemini', 'Gemini'], ['openai', 'OpenAI'], ['off', 'Off']]} />
@@ -400,56 +391,7 @@ export function Admin() {
               </div>
             </Section>
 
-            <Section id="artkit" title="Art kit" desc="Claude art-directs the whole cyber-magic look, OpenAI paints it: backdrop, IGNIS, tale covers, choice icons, ending badges, logo and share card.">
-              <ArtKitPanel
-                client={client}
-                settings={cfg.artkit}
-                onSettings={(field, value) => set('artkit', field, value)}
-                imageModels={options('openai', 'image')}
-                dirty={dirty}
-              />
-            </Section>
-
-            <Section id="universe" title="iFairy Universe" desc="The second world: adventures and live canon from the iFairy Universe lore API. Stories pin the adventure they start with, so syncing never changes a running story.">
-              <UniversePanel
-                client={client}
-                settings={cfg.universe}
-                keyInfo={cfg.universeKey}
-                onSettings={(field, value) => set('universe', field, value)}
-                onConfig={keepEdits}
-                dirty={dirty}
-              />
-            </Section>
-
-            <Section id="gm" title="Game Master" desc="For the iFairy world: dice and rules run as tools in code, the model only chooses and narrates. Applies to stories started while it is on.">
-              <div className="card p-5 space-y-5">
-                <Field label="Game Master" help="Stories keep the mode they started with.">
-                  <ProviderPicker value={cfg.gm.enabled ? 'on' : 'off'} onChange={(v) => set('gm', 'enabled', v === 'on')} options={[['on', 'On'], ['off', 'Off']]} />
-                </Field>
-                <Field label="Model" help="Empty uses the story engine's model.">
-                  <ModelInput value={cfg.gm.model} onChange={(v) => set('gm', 'model', v)} models={options('anthropic', 'text')} id="gm-models" />
-                </Field>
-                <Field label="Effort">
-                  <select value={cfg.gm.effort} onChange={(e) => set('gm', 'effort', e.target.value)} className="field">
-                    <option value="low">Low · fastest turns</option>
-                    <option value="medium">Medium · balanced</option>
-                    <option value="high">High · smartest, slowest</option>
-                  </select>
-                </Field>
-                <Field label="Tool rounds per page" help="The last round must answer without tools.">
-                  <input type="number" min={1} max={6} value={cfg.gm.maxRounds} onChange={(e) => set('gm', 'maxRounds', Number(e.target.value))} className="field w-28" />
-                </Field>
-                <Field label="Time budget (s)" help="Per page; keep it under the proxy timeout.">
-                  <input type="number" min={20} max={110} value={Math.round(cfg.gm.turnBudgetMs / 1000)} onChange={(e) => set('gm', 'turnBudgetMs', Number(e.target.value) * 1000)} className="field w-28" />
-                </Field>
-                <Field label="Content review" help="Claude Haiku 5.5 reads finished pages against the 13+ profile.">
-                  <ProviderPicker value={cfg.gm.outputCheck} onChange={(v) => set('gm', 'outputCheck', v)} options={[['custom', 'Own words'], ['all', 'Every page'], ['off', 'Off']]} />
-                </Field>
-                <Probe role="gm" state={probes.gm} onRun={() => probe('gm')} dirty={dirty} />
-              </div>
-            </Section>
-
-            <Section id="limits" title="Limits" desc="Protect your API bill from enthusiastic timeline-breakers.">
+            <Section id="limits" title="Limits" desc="Protect your API bill from overly enthusiastic field agents.">
               <div className="card p-5 space-y-5">
                 <Field label="Actions per minute" help="Per visitor: new pages, illustrations and voice.">
                   <input type="number" min={1} value={cfg.limits.actionsPerMinute} onChange={(e) => set('limits', 'actionsPerMinute', Number(e.target.value))} className="field w-28" />

@@ -3,23 +3,22 @@ import type { AddressInfo } from 'net';
 
 /** A page as the story model would return it; tests override fields per call. */
 export const samplePage = (over: Record<string, unknown> = {}) => ({
-  narration: 'You step onto the *encrypted path*.',
-  ignis_quip: 'Bold. Wrong, but bold.',
-  mood: 'smug',
+  narration: 'Wchodzisz do *zaczarowanego lasu* z formularzem B-7 pod pachą.',
+  cat_note: '[MRUCZ-TERM, pewność 40%] „Las jest mokry. Nie lubię.”',
+  cat_mood: 'zniesmaczony',
   choices: [
-    { label: 'Stay on the path', kind: 'sane' },
-    { label: 'Hack the wolf', kind: 'chaos' },
-    { label: 'Give the wolf your password', kind: 'dumb' },
-    { label: 'sudo rm -rf /wolf', kind: 'sudo' },
+    { label: 'Wypełnij protokół C-0', kind: 'procedura', risky: false },
+    { label: 'Zaskocz wilka pytaniem o terapię', kind: 'improwizacja', risky: true },
+    { label: 'Zaproponuj Kapturkowi ugodę', kind: 'dyplomacja', risky: true },
+    { label: 'Przystaw pieczątkę na koszyku', kind: 'pieczatka', risky: false },
   ],
-  stat_changes: { chaos: 10, karma: 0, mana: 0 },
-  canon_delta: -5,
-  inventory_add: ['firewall.spell'],
-  inventory_remove: [],
+  stat_changes: { coherence: 5, stress: 4, coffee: -3 },
+  evidence_add: ['okruszek ciastka'],
+  evidence_remove: [],
+  form_filed: null,
   ending: null,
-  image_prompt: 'A courier in a red hood',
-  story_summary: 'The courier set off.',
-  artifact_description: null,
+  image_prompt: 'A field agent with a clipboard in an enchanted forest',
+  story_summary: 'The agent entered the forest.',
   ...over,
 });
 
@@ -27,11 +26,6 @@ export const samplePage = (over: Record<string, unknown> = {}) => ({
 export interface RawTurn {
   __raw: { content: Record<string, unknown>[]; stop_reason: string };
 }
-let toolSeq = 0;
-/** One assistant turn that calls tools (several calls = parallel tool use). */
-export const toolUse = (...calls: [name: string, input: Record<string, unknown>][]): RawTurn => ({
-  __raw: { content: calls.map(([name, input]) => ({ type: 'tool_use', id: `toolu_${++toolSeq}`, name, input })), stop_reason: 'tool_use' },
-});
 export const refusal = (): RawTurn => ({ __raw: { content: [{ type: 'text', text: '' }], stop_reason: 'refusal' } });
 
 /**

@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ignis-config-'));
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arb-config-'));
 process.env.DATA_DIR = dir;
 process.env.OPENAI_API_KEY = 'sk-env-openai-123456';
 delete process.env.ANTHROPIC_API_KEY;

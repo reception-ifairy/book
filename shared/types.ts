@@ -1,125 +1,160 @@
-import type { AdventureCard, AdventureSnapshot } from './universe';
-import type { GmState, PageGm } from './gm';
+import type { ChoiceKind, EndingType, MiniGameId, MissionTypeId, SpecializationId } from './arb';
 
-export type Lang = 'en' | 'pl';
-export type Mood = 'neutral' | 'smug' | 'annoyed' | 'panic' | 'sincere' | 'hyped';
-/** Grimm Protocol (IGNIS, 16+) or the iFairy Universe (canon narrator, 13+). */
-export type World = 'grimm' | 'ifairy';
-/** The four Archetypal forces of the iFairy canon; iFairy choices are tied to one each. */
-export const FORCES = ['logos', 'mythos', 'gnosis', 'phantasia'] as const;
-export type Force = (typeof FORCES)[number];
-export type ChoiceKind = 'sane' | 'chaos' | 'dumb' | 'sudo' | Force;
-export type EndingType = 'canon' | 'subverted' | 'cursed' | 'secret' | 'death';
+export type Lang = 'pl' | 'en';
 
-export const SUDO_MANA_COST = 20;
+/** How the Deputy Director (the Cat) feels about the page, as translated by Mrucz-Term. */
+export type CatMood = 'mruczy' | 'drzemie' | 'zaciekawiony' | 'syczy' | 'zniesmaczony' | 'dumny';
 
 export interface Choice {
   id: string;
   label: string;
   kind: ChoiceKind;
-  /** iFairy Game Master: a risky option is rolled by the rules before the narrator writes the page. */
-  risk?: 'safe' | 'risky';
+  /** A risky choice is settled by a K20 test in code before the narrator writes the next page. */
+  risky: boolean;
 }
 
+/** Mission meters. Coherence is the tale's health; stress and coffee are the agent's. */
 export interface Stats {
-  chaos: number; // 0..100
-  karma: number; // -100..100
-  mana: number; // 0..100
+  /** Wskaźnik Spójności Fabularnej, 0..100. The mission is about getting it back up. */
+  coherence: number;
+  /** 0..100. Above 70 the agent rolls K20 tests with −2. */
+  stress: number;
+  /** 0..100. At 0 the agent rolls with −1. */
+  coffee: number;
+  /** Pieczątki DKSF: each one turns a choice into an approved, unrolled success. */
+  stamps: number;
+}
+
+export type RollOutcome = 'krytyczny-sukces' | 'sukces' | 'czesciowy' | 'porazka' | 'krytyczna-porazka';
+
+/** A K20 test resolved in code: the narrator only narrates it. */
+export interface RollResult {
+  die: number;
+  modifier: number;
+  total: number;
+  dc: number;
+  outcome: RollOutcome;
+  /** Where the modifier came from, shown to the player. */
+  parts: { label: string; value: number }[];
 }
 
 export interface Page {
   id: string;
   parentId: string | null;
   depth: number;
-  /** What the player did to reach this page (null for the first page). */
-  action: { kind: ChoiceKind | 'custom' | 'boot'; label: string } | null;
+  action: { kind: ChoiceKind | 'custom'; label: string } | null;
+  roll: RollResult | null;
   narration: string;
-  quip: string;
-  mood: Mood;
+  /** The Cat's comment, translated by Mrucz-Term. */
+  catNote: string;
+  catMood: CatMood;
   choices: Choice[];
   ending: { type: EndingType; title: string } | null;
+  /** Evidence, forms and artifacts the agent carries. */
+  evidence: string[];
+  /** A form the narrator says was filed on this page, if any. */
+  formFiled: string | null;
+  stats: Stats;
   imagePrompt: string;
   imageUrl: string | null;
   audioUrl: string | null;
-  stats: Stats;
-  canon: number; // 0..100, how intact the original fairy tale still is
-  inventory: string[];
   summary: string;
   createdAt: number;
-  /** iFairy world: canon passages the narrator cited on this page. */
-  lore?: LoreRef[];
-  /** iFairy world: the narrator's invitation for option C, the player's own words. */
-  freeForm?: string;
-  /** iFairy world: where the page happens and who is in it, used to pick the next lore lookup. */
-  scene?: { location: string; present: string[] };
-  /** iFairy world: what the input screen noticed in the player's own words. */
-  safety?: { privacy?: boolean; distress?: boolean };
-  /** iFairy Game Master: this turn's rolls, events and the resulting state. */
-  gm?: PageGm;
 }
 
-/** A canon passage from the iFairy Universe, cited by its REF. */
-export interface LoreRef {
-  ref: string;
-  title: string;
-  excerpt: string;
-}
-
+/** One mission run: a case file the narrator writes page by page. */
 export interface Story {
   id: string;
-  taleId: string;
+  agentId: string;
+  missionId: string;
   lang: Lang;
-  heroName: string;
-  timeline: string;
+  codename: string;
+  /** Case number shown on the file, e.g. "ARB/2026/B-7/0412". */
+  caseNo: string;
+  /** Assigned through a NarratoMat paradox (natural 1): harder tests. */
+  paradox?: boolean;
   rootPageId: string;
   currentPageId: string;
   pages: Record<string, Page>;
+  /** Set once the ending's XP has been booked on the agent. */
+  settled?: { xp: number; at: number };
   createdAt: number;
   updatedAt: number;
-  /** Absent on stories from before v4.3, which are all Grimm Protocol. */
-  world?: World;
-  /** iFairy world: the adventure as synced from the Universe, pinned at start so a re-sync never changes a running story. */
-  adventure?: AdventureSnapshot;
-  /** iFairy world: pinned at start so the system prompt stays the same for the whole story. */
-  maxDepth?: number;
-  /** iFairy world: played with the Game Master (dice, events); pinned at start. */
-  gm?: boolean;
-  /** Server only: the dice seed. Never sent to the browser. */
-  gmSecret?: { seed: string };
-  /** sha256 of the dice seed, shown to players so the dice can be audited afterwards. */
-  gmCommit?: string;
-  /** Server only: the Game Master state the first page started from (quest, clocks, carried-over bonds). */
-  gmStart?: GmState;
-  /** The If-AI Saga as a campaign: the chapter this story continues. */
-  campaign?: { fromStoryId: string; chapter: number };
 }
 
-/** A story as the browser sees it: the pinned adventure is reduced to its card, the dice seed removed. */
-export type PublicStory = Omit<Story, 'adventure' | 'gmSecret' | 'gmStart'> & { adventure?: AdventureCard };
+export interface MissionRecord {
+  storyId: string;
+  missionId: string;
+  type: MissionTypeId;
+  title: string;
+  ending: EndingType | null;
+  xp: number;
+  startedAt: number;
+  endedAt: number | null;
+}
 
-export const worldOf = (story: Pick<Story, 'world'>): World => story.world ?? 'grimm';
+/** What NarratoMat 5000 put on the agent's desk. */
+export interface MissionOffer {
+  missionId: string;
+  /** With a natural 20 the agent may pick from these instead. */
+  alternatives: string[];
+  roll: number;
+  /** Scores of the top candidates, so the printout can show the system's reasoning. */
+  reasons: string[];
+  /** A natural 1 opens a paradox: the mission is harder than the file says. */
+  paradox: boolean;
+  createdAt: number;
+  expiresAt: number;
+}
 
-export interface Tale {
+export interface MapNote {
   id: string;
-  emoji: string;
-  /** The tech concept the tale is built on, shown as a tag. */
-  tech: string;
-  /** Base hue (0-360) for the generated cover. */
-  hue: number;
-  title: Record<Lang, string>;
-  tagline: Record<Lang, string>;
-  /** The cyber-magic twist, fed to the story model. */
-  twist: string;
-  /** Canon beats of the original, used as a loose skeleton. */
-  beats: string[];
-  cast: string[];
-  /** Visual anchor added to every illustration prompt for this tale. */
-  art: string;
+  x: number;
+  y: number;
+  text: string;
+  createdAt: number;
+}
+
+export interface TrainingRecord {
+  best: number;
+  plays: number;
+  lastAt: number;
+}
+
+export interface Agent {
+  id: string;
+  codename: string;
+  specialization: SpecializationId;
+  lang: Lang;
+  xp: number;
+  /** Coffee is stored with its timestamp and drains in real time; read it through coffeeNow(). */
+  coffee: number;
+  coffeeAt: number;
+  stress: number;
+  /** Stress eases off 1 point per 15 minutes away from missions, counted from here. */
+  stressAt: number;
+  history: MissionRecord[];
+  training: Partial<Record<MiniGameId, TrainingRecord>>;
+  offer: MissionOffer | null;
+  /** "Zaproponuj innego Agenta": rerolls left today. */
+  rerolls: { day: string; left: number };
+  notes: MapNote[];
+  /** The mission in progress, if any. */
+  activeStoryId: string | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface PublicConfig {
   storyReady: boolean;
   image: boolean;
   tts: 'browser' | 'openai' | 'gemini';
-  vision: boolean;
+}
+
+/** What the coffee machine in the Dark Corridor did this time. */
+export interface CoffeeResult {
+  kind: 'kawa' | 'espresso' | 'lawa' | 'herbata' | 'telepatia' | 'pusto';
+  text: string;
+  coffee: number;
+  stress: number;
 }

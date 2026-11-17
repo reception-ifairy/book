@@ -1,6 +1,8 @@
 {
-  "name": "IGNIS // OS: Grimm Protocol",
-  "description": "A choose-your-own-story game where a sarcastic cyber-grimoire retells classic fairy tales as buggy legacy code. Claude writes the story structure; Gemini or OpenAI render illustrations and narration.",
-  "requestFramePermissions": ["microphone"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "ARB · Narratoriusz (Agencja Ratowania Bajek)",
+  "description": "Gra, w której jesteś agentem Agencji Ratowania Bajek. NarratoMat 5000 przydziela misje rzutem K20, Claude prowadzi akta sprawy, a Gemini lub OpenAI ilustrują i czytają je na głos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

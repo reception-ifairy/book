@@ -1,16 +1,6 @@
-import type { Page, PublicConfig, PublicStory, Tale, World } from '../shared/types';
-import type { ArtKitState, ArtSlot } from '../shared/artkit';
-import type { AdventureCard } from '../shared/universe';
-
-export interface ArtKitView {
-  slots: ArtSlot[];
-  kit: ArtKitState;
-  settings: { model: string; quality: 'low' | 'medium' | 'high' };
-  ready: { anthropic: boolean; openai: boolean };
-}
-
-export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
-export type WorldInfo = { id: World; ready: boolean; adventures?: number; canonVersion?: string | null; gm?: boolean };
+import type { Agent, CoffeeResult, MapNote, Page, PublicConfig, Story } from '../shared/types';
+import type { MiniGameId, SpecializationId } from '../shared/arb';
+import type { ArchiveComment, ArchiveEntryView, ArchiveListItem } from '../shared/archive';
 
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const res = await fetch(url, {
@@ -19,25 +9,41 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status}).`);
+  if (!res.ok) throw new Error(data.error || `Żądanie nie powiodło się (${res.status}).`);
   return data as T;
+}
+
+export interface TrainingResult {
+  agent: Agent;
+  xp: number;
+  newBest: boolean;
 }
 
 export const api = {
   config: () => call<PublicConfig>('GET', '/api/config'),
-  tales: () => call<TaleCard[]>('GET', '/api/tales'),
-  worlds: () => call<WorldInfo[]>('GET', '/api/worlds'),
-  adventures: () => call<AdventureCard[]>('GET', '/api/adventures'),
-  start: (taleId: string, lang: string, heroName: string) => call<PublicStory>('POST', '/api/story', { taleId, lang, heroName }),
-  startAdventure: (adventureId: string, lang: string, heroName: string, strongest?: string) =>
-    call<PublicStory>('POST', '/api/story', { world: 'ifairy', adventureId, lang, heroName, strongest }),
-  story: (id: string) => call<PublicStory>('GET', `/api/story/${id}`),
-  act: (id: string, body: { pageId: string; choiceId?: string; custom?: string; image?: { mime: string; data: string } }) =>
-    call<{ page: Page; story: PublicStory }>('POST', `/api/story/${id}/act`, body),
-  goto: (id: string, pageId: string) => call<PublicStory>('POST', `/api/story/${id}/goto`, { pageId }),
-  nextChapter: (id: string) => call<PublicStory>('POST', `/api/story/${id}/next-chapter`, {}),
+
+  /* Agent */
+  register: (codename: string, specialization: SpecializationId, lang: 'pl' | 'en') => call<Agent>('POST', '/api/agent', { codename, specialization, lang }),
+  agent: (id: string) => call<Agent>('GET', `/api/agent/${id}`),
+  coffee: (id: string) => call<{ agent: Agent; result: CoffeeResult }>('POST', `/api/agent/${id}/coffee`, {}),
+  /** NarratoMat 5000: returns the current offer, or rolls a new one. `reroll` = "Zaproponuj innego Agenta". */
+  narratomat: (id: string, reroll = false) => call<Agent>('POST', `/api/agent/${id}/narratomat`, { reroll }),
+  accept: (id: string, missionId: string) => call<Story>('POST', `/api/agent/${id}/mission`, { missionId }),
+  training: (id: string, game: MiniGameId, score: number) => call<TrainingResult>('POST', `/api/agent/${id}/training`, { game, score }),
+  addNote: (id: string, note: { x: number; y: number; text: string }) => call<Agent>('POST', `/api/agent/${id}/notes`, note),
+  removeNote: (id: string, noteId: string) => call<Agent>('DELETE', `/api/agent/${id}/notes/${noteId}`),
+
+  /* Missions */
+  story: (id: string) => call<Story>('GET', `/api/story/${id}`),
+  act: (id: string, body: { pageId: string; choiceId?: string; custom?: string }) => call<{ page: Page; story: Story; agent: Agent }>('POST', `/api/story/${id}/act`, body),
   image: (id: string, pageId: string) => call<{ url: string }>('POST', `/api/story/${id}/page/${pageId}/image`, {}),
   speech: (id: string, pageId: string) => call<{ url: string | null }>('POST', `/api/story/${id}/page/${pageId}/speech`, {}),
+
+  /* Archive (clearance comes from the agent's rank on the server) */
+  archive: (agentId: string) => call<ArchiveListItem[]>('GET', `/api/archive?agent=${encodeURIComponent(agentId)}`),
+  entry: (agentId: string, entryId: string) => call<ArchiveEntryView>('GET', `/api/archive/${entryId}?agent=${encodeURIComponent(agentId)}`),
+  comment: (agentId: string, entryId: string, body: { text: string; rating: number; warning: boolean }) =>
+    call<ArchiveComment>('POST', `/api/archive/${entryId}/comments`, { agentId, ...body }),
 };
 
 export const adminApi = (password: string) => {
@@ -47,61 +53,7 @@ export const adminApi = (password: string) => {
     save: (body: unknown) => call<any>('PUT', '/api/admin/config', body, h),
     models: (provider: string, key?: string) => call<any>('POST', `/api/admin/providers/${provider}/models`, { key }, h),
     probe: (role: string) => call<any>('POST', `/api/admin/probe/${role}`, {}, h),
-    audit: (storyId: string) => call<any>('GET', `/api/admin/story/${storyId}/audit`, undefined, h),
-    artkit: {
-      get: () => call<ArtKitView>('GET', '/api/admin/artkit', undefined, h),
-      plan: (notes: string) => call<ArtKitView>('POST', '/api/admin/artkit/plan', { notes }, h),
-      edit: (slot: string, prompt: string, alt: string) => call<ArtKitView>('PUT', `/api/admin/artkit/plan/${slot}`, { prompt, alt }, h),
-      generate: (slots?: string[]) => call<ArtKitView>('POST', '/api/admin/artkit/generate', { slots }, h),
-      publish: () => call<ArtKitView>('POST', '/api/admin/artkit/publish', {}, h),
-      unpublish: () => call<ArtKitView>('DELETE', '/api/admin/artkit/published', undefined, h),
-    },
-    universe: {
-      status: () => call<any>('GET', '/api/admin/universe/status', undefined, h),
-      test: (target: { url?: string; key?: string; grant?: string }) => call<any>('POST', '/api/admin/universe/test', target, h),
-      sync: () => call<any>('POST', '/api/admin/universe/sync', {}, h),
-      prompt: (id: string, lang: string) => call<{ prompt: string; version: string; status: string }>('GET', `/api/admin/universe/adventures/${id}/prompt?lang=${lang}`, undefined, h),
-    },
   };
 };
 
-/** Runs this browser has started, so the home screen can offer to resume them. */
-export interface SavedRun {
-  id: string;
-  taleId: string;
-  heroName: string;
-  updatedAt: number;
-  pages: number;
-  ending: string | null;
-  /** iFairy runs carry their own card, since the adventure list depends on the last sync. */
-  world?: World;
-  title?: Record<string, string>;
-  emoji?: string;
-  hue?: number;
-}
-const RUNS_KEY = 'ignis.runs';
-export function loadRuns(): SavedRun[] {
-  try {
-    return JSON.parse(localStorage.getItem(RUNS_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-export function rememberRun(story: PublicStory) {
-  try {
-    const runs = loadRuns().filter((r) => r.id !== story.id);
-    const current = story.pages[story.currentPageId];
-    runs.unshift({
-      id: story.id,
-      taleId: story.taleId,
-      heroName: story.heroName,
-      updatedAt: story.updatedAt,
-      pages: Object.keys(story.pages).length,
-      ending: current?.ending?.title ?? null,
-      ...(story.adventure ? { world: story.world, title: story.adventure.title, emoji: story.adventure.emoji, hue: story.adventure.hue } : {}),
-    });
-    localStorage.setItem(RUNS_KEY, JSON.stringify(runs.slice(0, 20)));
-  } catch {
-    /* storage unavailable: resuming is a convenience only */
-  }
-}
+export type { MapNote };

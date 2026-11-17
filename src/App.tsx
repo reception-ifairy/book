@@ -1,25 +1,46 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Home } from './screens/Home';
 import { ToastProvider } from './ui';
-import { Snow } from './components/Effects';
-import { useSnow } from './prefs';
+import { useAgent } from './agent';
+import { Dashboard } from './screens/Dashboard';
+import { Recruitment } from './screens/Recruitment';
 
-// Players never download the admin console, and the reader loads only when a story opens.
-const StoryScreen = lazy(() => import('./screens/Story').then((m) => ({ default: m.StoryScreen })));
+// Each area loads on demand; players never download the admin console.
+const MissionScreen = lazy(() => import('./screens/Mission').then((m) => ({ default: m.MissionScreen })));
+const Training = lazy(() => import('./screens/Training').then((m) => ({ default: m.Training })));
+const MapScreen = lazy(() => import('./screens/MapScreen').then((m) => ({ default: m.MapScreen })));
+const ArchiveScreen = lazy(() => import('./screens/ArchiveScreen').then((m) => ({ default: m.ArchiveScreen })));
 const Admin = lazy(() => import('./screens/Admin').then((m) => ({ default: m.Admin })));
 
-const readRoute = () => window.location.hash.replace(/^#\/?/, '').split('/');
+const readRoute = () => window.location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
 
 export const navigate = (path: string) => {
   window.location.hash = `/${path}`;
 };
 
-function Loading() {
+function Loading({ text = 'Wypełnianie formularza B-7…' }: { text?: string }) {
   return (
     <div className="min-h-screen grid place-items-center">
-      <span className="eyebrow animate-pulse">Opening the grimoire…</span>
+      <span className="eyebrow animate-pulse">{text}</span>
     </div>
   );
+}
+
+function AgentRoutes({ screen, id }: { screen: string; id?: string }) {
+  const { agent, registered, failed } = useAgent();
+  if (!registered || failed) return <Recruitment lost={failed} />;
+  if (!agent) return <Loading text="Weryfikacja przepustki…" />;
+  switch (screen) {
+    case 'misja':
+      return id ? <MissionScreen key={id} storyId={id} /> : <Dashboard />;
+    case 'szkolenia':
+      return <Training game={id} />;
+    case 'mapa':
+      return <MapScreen focus={id} />;
+    case 'archiwum':
+      return <ArchiveScreen entryId={id} />;
+    default:
+      return <Dashboard />;
+  }
 }
 
 export default function App() {
@@ -34,13 +55,9 @@ export default function App() {
   }, []);
 
   const [screen, id] = route;
-  const snow = useSnow();
   return (
     <ToastProvider>
-      {snow && <Snow />}
-      <Suspense fallback={<Loading />}>
-        {screen === 'admin' ? <Admin /> : screen === 'story' && id ? <StoryScreen key={id} storyId={id} /> : <Home />}
-      </Suspense>
+      <Suspense fallback={<Loading />}>{screen === 'admin' ? <Admin /> : <AgentRoutes screen={screen} id={id} />}</Suspense>
     </ToastProvider>
   );
 }
