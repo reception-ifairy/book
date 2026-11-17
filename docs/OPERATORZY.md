@@ -25,6 +25,9 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Cache:** prompt systemowy ma `cache_control: ephemeral`. Jest stały dla pary baśń + język, więc kolejne tury płacą za niego taniej.
 - **Kontekst:** ostatnie 6 stron dosłownie, starsze jako streszczenie, do tego blok `STATE` (głębokość, statystyki, kanon, ekwipunek) i akcja gracza.
 - **Ton i zasady** (`prompts.ts`):
+  - **kim jest Ignis** (sekcja „Who you are"): latający robocik cybermagii wielkości dłoni — ciało ze skórzanej księgi, głowa to ekranik CRT z pikselową twarzą, przezroczyste skrzydła, płomyk zamiast anteny. Gadżet, nie wróżka: bootuje się, laguje i przegrzewa. Ten sam wygląd, co w kanonie Art Kitu i w `SVGCharacter`;
+  - **rodzaj gramatyczny:** po polsku Ignis mówi o sobie zawsze w rodzaju męskim („zrobiłem", „jestem gotowy"), bo „księga" i „wróżka" ciągnęły narratora w żeńskie formy. Nie przesądza też płci gracza;
+  - **running gag:** zapytany o to, czy jest chłopcem, czy dziewczynką, odpowiada tylko tyle, że czuje się kwiatkiem — bez tłumaczenia i z powrotem do baśni;
   - widownia od 12 lat: humor jak z dobrego familijnego filmu animowanego (absurd, kalambury, slapstick, proste żarty o grach i technice), Ignis droczy się z graczem po koleżeńsku, nigdy złośliwie; żadnych nazw ani postaci z istniejących serii;
   - PG: tylko kreskówkowe zagrożenie, nikt nie ginie na stronie (złoczyńcy zostają przechytrzeni, uwięzieni albo przegonieni), bez przekleństw (także bez `#$%@!`), bez romansu, używek i żartów z wyglądu;
   - zakończenie `death` to kreskówkowe „game over” z podpowiedzią, że można się cofnąć;

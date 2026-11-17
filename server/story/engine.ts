@@ -256,7 +256,7 @@ export async function probeStoryModel(): Promise<{ text: string; model: string; 
       max_tokens: 2000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      messages: [{ role: 'user', content: 'You are IGNIS // OS, a sarcastic cyber-grimoire. Announce in one sentence that the story engine is online.' }],
+      messages: [{ role: 'user', content: 'You are IGNIS // OS, a cheeky little cyber-magic robot. Announce in one sentence that the story engine is online.' }],
       output_config: { effort: 'low', format: betaZodOutputFormat(z.object({ line: z.string() })) },
     });
     return { text: res.parsed_output?.line ?? '(empty)', model: res.model, ms: Date.now() - t0 };

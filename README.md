@@ -6,7 +6,9 @@ Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 l
 
 **Na żywo:** https://demo.ifairy.co.uk/ · PM2 `demo-ifairy-book` na porcie 8803 za nginx · dane w `/var/www/demo.ifairy.co.uk/data/` (konfiguracja, klucze, historie).
 
-**Wersja 6.1.0:** jeden świat, Grimm Protocol (5 baśni, narrator Ignis, 12+). Świat iFairy Universe, AI Game Master i połączenie z API Universe zostały usunięte w 6.0.0. Dokładne zapytania do Claude'a pilnuje test `grimm-golden`.
+**Wersja 6.1.1:** jeden świat, Grimm Protocol (5 baśni, narrator Ignis, 12+). Świat iFairy Universe, AI Game Master i połączenie z API Universe zostały usunięte w 6.0.0. Dokładne zapytania do Claude'a pilnuje test `grimm-golden`.
+
+**Co nowego w 6.1.1:** Ignis to **cybermagiczny robocik ze skrzydłami**, a nie dawna wróżka — po polsku mówi o sobie w rodzaju męskim („zrobiłem", „jestem gotowy"), a zapytany, czy jest chłopcem, czy dziewczynką, odpowiada niezmiennie, że **czuje się kwiatkiem**.
 
 **Co nowego w 6.1.0:** pod każdą stroną jest zwijany **panel DEBUG** (klawisz `D`) — Ignis wychodzi na chwilę z baśni i tłumaczy krok po kroku prawdziwą technologię, na której ta strona stoi (atak MITM, DDoS, ciasteczka śledzące, wygasła sesja, trojan). Obowiązuje też zasada domu **„jak wyjaśnisz, to zaistnieje”**: własny ruch z uzasadnieniem działa mocniej niż ruch bez niego.
 

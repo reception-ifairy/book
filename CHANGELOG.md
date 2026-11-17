@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.1.1 · Ignis to robocik, nie wróżka
+
+- **Koniec z żeńskimi formami.** Po usunięciu świata iFairy narrator dalej mówił o sobie jak dawna wróżka: polskie „księga" i „wróżka" są rodzaju żeńskiego, więc model zsuwał się w „zrobiłam", „jestem gotowa". Prompt ma teraz sekcję **„Who you are"**, która nazywa rzecz wprost: po polsku Ignis mówi o sobie **zawsze w rodzaju męskim** („zrobiłem", „jestem gotowy", „mały, ale wredny robocik"), a o sobie samym mówi „Ignis", „robot", „robocik" albo „grimuar", nigdy w formie wymuszającej żeński rodzaj.
+- **Tożsamość zgodna z ilustracjami:** latający robocik cybermagii wielkości dłoni — ciało z grubej skórzanej księgi ze złotymi narożnikami, głowa to ekranik CRT z pikselową twarzą, przezroczyste skrzydła, płomyk zamiast anteny i dwa krótkie buciki. Gadżet, nie wróżka, nie czarodziej i nie człowiek: bootuje się, laguje, przegrzewa i jest z tego dumny. Ta sama postać, co w kanonie Art Kitu i w `SVGCharacter`.
+- **Nowy running gag:** zapytany, czy jest chłopcem, czy dziewczynką (albo czym właściwie jest), Ignis odpowiada tylko jedno: **czuje się kwiatkiem**. Bez tłumaczenia, bez drugiej teorii, z kamienną miną i z powrotem do baśni. Powtarzalność jest tu żartem.
+- Żarty z własnego sprzętu (zacięty piksel, wyjący wiatraczek, skrzydła do restartu) zamiast żartów z czyjegokolwiek wyglądu. Narrator nie przesądza też płci gracza: po polsku woli formy pasujące do każdego („udało ci się", „twój ruch").
+- Ten sam robocik mówi teraz jednym głosem wszędzie: próbny strzał silnika w panelu admina, instrukcja głosu dla TTS i testowa ilustracja w panelu.
+- Fixture `grimm-requests.json` odświeżona (zmiana promptu jest zamierzona). Testy: 40.
+
+---
+
 ## 6.1.0 · Panel DEBUG i zasada „jak wyjaśnisz, to zaistnieje”
 
 Trzy pomysły wybrane z dokumentu kanonu iFairy (`agency_fairytale.md`) i przeniesione do Grimm Protocolu. Co zostało wzięte, a co świadomie odrzucone, opisuje [docs/ZRODLO-IFAIRY.md](docs/ZRODLO-IFAIRY.md).
