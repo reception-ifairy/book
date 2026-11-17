@@ -4,6 +4,19 @@ export type ChoiceKind = 'sane' | 'chaos' | 'dumb' | 'sudo';
 export type EndingType = 'canon' | 'subverted' | 'cursed' | 'secret' | 'death';
 
 export const SUDO_MANA_COST = 20;
+/** How many steps a page's DEBUG explainer may have. */
+export const MAX_EXPLAINER_STEPS = 4;
+
+/**
+ * IGNIS stepping out of the tale for a moment to explain the real technology the page plays with,
+ * one step at a time. Shown in the reader's DEBUG panel, written in the story's language.
+ */
+export interface Explainer {
+  /** What a 12-year-old might ask about this page, phrased as their question. */
+  question: string;
+  /** 2-4 short steps, in order, each building on the one before. */
+  steps: string[];
+}
 
 export interface Choice {
   id: string;
@@ -35,6 +48,8 @@ export interface Page {
   canon: number; // 0..100, how intact the original fairy tale still is
   inventory: string[];
   summary: string;
+  /** Missing on pages written before 6.1.0, null when the page touches no technology. */
+  explainer?: Explainer | null;
   createdAt: number;
 }
 

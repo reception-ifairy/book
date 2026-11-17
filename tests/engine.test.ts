@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMessages, pathTo, pick, toPage, type PageOutput } from '../server/story/engine';
+import { buildMessages, pathTo, pick, toExplainer, toPage, type PageOutput } from '../server/story/engine';
 import type { Page, Story } from '../shared/types';
 import { samplePage } from './fakeAnthropic';
 
@@ -67,6 +67,26 @@ describe('toPage', () => {
   it('keeps at most four choices', () => {
     const many = Array.from({ length: 7 }, (_, i) => ({ label: `c${i}`, kind: 'sane' }));
     expect(toPage(null, { kind: 'boot', label: '' }, out({ choices: many })).choices).toHaveLength(4);
+  });
+});
+
+describe('toExplainer', () => {
+  it('keeps at most four trimmed steps and drops the empty ones', () => {
+    const e = toExplainer({ question: '  Why? ', steps: ['  one  ', '', '   ', 'two', 'three', 'four', 'five'] });
+    expect(e).toEqual({ question: 'Why?', steps: ['one', 'two', 'three', 'four'] });
+  });
+
+  it('is null when the model sends nothing usable', () => {
+    expect(toExplainer(null)).toBeNull();
+    expect(toExplainer({ question: 'Why?', steps: [] })).toBeNull();
+    expect(toExplainer({ question: '   ', steps: ['one'] })).toBeNull();
+  });
+
+  it('caps a long step rather than losing it, and rides along on the page', () => {
+    const long = toExplainer({ question: 'Q', steps: ['x'.repeat(400)] })!;
+    expect(long.steps[0]).toHaveLength(240);
+    expect(toPage(null, { kind: 'boot', label: '' }, out()).explainer?.steps).toHaveLength(3);
+    expect(toPage(null, { kind: 'boot', label: '' }, out({ explainer: null })).explainer).toBeNull();
   });
 });
 

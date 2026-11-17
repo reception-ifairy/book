@@ -19,6 +19,14 @@ export const samplePage = (over: Record<string, unknown> = {}) => ({
   ending: null,
   image_prompt: 'A courier in a red hood',
   story_summary: 'The courier set off.',
+  explainer: {
+    question: 'How can someone pretend to be Grandma?',
+    steps: [
+      'Red and Grandma think they are talking straight to each other.',
+      'The wolf sits in the middle and passes every message along.',
+      'On the way he can read it, change it, or make one up.',
+    ],
+  },
   artifact_description: null,
   ...over,
 });

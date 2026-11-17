@@ -5,6 +5,18 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.1.0 · Panel DEBUG i zasada „jak wyjaśnisz, to zaistnieje”
+
+Trzy pomysły wybrane z dokumentu kanonu iFairy (`agency_fairytale.md`) i przeniesione do Grimm Protocolu. Co zostało wzięte, a co świadomie odrzucone, opisuje [docs/ZRODLO-IFAIRY.md](docs/ZRODLO-IFAIRY.md).
+
+- **Panel DEBUG na każdej stronie** (iteracja sekwencyjna + „sposób zadawania pytań o niezrozumiałe” z kanonu): Ignis wychodzi na chwilę z baśni i tłumaczy krok po kroku prawdziwą technologię, na której stoi ta strona. Nowe pole `Page.explainer`: pytanie, które zadałby 12-latek, i 2–4 kroki po jednym zdaniu, w języku opowieści. W czytniku to rozwijana karta pod stroną (klawisz `D`), domyślnie zwinięta, więc nie wchodzi w drogę czytaniu. Prompt pilnuje, żeby technologia była prawdziwa, nawet gdy baśń nie jest: model nie zmyśla, a przy trudnym temacie wyjaśnia mniejszy kawałek. Serwer przycina panel do 4 kroków i zwraca `null`, gdy nie ma czego pokazać.
+- **Zasada domu „jak wyjaśnisz, to zaistnieje”** (motto iFairy jako mechanika): własny ruch z uzasadnieniem — choćby najbardziej absurdalną pseudonauką — działa hojniej i dostaje nagrodę (przedmiot, mana, skrót), a narracja nazywa tę część wyjaśnienia, którą świat przyjął. Ruch bez uzasadnienia dalej się udaje, tylko krzywiej i śmieszniej. W czytniku mówi o tym podpowiedź pod polem i nowy tekst zachęty.
+- **Plan strony przed pisaniem** (zero-shot CoT z kanonu): sekcja „Before you write” prowadzi model przez pięć kroków — co zmienia ruch gracza, najzabawniejsza logiczna konsekwencja, bliski kanoniczny moment, czego gracz może nie rozumieć, trzy naprawdę różne wybory. Rozumowanie zostaje po stronie modelu.
+- Prompt zna teraz wprost `tale.tech`, czyli prawdziwą technologię każdej baśni, więc żart i wyjaśnienie trzymają się jednego tematu.
+- Fixture `grimm-requests.json` odświeżona (zmiana promptu jest zamierzona). Testy: 40.
+
+---
+
 ## 6.0.0 · Tylko Grimm Protocol, humor dla 12+
 
 - **Usunięty świat iFairy Universe** razem z AI Game Masterem: narrator-Archiwista, połączenie z API Universe (Sync, katalog przygód, lore na żywo, blokada wyglądu w ilustracjach), kości i reguły, Codex, kampania sagi, ewaluacje `eval:gm`. Znikają endpointy `/api/worlds`, `/api/adventures`, `/api/story/:id/next-chapter`, `/api/admin/universe/*`, `/api/admin/story/:id/audit`, test `probe/gm`, sekcje panelu *iFairy Universe* i *Game Master*, zmienne `UNIVERSE_API_KEY` / `UNIVERSE_API_URL`. Sekcje `universe` i `gm` ze starego `config.json` są pomijane przy wczytaniu i znikają przy następnym zapisie.

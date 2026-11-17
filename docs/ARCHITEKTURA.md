@@ -47,7 +47,7 @@ flowchart LR
 │   │   └── types.ts           ModelInfo, Media, ProviderError, czyszczenie komunikatów błędów
 │   └── story/
 │       ├── engine.ts          Silnik Grimm: schemat strony, kontekst dla Claude, wywołanie, normalizacja, start i akcje
-│       ├── prompts.ts         Prompt systemowy Ignisa (stały dla pary baśń + język, więc cache'owany)
+│       ├── prompts.ts         Prompt systemowy Ignisa: głos, plan strony, zasady gry, panel DEBUG (stały dla pary baśń + język, więc cache'owany)
 │       └── store.ts           Zapis historii (pamięć + JSON na dysku) i plików mediów, ochrona ścieżek
 ├── shared/
 │   ├── artkit.ts              Katalog 19 slotów graficznych (brief, miejsce użycia, rozmiar, przezroczystość) i typy art kitu
@@ -157,7 +157,8 @@ sequenceDiagram
 | Typ | Pola kluczowe | Uwagi |
 |---|---|---|
 | `Story` | `id`, `taleId`, `lang`, `heroName`, `timeline`, `rootPageId`, `currentPageId`, `pages` | Wszystkie strony wszystkich gałęzi w jednej mapie |
-| `Page` | `parentId`, `depth`, `action`, `narration`, `quip`, `mood`, `choices`, `ending`, `stats`, `canon`, `inventory`, `summary`, `imagePrompt`, `imageUrl`, `audioUrl` | Pełny stan po tej stronie |
+| `Page` | `parentId`, `depth`, `action`, `narration`, `quip`, `mood`, `choices`, `ending`, `stats`, `canon`, `inventory`, `summary`, `explainer`, `imagePrompt`, `imageUrl`, `audioUrl` | Pełny stan po tej stronie |
+| `Explainer` | `question`, `steps` (2–4) | Panel DEBUG: wyjaśnienie prawdziwej technologii tej strony krok po kroku. Brakuje go na stronach sprzed 6.1.0, jest `null`, gdy strona nie dotyka techniki |
 | `Choice` | `id`, `label`, `kind` (`sane` · `chaos` · `dumb` · `sudo`) | `id` nadaje serwer |
 | `Stats` | `chaos` 0..100, `karma` −100..100, `mana` 0..100 | Start: 0 / 0 / 60, kanon 100 |
 | `Tale` | `twist`, `beats`, `cast`, `art`, `tech`, `hue`, `title`/`tagline` (pl/en) | Klient dostaje tylko część do wyświetlenia |
@@ -168,6 +169,7 @@ sequenceDiagram
 - `sudo` kosztuje 20 many i jest odrzucane, gdy many brakuje;
 - najwyżej 4 wybory, a przy zakończeniu żadnych;
 - ekwipunek ma najwyżej 12 unikalnych przedmiotów, a obraz dołączony przez gracza dopisuje się jako `🖼 opis`;
+- panel DEBUG ma najwyżej 4 kroki (puste wypadają, długie są przycinane do 240 znaków), a bez pytania albo bez kroków jest `null`;
 - wartości spoza listy (nastrój, typ wyboru, typ zakończenia) zamieniają się w bezpieczną wartość domyślną, więc strona nie wysypuje się z ich powodu.
 
 ---
@@ -200,5 +202,5 @@ sequenceDiagram
   - SMIL (animacje wewnątrz SVG) obsługuje twarz i skrzydła Ignisa.
   
   Wszystko respektuje systemowe ograniczenie ruchu.
-- **Skróty w czytniku:** `1`–`4` wybór, `/` własny ruch, `M` mapa linii czasu, `V` czytanie na głos, `Spacja` pominięcie animacji tekstu.
-- **Teksty wokół historii** (narrator, „IGNIS is writing page”, pusty ekwipunek) są w stałej `W` w `src/screens/Story.tsx`.
+- **Skróty w czytniku:** `1`–`4` wybór, `/` własny ruch, `M` mapa linii czasu, `V` czytanie na głos, `D` panel DEBUG, `Spacja` pominięcie animacji tekstu.
+- **Teksty wokół historii** (narrator, „IGNIS is writing page”, pusty ekwipunek, nagłówek i zasada domu panelu DEBUG) są w stałej `W` w `src/screens/Story.tsx`.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, ArrowUp, GitFork, ImagePlus, Laugh, Mic, PenLine, Share2, ShieldCheck, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Bug, ChevronDown, GitFork, ImagePlus, Laugh, Mic, PenLine, Share2, ShieldCheck, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
 import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
@@ -9,7 +9,7 @@ import { api, rememberRun, type TaleCard } from '../api';
 import { coverStyle, ENDING, KIND } from '../meta';
 import { useArt } from '../artkit';
 import { Badge, Button, IconButton, Kbd, Meter, Sheet, SnowToggle, cx, useToast } from '../ui';
-import { SUDO_MANA_COST, type Choice, type ChoiceKind, type Page, type PublicConfig, type Story } from '../../shared/types';
+import { SUDO_MANA_COST, type Choice, type ChoiceKind, type Explainer, type Page, type PublicConfig, type Story } from '../../shared/types';
 
 const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
   sane: ShieldCheck,
@@ -31,9 +31,56 @@ const W = {
   busy: 'Compiling your next adventure…',
   customKind: 'Your move',
   emptyInventory: 'Empty. Like a dragon’s to-do list.',
+  debug: 'What really just happened',
+  houseRule: 'House rule: explain how your move works and it works better.',
 };
 
 type Picked = { id: string; kind: ChoiceKind | 'custom'; label: string };
+
+/** IGNIS stepping out of the tale to explain, step by step, the real tech the page just played with. */
+function DebugPanel({ explainer, open, onToggle }: { explainer: Explainer; open: boolean; onToggle: () => void }) {
+  return (
+    <div className="card mt-4 overflow-hidden">
+      <button onClick={onToggle} aria-expanded={open} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+        <span className="grid place-items-center w-9 h-9 shrink-0 rounded-xl border-[2.5px] border-outline bg-screen text-pixel shadow-[0_3px_0_var(--color-outline)]">
+          <Bug size={18} strokeWidth={2.5} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="eyebrow block">DEBUG · {W.debug}</span>
+          <span className="block font-serif font-bold text-[15px] leading-snug">{explainer.question}</span>
+        </span>
+        <ChevronDown size={18} className={cx('shrink-0 transition-transform', open && 'rotate-180')} />
+        <span className="hidden sm:block"><Kbd>D</Kbd></span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="steps"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <ol className="px-4 pb-4 pt-1 space-y-2.5">
+              {explainer.steps.map((step, i) => (
+                <motion.li
+                  key={i}
+                  className="flex gap-3"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.06 * i }}
+                >
+                  <span className="font-pixel text-sm grid place-items-center w-6 h-6 shrink-0 rounded-lg border-2 border-outline bg-raised">{i + 1}</span>
+                  <span className="text-[15px] font-medium leading-snug">{step}</span>
+                </motion.li>
+              ))}
+            </ol>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function WritingIndicator({ page, text }: { page: number; text: string }) {
   return (
@@ -107,6 +154,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   const [custom, setCustom] = useState('');
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
   const [imageState, setImageState] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [listening, setListening] = useState(false);
@@ -252,7 +300,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     }
   };
 
-  // Keyboard: 1-4 choose, / type, M map, V voice, Space/Enter skip the typewriter.
+  // Keyboard: 1-4 choose, / type, M map, V voice, D debug panel, Space/Enter skip the typewriter.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || !page) return;
@@ -269,6 +317,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
         inputRef.current?.focus();
       } else if (e.key.toLowerCase() === 'm') setShowMap((v) => !v);
       else if (e.key.toLowerCase() === 'v') setVoiceOn((v) => !v);
+      else if (e.key.toLowerCase() === 'd' && page.explainer?.steps?.length) setDebugOpen((v) => !v);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -511,6 +560,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               )}
               </div>
 
+              {done && page.explainer?.steps?.length ? (
+                <DebugPanel explainer={page.explainer} open={debugOpen} onToggle={() => setDebugOpen((v) => !v)} />
+              ) : null}
+
               <div className="lg:hidden mt-6 flex items-center gap-4">
                 <SVGCharacter isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
                 <p className="bubble flex-1 px-3 py-2 font-serif font-medium text-sm leading-snug">{busy ? W.busy : `“${page.quip}”`}</p>
@@ -628,7 +681,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                   if (canSend) sendCustom();
                                 } else if (e.key === 'Escape') inputRef.current?.blur();
                               }}
-                              placeholder="Or write your own move…"
+                              placeholder="Or write your own move — and how it works…"
                               className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] font-semibold placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
                             />
                             <div className="flex items-center gap-1 px-2 pb-2">
@@ -665,11 +718,13 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                               }}
                             />
                           </div>
-                          <p className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 text-xs font-semibold text-faint">
+                          <p className="mt-3 text-xs font-semibold text-faint">{W.houseRule}</p>
+                          <p className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs font-semibold text-faint">
                             <span><Kbd>1</Kbd>–<Kbd>{page.choices.length}</Kbd> choose</span>
                             <span><Kbd>/</Kbd> write</span>
                             <span><Kbd>M</Kbd> timeline</span>
                             <span><Kbd>V</Kbd> voice</span>
+                            {!!page.explainer?.steps?.length && <span><Kbd>D</Kbd> debug</span>}
                           </p>
                         </>
                       )}

@@ -6,7 +6,9 @@ Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 l
 
 **Na żywo:** https://demo.ifairy.co.uk/ · PM2 `demo-ifairy-book` na porcie 8803 za nginx · dane w `/var/www/demo.ifairy.co.uk/data/` (konfiguracja, klucze, historie).
 
-**Wersja 6.0.0:** jeden świat, Grimm Protocol (5 baśni, narrator Ignis, 12+). Świat iFairy Universe, AI Game Master i połączenie z API Universe zostały usunięte. Dokładne zapytania do Claude'a pilnuje test `grimm-golden`.
+**Wersja 6.1.0:** jeden świat, Grimm Protocol (5 baśni, narrator Ignis, 12+). Świat iFairy Universe, AI Game Master i połączenie z API Universe zostały usunięte w 6.0.0. Dokładne zapytania do Claude'a pilnuje test `grimm-golden`.
+
+**Co nowego w 6.1.0:** pod każdą stroną jest zwijany **panel DEBUG** (klawisz `D`) — Ignis wychodzi na chwilę z baśni i tłumaczy krok po kroku prawdziwą technologię, na której ta strona stoi (atak MITM, DDoS, ciasteczka śledzące, wygasła sesja, trojan). Obowiązuje też zasada domu **„jak wyjaśnisz, to zaistnieje”**: własny ruch z uzasadnieniem działa mocniej niż ruch bez niego.
 
 **Otwarte sprawy:**
 - **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty.
@@ -37,7 +39,7 @@ Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASS
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 37 testów (bez kluczy, na sztucznych API) + build
+bun run check   # typecheck + 40 testów (bez kluczy, na sztucznych API) + build
 ```
 
 To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
@@ -48,6 +50,7 @@ To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
 |---|---|
 | [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md) | Struktura repo plik po pliku, przebieg tury (diagramy), model danych, zapis danych, frontend i motyw |
 | [docs/OPERATORZY.md](docs/OPERATORZY.md) | Kto co obsługuje: modele AI, gracz i sysadmin, wszystkie endpointy, zabezpieczenia, skrypty, testy, CI, zmienne środowiskowe |
+| [docs/ZRODLO-IFAIRY.md](docs/ZRODLO-IFAIRY.md) | Analiza dokumentu kanonu iFairy: co weszło do gry, co odrzucone i dlaczego |
 | [CHANGELOG.md](CHANGELOG.md) | Wszystkie zmiany od wersji z AI Studio do obecnej |
 
 ## Stos
