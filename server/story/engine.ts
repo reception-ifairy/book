@@ -6,7 +6,7 @@ import { getConfig, getKey } from '../config';
 import { anthropicClient, describeAnthropicError } from '../providers/anthropic';
 import { systemPrompt } from './prompts';
 import { getTale } from '../../shared/tales';
-import { SUDO_MANA_COST, type ChoiceKind, type Lang, type Page, type Stats, type Story } from '../../shared/types';
+import { MAX_EXPLAINER_STEPS, SUDO_MANA_COST, type ChoiceKind, type Explainer, type Lang, type Page, type Stats, type Story } from '../../shared/types';
 
 const MOODS = ['neutral', 'smug', 'annoyed', 'panic', 'sincere', 'hyped'] as const;
 const KINDS = ['sane', 'chaos', 'dumb', 'sudo'] as const;
@@ -38,6 +38,7 @@ const PageOutput = z.object({
     .nullable(),
   image_prompt: z.string(),
   story_summary: z.string(),
+  explainer: z.object({ question: z.string(), steps: z.array(z.string()) }).nullable(),
   artifact_description: z.string().nullable(),
 });
 export type PageOutput = z.infer<typeof PageOutput>;
@@ -59,6 +60,17 @@ export interface PlayerAction {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
 const START_STATS: Stats = { chaos: 0, karma: 0, mana: 60 };
+
+/** Keeps the DEBUG panel short: drops empty steps, caps how many there are and how long each runs. Exported for tests. */
+export function toExplainer(raw: PageOutput['explainer']): Explainer | null {
+  if (!raw) return null;
+  const steps = raw.steps
+    .map((s) => s.trim().slice(0, 240))
+    .filter(Boolean)
+    .slice(0, MAX_EXPLAINER_STEPS);
+  const question = raw.question.trim().slice(0, 120);
+  return steps.length && question ? { question, steps } : null;
+}
 
 export function pathTo(story: Story, pageId: string): Page[] {
   const out: Page[] = [];
@@ -179,6 +191,7 @@ export function toPage(parent: Page | null, action: PlayerAction, out: PageOutpu
     canon: clamp((parent?.canon ?? 100) + clamp(out.canon_delta, -25, 10), 0, 100),
     inventory,
     summary: out.story_summary,
+    explainer: toExplainer(out.explainer),
     createdAt: Date.now(),
   };
 }
@@ -243,7 +256,7 @@ export async function probeStoryModel(): Promise<{ text: string; model: string; 
       max_tokens: 2000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      messages: [{ role: 'user', content: 'You are IGNIS // OS, a sarcastic cyber-grimoire. Announce in one sentence that the story engine is online.' }],
+      messages: [{ role: 'user', content: 'You are IGNIS // OS, a cheeky little cyber-magic robot. Announce in one sentence that the story engine is online.' }],
       output_config: { effort: 'low', format: betaZodOutputFormat(z.object({ line: z.string() })) },
     });
     return { text: res.parsed_output?.line ?? '(empty)', model: res.model, ms: Date.now() - t0 };

@@ -25,10 +25,16 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Cache:** prompt systemowy ma `cache_control: ephemeral`. Jest stały dla pary baśń + język, więc kolejne tury płacą za niego taniej.
 - **Kontekst:** ostatnie 6 stron dosłownie, starsze jako streszczenie, do tego blok `STATE` (głębokość, statystyki, kanon, ekwipunek) i akcja gracza.
 - **Ton i zasady** (`prompts.ts`):
+  - **kim jest Ignis** (sekcja „Who you are"): latający robocik cybermagii wielkości dłoni — ciało ze skórzanej księgi, głowa to ekranik CRT z pikselową twarzą, przezroczyste skrzydła, płomyk zamiast anteny. Gadżet, nie wróżka: bootuje się, laguje i przegrzewa. Ten sam wygląd, co w kanonie Art Kitu i w `SVGCharacter`;
+  - **rodzaj gramatyczny:** po polsku Ignis mówi o sobie zawsze w rodzaju męskim („zrobiłem", „jestem gotowy"), bo „księga" i „wróżka" ciągnęły narratora w żeńskie formy. Nie przesądza też płci gracza;
+  - **running gag:** zapytany o to, czy jest chłopcem, czy dziewczynką, odpowiada tylko tyle, że czuje się kwiatkiem — bez tłumaczenia i z powrotem do baśni;
   - widownia od 12 lat: humor jak z dobrego familijnego filmu animowanego (absurd, kalambury, slapstick, proste żarty o grach i technice), Ignis droczy się z graczem po koleżeńsku, nigdy złośliwie; żadnych nazw ani postaci z istniejących serii;
   - PG: tylko kreskówkowe zagrożenie, nikt nie ginie na stronie (złoczyńcy zostają przechytrzeni, uwięzieni albo przegonieni), bez przekleństw (także bez `#$%@!`), bez romansu, używek i żartów z wyglądu;
   - zakończenie `death` to kreskówkowe „game over” z podpowiedzią, że można się cofnąć;
   - 3 wybory (rozsądny, chaos, głupi) i czasem `sudo`;
+  - **plan strony przed pisaniem** (zero-shot CoT): co zmienia ruch gracza → najzabawniejsza logiczna konsekwencja → który kanoniczny moment jest blisko → czego gracz może nie rozumieć z technologii tej baśni → trzy naprawdę różne wybory. Samo rozumowanie nie trafia do gracza, tylko pola schematu;
+  - **panel DEBUG** (`explainer`): pytanie, które zadałby 12-latek, i 2–4 kroki wyjaśnienia prawdziwej technologii tej strony (`tale.tech`), w języku opowieści. Technologia jest prawdziwa, nawet gdy baśń nie jest: model ma nie zmyślać, a przy trudnym temacie wyjaśnić mniejszy kawałek;
+  - **zasada domu „jak wyjaśnisz, to zaistnieje”:** własny ruch z uzasadnieniem (choćby absurdalnym) działa hojniej i dostaje nagrodę, a narracja nazywa przyjętą część wyjaśnienia; ruch bez uzasadnienia też się udaje, ale krzywiej i śmieszniej;
   - próby jailbreaka kończą się żartobliwą, nieszkodliwą karą w fabule (np. gracz na stronę zmienia się w żabę), prośby nieodpowiednie dla 12-latka narrator zamienia w coś zabawnego, a gdy słowa gracza brzmią na prawdziwy niepokój, jednym zdaniem zachęca do rozmowy z zaufanym dorosłym.
 - **Błędy:**
   - odmowa → 422 „IGNIS refused…”;
@@ -59,7 +65,8 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 
 ### Gracz
 - Wybiera baśń, imię („debugger name”) i język opowieści (PL/EN). Interfejs jest po angielsku.
-- Gra wyborami albo własnym ruchem: do 280 znaków, dyktowaniem albo obrazem do 5 MB (zmniejszanym w przeglądarce do 1024 px).
+- Gra wyborami albo własnym ruchem: do 280 znaków, dyktowaniem albo obrazem do 5 MB (zmniejszanym w przeglądarce do 1024 px). Własny ruch opłaca się uzasadnić: „jak wyjaśnisz, to zaistnieje”.
+- Może rozwinąć panel **DEBUG** pod stroną (klawisz `D`) i przeczytać krok po kroku, jak działa prawdziwa technologia z tej strony.
 - Może cofać się i forkować z mapy linii czasu, włączać czytanie na głos, kopiować kartę linii czasu i włączać lub wyłączać śnieg.
 - Nie ma konta. Rozgrywki pamięta jego przeglądarka (lista ID), a treść historii jest na serwerze.
 
@@ -142,12 +149,13 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `bun run test` / `test:watch` | Vitest |
 | `bun run check` | Typecheck + testy + build: to samo, co robi CI |
 
-**Testy** (`tests/`, 37 testów):
+**Testy** (`tests/`, 40 testów):
 - `engine.test.ts`:
   - normalizacja wartości spoza listy;
   - przycinanie statystyk i kanonu;
   - koszt `sudo`;
   - limit ekwipunku i artefakty;
+  - `toExplainer`: przycinanie kroków panelu DEBUG (najwyżej 4, bez pustych) i `null`, gdy nie ma czego pokazać;
   - zakończenia;
   - `pathTo`;
   - budowa kontekstu (okno 6 stron, streszczenie, obraz przed tekstem).

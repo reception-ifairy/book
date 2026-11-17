@@ -57,6 +57,7 @@ describe('public API', () => {
     const story = start.body;
     const root = story.pages[story.currentPageId];
     expect(root.choices).toHaveLength(4);
+    expect(root.explainer.steps).toHaveLength(3);
 
     const req = fake.requests.at(-1)!;
     expect(req.url).toContain('/v1/messages');
