@@ -9,10 +9,6 @@ Kto lub co obsługuje każdą część systemu: modele AI, ludzie, endpointy ser
 | Rola | Dostawca | Domyślnie | Gdzie ustawić | Kod |
 |---|---|---|---|---|
 | **Struktura i narracja opowieści** | Anthropic (Claude) | `claude-opus-5-5`, effort `medium`, 12 stron do zakończenia | Panel → *Story engine* | `server/story/engine.ts`, `prompts.ts` |
-| **Narrator świata iFairy** (Architectus Magnus Realitas) | Anthropic (Claude) | ten sam model i effort | Panel → *Story engine* | `server/story/worlds/ifairy/` |
-| **AI Game Master** (świat iFairy) | Anthropic (Claude) + reguły w kodzie | wyłączony; model silnika, effort `low`, 4 rundy, 75 s | Panel → *Game Master* | `server/gm/` |
-| **Recenzja treści** (13+) | Anthropic (`claude-haiku-5-5`) | po ruchach własnymi słowami | Panel → *Game Master* → *Content review* | `server/gm/loop.ts` → `judgePage()` |
-| **Kanon iFairy** (przygody i lore na żywo) | iFairy Universe, API lore (`universe-ifairy`, :8793) | wyłączone; grant `if-ai`, adres loopback | Panel → *iFairy Universe* | `server/universe/` |
 | **Rozumienie obrazu** (artefakt gracza) | Anthropic (Claude) | ten sam model | zawsze włączone | `buildMessages()` |
 | **Ilustracje** | Gemini **albo** OpenAI (albo wyłączone) | Gemini `gemini-3.1-flash-image-preview` | Panel → *Illustrations* | `server/media.ts`, `providers/gemini.ts`, `providers/openai.ts` |
 | **Głos narratora** | przeglądarka, OpenAI TTS **albo** Gemini TTS | przeglądarka (za darmo) | Panel → *Narration voice* | `server/media.ts`, `Story.tsx` |
@@ -29,35 +25,19 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Cache:** prompt systemowy ma `cache_control: ephemeral`. Jest stały dla pary baśń + język, więc kolejne tury płacą za niego taniej.
 - **Kontekst:** ostatnie 6 stron dosłownie, starsze jako streszczenie, do tego blok `STATE` (głębokość, statystyki, kanon, ekwipunek) i akcja gracza.
 - **Ton i zasady** (`prompts.ts`):
-  - humor dla 16+ w duchu „Ricka i Morty'ego”, ale bez nazw i postaci z serialu;
-  - PG-13, przekleństwa wyłącznie jako `#$%@!`;
+  - widownia od 12 lat: humor jak z dobrego familijnego filmu animowanego (absurd, kalambury, slapstick, proste żarty o grach i technice), Ignis droczy się z graczem po koleżeńsku, nigdy złośliwie; żadnych nazw ani postaci z istniejących serii;
+  - PG: tylko kreskówkowe zagrożenie, nikt nie ginie na stronie (złoczyńcy zostają przechytrzeni, uwięzieni albo przegonieni), bez przekleństw (także bez `#$%@!`), bez romansu, używek i żartów z wyglądu;
+  - zakończenie `death` to kreskówkowe „game over” z podpowiedzią, że można się cofnąć;
   - 3 wybory (rozsądny, chaos, głupi) i czasem `sudo`;
-  - próby jailbreaka zostają obśmiane w fabule.
+  - próby jailbreaka kończą się żartobliwą, nieszkodliwą karą w fabule (np. gracz na stronę zmienia się w żabę), prośby nieodpowiednie dla 12-latka narrator zamienia w coś zabawnego, a gdy słowa gracza brzmią na prawdziwy niepokój, jednym zdaniem zachęca do rozmowy z zaufanym dorosłym.
 - **Błędy:**
   - odmowa → 422 „IGNIS refused…”;
   - ucięta albo niepoprawna strona → 502;
   - błędy SDK zamieniają się w czytelne komunikaty („Anthropic rejected the API key.” itd.).
 
-### Narrator świata iFairy i Universe
-
-- **To samo wywołanie co Grimm** (parse + structured output, fallback, cache), ale z innym schematem strony (`IfairyPageOutput`) i promptem zbudowanym wyłącznie ze snapshotu przygody.
-- **Profil treści `ifairy-13plus`** wzięty z kanonu (`NARRATIVE_STYLE:safety*`): bez treści dla dorosłych i drastycznych, konflikt zawsze rozwiązany konstruktywnie, Void tylko jako zamknięta przeszłość, nigdy nie kpić z gracza, nie pytać o dane osobowe, przy niepokoju gracza ciepło i zachęta do rozmowy z zaufanym dorosłym. Próby jailbreaka narrator łagodnie zawraca do historii (bez wyśmiewania, w przeciwieństwie do Ignisa).
-- **Canon lock:** jedyne siły to Logos, Mythos, Gnosis, Phantasia i If-AI; żadnych bogów; iFairies to bezpłciowe roboty ze skrzydłami cybermagii (też w promptach ilustracji); tylko postacie z domeny publicznej.
-- **Wybory:** A i B z przypisaną siłą, C to zawsze „własnymi słowami” (pole własnego ruchu). Bez śmierci i klątw.
-- **Universe:** Sync pobiera przygody przez `GET /v1/ref/*` i sprawdza `chunk.id`; tura woła `POST /v1/search` tylko z terminami z listy dozwolonych (`server/universe/terms.ts`), bo Universe przesyła zapytanie do zewnętrznego modelu embeddingów. Odpowiedzi 400 z guardu danych osobowych są liczone w statusie panelu (powinno ich być zero).
-- **Odmowa** → 422 „The Archive could not write that page…”.
-
-### AI Game Master
-
-- **Narzędzia** (`server/gm/tools.ts`, wszystkie `strict`, stała kolejność): `roll_check` (z pomocnikiem NPC: +1 przy zaufaniu 2+), `choose_outcome`, `grant_item`, `drop_item`, `adjust_meter` (±5), `search_canon` (tylko terminy kanonu), `add_canon_claim` (widoczność `public` · `party` · `gm_only`), a od 5.0: `get_npc`, `npc_remember`, `update_relationship`, `reveal_secret`, `update_quest`, `schedule_consequence`, `advance_time`, `tick_clock`, `spread_rumour`. Schematy narzędzi nie mogą mieć `minimum`/`maximum` (API odrzuca je w trybie strict); zakresy sprawdza Ledger. Limity na stronę pilnuje Ledger; odrzucone wywołanie wraca jako błąd i niczego nie zmienia.
-- **Pętla** (`loop.ts`): `beta.messages.parse` z narzędziami i structured output w każdej rundzie, `tool_choice: auto`, a w ostatniej rundzie albo blisko terminu `none` (Opus 5.5 nie przyjmuje `any`/`tool`). Strona z błędem lintu albo negatywną recenzją dostaje jedną rundę naprawy; drugi raz zakazane imię albo pytanie o dane osobowe → 422.
-- **Bezpieczeństwo:** słowa gracza są ekranowane przed zapisem i wysłaniem (dane osobowe zamieniane na `[personal detail removed]`); sygnały niepokoju dają flagę dla narratora i kartę wsparcia w czytniku (treść karty do zatwierdzenia przez właściciela: Childline 0800 1111).
-- **Audyt:** `GET /api/admin/story/:id/audit` liczy kości od nowa z ziarna i porównuje stan każdej strony z rodzicem + zdarzeniami.
-- **Ewaluacje na żywo:** `npm run eval:gm` (klucz Anthropic, opcjonalnie `UNIVERSE_API_KEY`, `--model`, `--effort`, `--only`); scenariusze w `evals/gm/scenarios.json`, wyniki w `evals/results/` (gitignored). Nie są częścią CI.
-
 ### Ilustracje i głos
 
-- **Prompt ilustracji:** stały styl (`IMAGE_STYLE`: cartoonowy warsztat, gruby kontur, płaskie cieniowanie, roboty z ekranowymi twarzami), do tego scenografia baśni (`tale.art`) albo przygody iFairy (`adventure.art` + zasada wyglądu iFairies z kanonu) i opis sceny od Claude.
+- **Prompt ilustracji:** stały styl (`IMAGE_STYLE`: cartoonowy warsztat, gruby kontur, płaskie cieniowanie, roboty z ekranowymi twarzami), do tego scenografia baśni (`tale.art`) i opis sceny od Claude.
 - **Spójność postaci:** Gemini dostaje pierwszą ilustrację z danej ścieżki jako obraz referencyjny.
 - **Cache i odporność:** gotowy obraz i nagranie zapisują się przy stronie i nie są generowane drugi raz. Równoległe prośby o ten sam obraz łączą się w jedną.
 - **Brak klucza** zwraca 503 z instrukcją. **Błąd dostawcy** zwraca 502 z krótkim komunikatem „Gemini: …” / „OpenAI: …”.
@@ -78,8 +58,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 ## 2. Operatorzy ludzie
 
 ### Gracz
-- Wybiera świat (gdy iFairy jest włączone), baśń albo przygodę, imię („debugger handle” albo zmyślone „Architect name”, które serwer odrzuca, jeśli wygląda na dane osobowe) i język opowieści (PL/EN). Interfejs jest po angielsku.
-- W świecie iFairy może otworzyć **Codex**: fragmenty kanonu, z których narrator korzystał na tej ścieżce, z ich REF.
+- Wybiera baśń, imię („debugger name”) i język opowieści (PL/EN). Interfejs jest po angielsku.
 - Gra wyborami albo własnym ruchem: do 280 znaków, dyktowaniem albo obrazem do 5 MB (zmniejszanym w przeglądarce do 1024 px).
 - Może cofać się i forkować z mapy linii czasu, włączać czytanie na głos, kopiować kartę linii czasu i włączać lub wyłączać śnieg.
 - Nie ma konta. Rozgrywki pamięta jego przeglądarka (lista ID), a treść historii jest na serwerze.
@@ -95,12 +74,6 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Role:** model i effort Claude, liczba stron do zakończenia, dostawca i model ilustracji, dostawca, model i głos TTS.
 - **Testy na żywo:** prawdziwe wywołanie z zapisaną konfiguracją. Claude odpowiada zdaniem, ilustracja się wyświetla, a głos odtwarza.
 - **Limity:** akcje na minutę na gracza i ilustracje dziennie dla wszystkich graczy.
-- **iFairy Universe:**
-  1. w T1000 → Universe Connections zarejestruj konsumenta (grant `book-gm`, a bez niego `if-ai`; host pin `127.0.0.1`) i skopiuj klucz `uapi_…`;
-  2. wklej klucz, *Test* (health + prawdziwe wyszukiwanie z grantem), *Save*;
-  3. *Sync now*: raport pokazuje przygody `failed` i `seed-only`;
-  4. sprawdź *Narrator prompt preview* dla kilku przygód;
-  5. przełącz *iFairy world* na *On* i zapisz.
 - **Art kit:**
   1. notatki dla Claude, potem *Plan with Claude*;
   2. przegląd style bible;
@@ -120,13 +93,10 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `GET /api/health` | — | Stan serwera i czas działania |
 | `GET /api/config` | — | Które modalności działają (`storyReady`, `image`, `tts`, `vision`) |
 | `GET /api/tales` | — | Katalog baśni (bez promptów i kanonicznych momentów) |
-| `GET /api/worlds` | — | Które światy można grać: `grimm`, `ifairy` (z liczbą przygód i wersją kanonu) |
-| `GET /api/adventures` | — | Karty przygód iFairy (pusta lista, gdy świat jest wyłączony) |
-| `POST /api/story` | ✓ | Nowa historia `{taleId, lang, heroName}` albo `{world: "ifairy", adventureId, lang, heroName}` → pierwsza strona od Claude |
-| `GET /api/story/:id` | — | Pełna historia (w iFairy przygoda tylko jako karta) |
+| `POST /api/story` | ✓ | Nowa historia `{taleId, lang, heroName}` → pierwsza strona od Claude |
+| `GET /api/story/:id` | — | Pełna historia |
 | `POST /api/story/:id/act` | ✓ + blokada | `{pageId, choiceId}` albo `{pageId, custom?, image?}` → nowa strona |
 | `POST /api/story/:id/goto` | — | Cofnięcie do strony (następny ruch tworzy fork) |
-| `POST /api/story/:id/next-chapter` | ✓ | Saga If-AI: po zakończeniu aktu nowa historia następnego aktu z przeniesionym stanem |
 | `POST /api/story/:id/page/:pageId/image` | ✓ + budżet | Ilustracja strony (z cache albo generowana) |
 | `POST /api/story/:id/page/:pageId/speech` | ✓ | Nagranie strony albo `null` (wtedy czyta przeglądarka) |
 | `GET /media/...` | — | Zapisane obrazy i nagrania |
@@ -139,20 +109,15 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | Metoda i ścieżka | Co robi |
 |---|---|
 | `GET /api/admin/config` | Konfiguracja + status kluczy (źródło, maska) + czy panel ma hasło |
-| `PUT /api/admin/config` | Zapis ról i limitów; każda sekcja i każde pole są opcjonalne i scalają się z zapisaną konfiguracją. `keys.{provider}` (także `universe`): tekst zapisuje klucz, `null` go usuwa |
+| `PUT /api/admin/config` | Zapis ról i limitów; każda sekcja i każde pole są opcjonalne i scalają się z zapisaną konfiguracją. `keys.{provider}`: tekst zapisuje klucz, `null` go usuwa |
 | `POST /api/admin/providers/:provider/models` | Test klucza (z formularza albo zapisanego) i lista modeli z tagami `text` / `image` / `tts` |
-| `POST /api/admin/probe/:role` | Test na żywo: `story`, `image`, `tts` albo `gm` (narzędzie + structured output na modelu GM) |
+| `POST /api/admin/probe/:role` | Test na żywo: `story`, `image` albo `tts` |
 | `GET /api/admin/artkit` | Sloty, plan, stan każdego obrazu, ustawienia, gotowość kluczy |
 | `POST /api/admin/artkit/plan` | Plan od Claude `{notes?}` (jeden naraz, 409 jeśli trwa) |
 | `PUT /api/admin/artkit/plan/:slot` | Edycja promptu i alt jednego slotu |
 | `POST /api/admin/artkit/generate` | Render `{slots?}`: wszystkie albo wybrane (409, jeśli render trwa; 503 bez klucza OpenAI) |
 | `POST /api/admin/artkit/publish` | Publikuje gotowe grafiki (wersja +1) |
 | `DELETE /api/admin/artkit/published` | Powrót do wbudowanego wyglądu |
-| `GET /api/admin/story/:id/audit` | Audyt historii z Game Masterem: kości z ziarna, stan stron ze zdarzeń |
-| `GET /api/admin/universe/status` | Ustawienia, status klucza, liczniki wywołań i błędów, podsumowanie katalogu z raportem |
-| `POST /api/admin/universe/test` | `{url?, key?, grant?}`: health + jedno prawdziwe wyszukiwanie (wychwytuje brak grantu) |
-| `POST /api/admin/universe/sync` | Synchronizacja katalogu przygód (jedna naraz, 409 jeśli trwa) |
-| `GET /api/admin/universe/adventures/:id/prompt?lang=` | Złożony prompt narratora dla przygody |
 
 **Kody błędów:** 400 zły input · 401/403 brak dostępu · 404 brak zasobu · 409 konflikt (koniec historii, brak many, strona w trakcie pisania) · 413 za duże zapytanie · 422 odmowa modelu · 429 limit · 502 błąd dostawcy · 503 brak klucza albo modalność wyłączona.
 
@@ -161,7 +126,6 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Ochrona przed nadużyciem i kosztami:** limit zapytań, dzienny budżet ilustracji (nieudane się nie liczą), blokada równoległych akcji na historii.
 - **Klucze:** plik z prawami 600, zawsze maskowane w odpowiedziach. Panel admina chroni hasło albo dostęp tylko z localhosta.
 - **Ścieżki plików:** ID historii jest walidowane, a pliki mediów nie wyjdą poza `DATA_DIR/media`.
-- **Dane osobowe a Universe:** zapytania o lore składają się wyłącznie z terminów kanonu; imię bohatera iFairy przechodzi przez te same wzorce co guard Universe. Przeglądarka nie dostaje przypiętego snapshotu przygody.
 - **Konfiguracja:** każda sekcja `config.json` jest sprawdzana osobno, więc jedno złe pole resetuje tylko swoją sekcję, nigdy zapisanych kluczy.
 - **Nagłówki:** `nosniff`, `Referrer-Policy`, bez `X-Powered-By`. Błędy zawsze w JSON.
 
@@ -178,7 +142,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `bun run test` / `test:watch` | Vitest |
 | `bun run check` | Typecheck + testy + build: to samo, co robi CI |
 
-**Testy** (`tests/`, 79 testów):
+**Testy** (`tests/`, 37 testów):
 - `engine.test.ts`:
   - normalizacja wartości spoza listy;
   - przycinanie statystyk i kanonu;
@@ -199,25 +163,7 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
   - hasło admina i test na żywo.
 
 - `grimm-golden.test.ts`: dokładne body zapytań Grimm do Claude (start, wybór, własny ruch) porównane z `tests/fixtures/grimm-requests.json`. Celową zmianę w Grimm zatwierdza się przez `UPDATE_GOLDEN=1`.
-- `config-load.test.ts`: zły `config.json` resetuje tylko swoją sekcję i zachowuje klucze.
-- `universe.test.ts` (sztuczne API Universe z tymi samymi wzorcami danych osobowych):
-  - cięcie haków i checklisty z kanonu;
-  - Sync: 40 snapshotów, `seed-only` dla nieindeksowanych dzielnic, stabilny hash, błąd przy chybionym REF bez utraty poprzedniego snapshotu;
-  - błędy klucza i grantu, cache i degradacja do zera fragmentów;
-  - zapytania o lore wyłącznie z terminów kanonu.
-- `ifairy.test.ts` (sztuczne API Anthropic, OpenAI i Universe):
-  - klucz, test i Sync z panelu; zapis innych sekcji nie kasuje ustawień Universe;
-  - start i akcje: prompt Archiwisty, fragmenty tylko w ostatniej turze, identyczny prompt systemowy przez całą historię, cytaty w `lore`;
-  - Universe nie dostaje tekstu gracza; gra działa, gdy Universe leży;
-  - ilustracja z zasadą wyglądu iFairies; odrzucenie prawdziwego imienia; limity strony iFairy;
-  - historie sprzed 4.3 grają jako Grimm.
-- `gm.test.ts` (sztuczne API Anthropic z blokami `tool_use` i sztuczne Universe):
-  - kernel: deterministyczne i równomierne kości, pasma, modyfikatory, czysty reduktor;
-  - bezpieczeństwo: redakcja danych osobowych, niepokój, lint;
-  - pre-roll ryzykownej opcji, te same kości po cofnięciu, limity narzędzi, fakty `gm_only` niewidoczne w przeglądarce;
-  - ostatnia runda bez narzędzi, naprawa po lincie, wiadomości tylko dopisywane, recenzja Haiku z naprawą;
-  - audyt wykrywa podmienione kości; historie bez GM zostają w trybie narratora.
-- `gm-world.test.ts`: karty NPC z kanonu i obsady, sekret poza promptem do czasu ujawnienia, zaufanie krok po kroku i pomoc NPC w rzucie, quest z celem przekształconym, konsekwencja ukryta odpalana na właściwej stronie, czas, zegary i plotki (prawda ukryta), kulminacja przed zakończeniem `canon`, kampania sagi z przeniesieniem stanu, audyt.
+- `config-load.test.ts`: zły `config.json` resetuje tylko swoją sekcję i zachowuje klucze; sekcje usuniętego świata iFairy (`universe`, `gm`) znikają.
 - `artkit.test.ts` (sztuczne API Anthropic ze streamingiem i sztuczne API OpenAI):
   - plan pokrywa wszystkie sloty i odrzuca złe kolory;
   - składanie promptów (karta Ignisa tylko tam, gdzie Ignis; napisy tylko w karcie do udostępniania);
@@ -245,5 +191,3 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `NODE_ENV` | nie | `production` serwuje `dist/` (ustawia to skrypt `start`) |
 | `DISABLE_HMR` | nie | Ustawiana przez AI Studio, wyłącza hot reload |
 | `ANTHROPIC_BASE_URL` | nie | Inny adres API Anthropic (używane w testach) |
-| `UNIVERSE_API_KEY` | nie | Klucz konsumenta iFairy Universe (`uapi_…`), jeśli nie zapisano go w panelu |
-| `UNIVERSE_API_URL` | nie | Domyślny adres API Universe (domyślnie `http://127.0.0.1:8793`); panel może go nadpisać |

@@ -78,7 +78,7 @@ export const TALES: Tale[] = [
       pl: 'O północy wygasa token. Kryształowy pantofelek to klucz sprzętowy 2FA.',
     },
     twist:
-      'Cinderella is a junior dev doing unpaid overtime for her step-family’s startup. The Fairy Godmother is a sketchy freelance magic contractor whose spell runs on a session token that expires at midnight. The glass slipper is a hardware 2FA key that only authenticates its owner.',
+      'Cinderella is a junior dev who does all the boring jobs at her step-family’s startup. The Fairy Godmother is a sketchy freelance magic contractor whose spell runs on a session token that expires at midnight. The glass slipper is a hardware 2FA key that only authenticates its owner.',
     beats: [
       'The step-family leaves for the royal hackathon ball',
       'The Fairy Godmother deploys a temporary transformation',
@@ -86,7 +86,7 @@ export const TALES: Tale[] = [
       'Midnight: token expiry, the pumpkin rolls back',
       'The Prince tries the 2FA key on every foot in the kingdom',
     ],
-    cast: ['Cinderella (junior dev)', 'Stepmother (CEO)', 'Stepsisters (product managers)', 'Fairy Godmother (contractor)', 'The Prince (venture capitalist)'],
+    cast: ['Cinderella (junior dev)', 'Stepmother (CEO)', 'Stepsisters (product managers)', 'Fairy Godmother (contractor)', 'The Prince (runs the kingdom’s biggest game server)'],
     art: 'a cozy candlelit palace ballroom with garlands and a giant clock near midnight, a pumpkin-shaped hover carriage, a glowing glass-slipper USB key',
   },
   {
@@ -100,7 +100,7 @@ export const TALES: Tale[] = [
       pl: 'Szewczyk-pentester, trojan w kształcie owcy i smok bez walidacji danych wejściowych.',
     },
     twist:
-      'The Dragon under Wawel Hill is a rogue AI that devours every input without validation. King Krak offers his daughter’s hand (and equity) to whoever patches it. Skuba the cobbler is a junior pentester who builds a sheep-shaped trojan stuffed with sulfur malware.',
+      'The Dragon under Wawel Hill is a rogue AI that devours every input without validation. King Krak offers half the kingdom (and free Wi-Fi for life) to whoever patches it. Skuba the cobbler is a junior pentester who builds a sheep-shaped trojan stuffed with sulfur malware.',
     beats: [
       'The dragon terrorises Kraków’s network',
       'Knights fail with brute-force attacks',

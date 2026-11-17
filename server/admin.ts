@@ -1,17 +1,13 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import { timingSafeEqual, createHash } from 'crypto';
 import { z } from 'zod';
-import { AppConfigSchema, getConfig, getKey, keySource, maskKey, ProviderId, saveConfig, SecretId, type AppConfig } from './config';
+import { AppConfigSchema, getConfig, getKey, keySource, maskKey, ProviderId, saveConfig, type AppConfig } from './config';
 import { listAnthropicModels, describeAnthropicError } from './providers/anthropic';
 import { listGeminiModels } from './providers/gemini';
 import { listOpenAIModels } from './providers/openai';
 import { generateImage, generateSpeech, IMAGE_STYLE } from './media';
-import { probeStoryModel, StoryError } from './story/engine';
-import { probeGm } from './gm/loop';
-import { auditStory } from './gm/audit';
-import { getStory } from './story/store';
+import { probeStoryModel } from './story/engine';
 import { artkitAdmin } from './artkit/routes';
-import { universeAdmin } from './universe/admin';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
 
 export const admin = Router();
@@ -35,7 +31,6 @@ function guard(req: Request, res: Response, next: NextFunction) {
 }
 admin.use(guard);
 admin.use('/artkit', artkitAdmin);
-admin.use('/universe', universeAdmin);
 
 const PROVIDERS = ProviderId.options;
 
@@ -44,7 +39,6 @@ function publicView() {
   return {
     ...rest,
     providers: Object.fromEntries(PROVIDERS.map((p) => [p, { source: keySource(p), masked: maskKey(getKey(p)) }])),
-    universeKey: { source: keySource('universe'), masked: maskKey(getKey('universe')) },
     passwordProtected: !!process.env.ADMIN_PASSWORD,
   };
 }
@@ -59,10 +53,8 @@ const UpdateBody = z.object({
   tts: S.tts.partial().optional(),
   limits: S.limits.partial().optional(),
   artkit: S.artkit.partial().optional(),
-  universe: S.universe.partial().optional(),
-  gm: S.gm.partial().optional(),
   // A string sets the key, null removes the admin-saved key (falls back to env), absent leaves it.
-  keys: z.object(Object.fromEntries(SecretId.options.map((k) => [k, z.string().nullable()])) as Record<SecretId, z.ZodNullable<z.ZodString>>).partial().optional(),
+  keys: z.object(Object.fromEntries(ProviderId.options.map((k) => [k, z.string().nullable()])) as Record<ProviderId, z.ZodNullable<z.ZodString>>).partial().optional(),
 });
 
 admin.put('/config', (req, res) => {
@@ -74,7 +66,7 @@ admin.put('/config', (req, res) => {
   for (const [name, patch] of Object.entries(sections)) {
     if (patch) Object.assign(next, { [name]: { ...cur[name as keyof AppConfig], ...patch } });
   }
-  for (const p of SecretId.options) {
+  for (const p of ProviderId.options) {
     const v = keys?.[p];
     if (v === null) delete next.keys[p];
     else if (typeof v === 'string' && v.trim()) next.keys[p] = v.trim();
@@ -117,29 +109,19 @@ admin.post('/probe/:role', async (req, res) => {
     switch (req.params.role) {
       case 'story':
         return res.json({ ok: true, ...(await probeStoryModel()) });
-      case 'gm':
-        return res.json({ ok: true, ...(await probeGm()) });
       case 'image': {
         const img = await generateImage(`${IMAGE_STYLE}\nScene: a sarcastic floating spellbook with cartoon eyes and a glowing antenna, booting up in a dark server room.`);
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: `data:${img.mime};base64,${img.data.toString('base64')}` });
       }
       case 'tts': {
-        const audio = await generateSpeech('System boot complete. Greetings, meatbag. Your fairy tales are ready to be broken.');
+        const audio = await generateSpeech('System boot complete. Greetings, debugger. Your fairy tales are ready to be fixed, or broken.');
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: audio ? `data:${audio.mime};base64,${audio.data.toString('base64')}` : null });
       }
       default:
         return res.status(404).json({ ok: false, error: 'Unknown role.' });
     }
   } catch (e) {
-    if (req.params.role === 'gm' && e instanceof StoryError) return res.status(e.status).json({ ok: false, ms: Date.now() - t0, error: e.message });
     const provider = req.params.role === 'story' ? 'anthropic' : (req.params.role === 'image' ? getConfig().image.provider : getConfig().tts.provider);
     res.status(502).json({ ok: false, ms: Date.now() - t0, error: describe(ProviderId.safeParse(provider).data ?? 'openai', e) });
   }
-});
-
-/** Game Master audit: recomputes the dice from the seed and refolds every page's events. */
-admin.get('/story/:id/audit', (req, res) => {
-  const story = getStory(String(req.params.id));
-  if (!story) return res.status(404).json({ error: 'Timeline not found.' });
-  res.json(auditStory(story));
 });

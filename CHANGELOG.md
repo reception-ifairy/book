@@ -5,6 +5,15 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.0.0 · Tylko Grimm Protocol, humor dla 12+
+
+- **Usunięty świat iFairy Universe** razem z AI Game Masterem: narrator-Archiwista, połączenie z API Universe (Sync, katalog przygód, lore na żywo, blokada wyglądu w ilustracjach), kości i reguły, Codex, kampania sagi, ewaluacje `eval:gm`. Znikają endpointy `/api/worlds`, `/api/adventures`, `/api/story/:id/next-chapter`, `/api/admin/universe/*`, `/api/admin/story/:id/audit`, test `probe/gm`, sekcje panelu *iFairy Universe* i *Game Master*, zmienne `UNIVERSE_API_KEY` / `UNIVERSE_API_URL`. Sekcje `universe` i `gm` ze starego `config.json` są pomijane przy wczytaniu i znikają przy następnym zapisie.
+- **Widownia 12+ zamiast 16+:** prompt Ignisa nie odwołuje się już do „Ricka i Morty'ego”. Humor jak z familijnego filmu animowanego, droczenie się bez złośliwości („debugger”, „rookie”, „hero” zamiast „meatbag”), rating PG: kreskówkowe zagrożenie, złoczyńcy przechytrzeni zamiast zabici, bez przekleństw (także bez grawlixów), romansu, używek i żartów z wyglądu. Zakończenie `death` to „Game over” z zachętą do cofnięcia się. Przy prawdziwym niepokoju gracza narrator jednym zdaniem zachęca do rozmowy z zaufanym dorosłym.
+- Łagodniejsze szczegóły baśni (Kopciuszek bez „nieodpłatnych nadgodzin”, Książę zamiast inwestora prowadzi serwer gier, król Krak oferuje pół królestwa zamiast ręki córki), teksty ekranu głównego i planner Art Kitu dla 12+.
+- Fixture `grimm-requests.json` zaktualizowana do nowego promptu. Testy: 37.
+
+---
+
 ## 5.1.0 · Humor narratora świata iFairy
 
 - Prompt Archiwisty cytuje cały system humoru cybermagicznego z kanonu (kategorie żartów, komedia każdej z czterech sił, częstotliwość i miejsce żartów, przykładowa scena) i ma twardą sekcję o humorze: prawdziwy komiczny moment na każdej stronie, aside zawsze jako żart, NPC zabawni zgodnie ze swoją siłą, zwroty akcji z komicznym wyczuciem, żarty po polsku pisane po polsku, nigdy kosztem gracza; przy niepokoju gracza humor się wycofuje.

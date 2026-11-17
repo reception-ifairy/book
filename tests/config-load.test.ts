@@ -8,7 +8,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ignis-config-load-'));
 process.env.DATA_DIR = dir;
 fs.writeFileSync(
   path.join(dir, 'config.json'),
-  JSON.stringify({ keys: { anthropic: 'sk-ant-saved-1234567890' }, story: { model: 'claude-haiku-5-5', effort: 'low' }, universe: { url: 'not a url' } }),
+  JSON.stringify({ keys: { anthropic: 'sk-ant-saved-1234567890' }, story: { model: 'claude-haiku-5-5', effort: 'low' }, artkit: { quality: 'ultra' }, universe: { enabled: true }, gm: { enabled: true } }),
 );
 const cfg = await import('../server/config');
 
@@ -17,7 +17,10 @@ describe('loading config.json', () => {
     const c = cfg.getConfig();
     expect(c.keys.anthropic).toBe('sk-ant-saved-1234567890');
     expect(c.story).toEqual({ model: 'claude-haiku-5-5', effort: 'low', maxDepth: 12 });
-    expect(c.universe).toEqual({ enabled: false, url: 'http://127.0.0.1:8793', grant: 'if-ai' });
+    expect(c.artkit).toEqual({ model: 'gpt-image-1', quality: 'medium' });
+    // Sections from the removed iFairy world are dropped.
+    expect(c).not.toHaveProperty('universe');
+    expect(c).not.toHaveProperty('gm');
     expect(c.limits.actionsPerMinute).toBe(12);
   });
 });
