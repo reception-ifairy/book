@@ -1,50 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, ArrowUp, BookMarked, Brain, GitFork, HeartHandshake, ImagePlus, Laugh, Mic, PenLine, ScrollText, Share2, ShieldCheck, Sparkles, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUp, GitFork, ImagePlus, Laugh, Mic, PenLine, Share2, ShieldCheck, SquareTerminal, Undo2, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
-import { ArchivistAvatar } from '../components/ArchivistAvatar';
-import { DiceTray } from '../components/DiceTray';
-import { navigate } from '../App';
-import { SEGMENTS } from '../../shared/gm';
 import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
-import { coverStyle, ENDING, KIND, WORLD_TEXT } from '../meta';
+import { coverStyle, ENDING, KIND } from '../meta';
 import { useArt } from '../artkit';
 import { Badge, Button, IconButton, Kbd, Meter, Sheet, SnowToggle, cx, useToast } from '../ui';
-import { SUDO_MANA_COST, worldOf, type Choice, type ChoiceKind, type LoreRef, type Mood, type Page, type PublicConfig, type PublicStory } from '../../shared/types';
+import { SUDO_MANA_COST, type Choice, type ChoiceKind, type Page, type PublicConfig, type Story } from '../../shared/types';
 
 const KIND_ICON: Record<ChoiceKind | 'custom', typeof Zap> = {
   sane: ShieldCheck,
   chaos: Zap,
   dumb: Laugh,
   sudo: SquareTerminal,
-  logos: Brain,
-  mythos: ScrollText,
-  gnosis: HeartHandshake,
-  phantasia: Sparkles,
   custom: PenLine,
 };
 
 /** The sound effect each kind of choice makes when picked. */
 const SFX: Record<ChoiceKind | 'custom', string> = {
-  sane: 'OK!', chaos: 'ZAP!', dumb: 'BONK!', sudo: 'SUDO!', logos: 'CLICK!', mythos: 'ONCE…', gnosis: 'AWW!', phantasia: 'SPARK!', custom: 'POOF!',
+  sane: 'OK!', chaos: 'ZAP!', dumb: 'BONK!', sudo: 'SUDO!', custom: 'POOF!',
 };
 
-/** IGNIS narrates Grimm Protocol; the Archivist narrates the iFairy world. */
-function Narrator({ ifairy, isTalking, mood, size, sparks }: { ifairy: boolean; isTalking: boolean; mood: Mood; size: number; sparks?: boolean }) {
-  return ifairy ? <ArchivistAvatar isTalking={isTalking} size={size} /> : <SVGCharacter isTalking={isTalking} mood={mood} size={size} sparks={sparks} />;
-}
-
-/** Every canon passage cited along the path to this page, newest first, each once. */
-function codexOf(story: PublicStory, page: Page): LoreRef[] {
-  const seen = new Map<string, LoreRef>();
-  for (let p: Page | undefined = page; p; p = p.parentId ? story.pages[p.parentId] : undefined) {
-    for (const l of p.lore ?? []) if (!seen.has(l.ref)) seen.set(l.ref, l);
-  }
-  return [...seen.values()];
-}
+/** Words shown around the story; one place so the voice stays consistent. */
+const W = {
+  narrator: 'IGNIS',
+  writing: 'IGNIS is writing page',
+  busy: 'Compiling your next adventure…',
+  customKind: 'Your move',
+  emptyInventory: 'Empty. Like a dragon’s to-do list.',
+};
 
 type Picked = { id: string; kind: ChoiceKind | 'custom'; label: string };
 
@@ -112,7 +99,7 @@ const isTyping = (el: EventTarget | null) => el instanceof HTMLElement && (el.ta
 export function StoryScreen({ storyId }: { storyId: string }) {
   const toast = useToast();
   const art = useArt();
-  const [story, setStory] = useState<PublicStory | null>(null);
+  const [story, setStory] = useState<Story | null>(null);
   const [loadError, setLoadError] = useState('');
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [tale, setTale] = useState<TaleCard | null>(null);
@@ -120,7 +107,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
   const [custom, setCustom] = useState('');
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [showMap, setShowMap] = useState(false);
-  const [showCodex, setShowCodex] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
   const [imageState, setImageState] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [listening, setListening] = useState(false);
@@ -138,7 +124,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       .then((s) => {
         setStory(s);
         rememberRun(s);
-        if (!s.adventure) api.tales().then((ts) => setTale(ts.find((t) => t.id === s.taleId) ?? null)).catch(() => {});
+        api.tales().then((ts) => setTale(ts.find((t) => t.id === s.taleId) ?? null)).catch(() => {});
       })
       .catch((e) => setLoadError(e.message));
     api.config().then(setConfig).catch(() => {});
@@ -241,21 +227,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     }
   };
 
-  /** If-AI Saga: the next act opens as a new story with this one's bonds, facts and items. */
-  const nextChapter = async () => {
-    if (!story) return;
-    setBusy(true);
-    try {
-      const next = await api.nextChapter(story.id);
-      rememberRun(next);
-      navigate(`story/${next.id}`);
-    } catch (e) {
-      toast((e as Error).message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const listen = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR || !story) return toast('Voice input is not supported in this browser.', 'error');
@@ -270,13 +241,9 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
   const share = async () => {
     if (!story || !page) return;
-    const W = WORLD_TEXT[worldOf(story)];
-    const head = story.adventure ?? tale;
-    const endingLabel = page.ending ? W.endings[page.ending.type] ?? ENDING[page.ending.type].label : '';
-    const meters = story.adventure
-      ? `${W.meters.karma.toLowerCase()} ${page.stats.karma} · ${W.meters.chaos.toLowerCase()} ${page.stats.chaos}`
-      : `canon ${page.canon}% · chaos ${page.stats.chaos} · karma ${page.stats.karma}`;
-    const text = `${story.adventure ? 'JOURNEY' : 'TIMELINE'} #${story.timeline} · ${head?.title[story.lang] ?? story.taleId}\n${page.ending ? `${endingLabel}: ${page.ending.title}\n` : ''}${meters}\n${W.narrator}: "${page.quip}"\n${location.href}`;
+    const endingLabel = page.ending ? ENDING[page.ending.type].label : '';
+    const meters = `canon ${page.canon}% · chaos ${page.stats.chaos} · karma ${page.stats.karma}`;
+    const text = `TIMELINE #${story.timeline} · ${tale?.title[story.lang] ?? story.taleId}\n${page.ending ? `${endingLabel}: ${page.ending.title}\n` : ''}${meters}\n${W.narrator}: "${page.quip}"\n${location.href}`;
     try {
       await navigator.clipboard.writeText(text);
       toast('Timeline card copied to clipboard.');
@@ -326,19 +293,14 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     );
   }
 
-
-  const ifairy = worldOf(story) === 'ifairy';
-  const W = WORLD_TEXT[worldOf(story)];
-  // The header and placeholders show the Grimm tale or the pinned iFairy adventure card.
-  const head = story.adventure ?? tale;
-  const codex = ifairy ? codexOf(story, page) : [];
+  const head = tale;
   const glitch = Math.max(0, (60 - page.canon) / 60);
-  // Getting garbage-collected leaves IGNIS seeing spirals, like the bonked robot in the workshop.
+  // A game over leaves IGNIS seeing spirals, like the bonked robot in the workshop.
   const ignisMood = busy || page.ending?.type === 'death' ? 'panic' : page.mood;
   const parent = page.parentId ? story.pages[page.parentId] : null;
   const canSend = !busy && (custom.trim().length > 0 || !!attachment);
   const forks = Object.values(story.pages).filter((p) => p.parentId && Object.values(story.pages).some((q) => q.parentId === p.parentId && q.id !== p.id)).length;
-  const ending = page.ending ? { ...ENDING[page.ending.type], label: W.endings[page.ending.type] ?? ENDING[page.ending.type].label } : null;
+  const ending = page.ending ? ENDING[page.ending.type] : null;
   const endingColor = ending ? { ok: 'var(--color-sane)', warn: 'var(--color-dumb)', danger: 'var(--color-danger)', ember: 'var(--color-ember)' }[ending.tone] : '';
 
   const illustration = config?.image ? (
@@ -396,11 +358,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
   const stats = (
     <>
-      {!ifairy && <Meter label="Canon" value={page.canon} color="var(--color-ink)" />}
-      {ifairy && <Meter label={W.meters.karma} value={page.stats.karma} min={-100} max={100} center color="var(--color-mythos)" />}
-      <Meter label={W.meters.chaos} value={page.stats.chaos} color={ifairy ? 'var(--color-gnosis)' : 'var(--color-chaos)'} />
-      {!ifairy && <Meter label="Karma" value={page.stats.karma} min={-100} max={100} center color="var(--color-dumb)" />}
-      <Meter label={W.meters.mana} value={page.stats.mana} color="var(--color-mana)" />
+      <Meter label="Canon" value={page.canon} color="var(--color-ink)" />
+      <Meter label="Chaos" value={page.stats.chaos} color="var(--color-chaos)" />
+      <Meter label="Karma" value={page.stats.karma} min={-100} max={100} center color="var(--color-dumb)" />
+      <Meter label="Mana" value={page.stats.mana} color="var(--color-mana)" />
     </>
   );
 
@@ -424,17 +385,11 @@ export function StoryScreen({ storyId }: { storyId: string }) {
             <div className={cx('font-serif font-bold text-lg truncate leading-tight', glitch > 0 && 'reality-tear')}>{head?.title[story.lang] ?? '…'}</div>
             <div className="font-mono text-[11px] text-faint">#{story.timeline} · {story.heroName}</div>
           </div>
-          <div className={cx('hidden lg:grid gap-5 ml-auto mr-4', ifairy ? 'grid-cols-3 w-[340px]' : 'grid-cols-4 w-[440px]')}>{stats}</div>
+          <div className="hidden lg:grid gap-5 ml-auto mr-4 grid-cols-4 w-[440px]">{stats}</div>
           <div className="flex items-center gap-1 ml-auto lg:ml-0">
             <IconButton label={voiceOn ? 'Mute narration (V)' : 'Read aloud (V)'} active={voiceOn} onClick={() => setVoiceOn((v) => !v)}>
               {voiceOn ? <><Volume2 size={18} /><Equalizer /></> : <VolumeX size={18} />}
             </IconButton>
-            {ifairy && (
-              <IconButton label="Codex: canon cited so far" active={showCodex} onClick={() => setShowCodex(true)}>
-                <BookMarked size={18} />
-                {codex.length > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_6px_var(--color-gold)]" />}
-              </IconButton>
-            )}
             <IconButton label="Timeline map (M)" active={showMap} onClick={() => setShowMap(true)}>
               <GitFork size={18} />
               {forks > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-ember shadow-[0_0_6px_var(--color-ember)]" />}
@@ -456,10 +411,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
           <div className="hidden lg:flex gap-5 items-start pt-2">
             <div className="shrink-0 -my-2">
-              <Narrator ifairy={ifairy} isTalking={busy || !done} mood={ignisMood} size={config?.image ? 96 : 130} />
+              <SVGCharacter isTalking={busy || !done} mood={ignisMood} size={config?.image ? 96 : 130} />
             </div>
             <div className="bubble min-w-0 flex-1 px-4 py-3 mt-2">
-              <div className="eyebrow mb-1 !text-[#9c7f62]">{W.narrator} · {busy ? (ifairy ? 'writing' : 'compiling') : ifairy ? 'aside' : ignisMood}</div>
+              <div className="eyebrow mb-1 !text-[#9c7f62]">{W.narrator} · {busy ? 'compiling' : ignisMood}</div>
               <AnimatePresence mode="wait">
                 <motion.p
                   key={busy ? 'busy' : page.id}
@@ -475,8 +430,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
           </div>
 
           <div className="card p-4 grid grid-cols-2 gap-4 lg:hidden">{stats}</div>
-
-          {page.gm && <DiceTray key={page.id} rolls={page.gm.rolls} commit={story.gmCommit} />}
 
           <div className="card p-4">
             <div className="eyebrow mb-2">🎒 Inventory</div>
@@ -507,12 +460,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               </motion.div>
             ) : (
               <p className="text-sm text-faint">{W.emptyInventory}</p>
-            )}
-            {!!page.gm?.state.conditions.length && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                <span className="eyebrow">Conditions</span>
-                {page.gm.state.conditions.map((c) => <Badge key={c} tone="warn">{c}</Badge>)}
-              </div>
             )}
           </div>
         </aside>
@@ -564,16 +511,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
               )}
               </div>
 
-              {page.safety?.distress && (
-                // Shown whenever the player's own words sounded upset, whatever the narrator wrote.
-                <div className="card mt-4 p-4 text-sm !bg-[#e8f4ff]" role="note">
-                  <div className="font-serif font-bold">The Archivist hopes you are all right.</div>
-                  <p className="text-muted mt-1">If something real is worrying you, please talk to a trusted adult. In the UK you can contact Childline free and in confidence: call 0800 1111 or visit childline.org.uk.</p>
-                </div>
-              )}
-
               <div className="lg:hidden mt-6 flex items-center gap-4">
-                <Narrator ifairy={ifairy} isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
+                <SVGCharacter isTalking={busy || !done} mood={ignisMood} size={64} sparks={false} />
                 <p className="bubble flex-1 px-3 py-2 font-serif font-medium text-sm leading-snug">{busy ? W.busy : `“${page.quip}”`}</p>
               </div>
 
@@ -616,16 +555,13 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                         {page.ending.title}
                       </motion.h2>
                       <p className="text-sm text-muted mt-3">
-                        {Object.keys(story.pages).length} pages written in this {ifairy ? 'journey' : `timeline · canon ${page.canon}% intact`}
+                        {Object.keys(story.pages).length} pages written in this timeline · canon {page.canon}% intact
                       </p>
                       <div className="flex flex-wrap justify-center gap-2 mt-6">
                         {parent && (
                           <Button onClick={() => jump(parent.id)} disabled={busy}><Undo2 size={16} /> Roll back one page</Button>
                         )}
                         <Button onClick={() => setShowMap(true)}><GitFork size={16} /> Fork from the map</Button>
-                        {story.adventure?.kind === 'saga' && story.adventure.order < 8 && (
-                          <Button variant="primary" onClick={nextChapter} disabled={busy}>Continue to Act {['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][story.adventure.order - 1]}</Button>
-                        )}
                         <Button variant="primary" onClick={share}><Share2 size={16} /> Share ending</Button>
                       </div>
                     </div>
@@ -653,15 +589,13 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                             >
                               <ChoiceCard
                                 index={i + 1}
-                                letter={ifairy ? 'AB'[i] : undefined}
                                 id={c.id}
                                 kind={c.kind}
                                 label={c.label}
                                 disabled={noMana || busy}
                                 committed={isPicked}
                                 onPick={(e) => choose(c, e)}
-                                title={noMana ? `Needs ${SUDO_MANA_COST} mana` : c.risk === 'risky' ? 'Risky: the dice decide how it goes' : undefined}
-                                risky={c.risk === 'risky'}
+                                title={noMana ? `Needs ${SUDO_MANA_COST} mana` : undefined}
                               >
                                 {burst?.target === c.id && <ComicBurst key={burst.key} x={burst.x} y={burst.y} color={burst.color} word={burst.word} size={96} />}
                               </ChoiceCard>
@@ -694,7 +628,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
                                   if (canSend) sendCustom();
                                 } else if (e.key === 'Escape') inputRef.current?.blur();
                               }}
-                              placeholder={ifairy && page.freeForm ? `C) ${page.freeForm}` : 'Or write your own move…'}
+                              placeholder="Or write your own move…"
                               className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] font-semibold placeholder:text-faint focus:outline-none field-sizing-content max-h-40"
                             />
                             <div className="flex items-center gap-1 px-2 pb-2">
@@ -751,79 +685,6 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       <Sheet open={showMap} onClose={() => setShowMap(false)} title="Timeline">
         <TimelineMap story={story} onJump={jump} busy={busy} />
       </Sheet>
-      {ifairy && (
-        <Sheet open={showCodex} onClose={() => setShowCodex(false)} title="Codex">
-          {page.gm?.state.quest && (
-            <>
-              <div className="eyebrow mb-2">Quest</div>
-              <ol className="space-y-1 mb-6 text-sm">
-                {page.gm.state.quest.map((n) => (
-                  <li key={n.id} className={cx('flex gap-2', n.status === 'locked' && 'text-faint')}>
-                    <span className="w-4 shrink-0">{{ done: '✓', failed: '✗', transformed: '↻', active: '▸', locked: '·' }[n.status]}</span>
-                    <span className={cx(n.status === 'active' && 'font-bold', (n.status === 'done' || n.status === 'transformed') && 'line-through text-muted')}>{n.title}</span>
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-          {page.gm?.state.npcs && Object.values(page.gm.state.npcs).some((n) => n.met) && (
-            <>
-              <div className="eyebrow mb-2">Bonds</div>
-              <ul className="space-y-2 mb-6">
-                {Object.entries(page.gm.state.npcs).filter(([, n]) => n.met).map(([id, n]) => (
-                  <li key={id} className="text-sm">
-                    <div className="font-bold capitalize">{id.replace(/-/g, ' ')}</div>
-                    <div className="grid grid-cols-3 gap-3 mt-1">
-                      {(['affinity', 'trust', 'respect'] as const).map((axis) => (
-                        <Meter key={axis} label={axis} value={n[axis]} min={-3} max={3} center color="var(--color-gnosis)" />
-                      ))}
-                    </div>
-                    {n.memories.length > 0 && <p className="text-xs text-faint mt-1">Remembers: {n.memories.at(-1)!.text}</p>}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          {page.gm?.state.world && (
-            <>
-              <div className="eyebrow mb-2">World</div>
-              <p className="text-sm mb-2">Day {page.gm.state.world.day}, {SEGMENTS[page.gm.state.world.segment]}</p>
-              <div className="grid grid-cols-2 gap-3 mb-2">
-                {page.gm.state.world.clocks.map((c) => <Meter key={c.id} label={c.label} value={c.value} max={c.max} color="var(--color-ember)" />)}
-              </div>
-              {page.gm.state.world.rumours.length > 0 && (
-                <ul className="text-xs text-muted space-y-0.5 mb-2">{page.gm.state.world.rumours.slice(-3).map((r) => <li key={r.id}>“{r.text}”</li>)}</ul>
-              )}
-              <div className="mb-6" />
-            </>
-          )}
-          {!!page.gm?.state.facts.length && (
-            <>
-              <div className="eyebrow mb-2">Journal</div>
-              <ul className="space-y-1.5 mb-6 text-sm">
-                {page.gm.state.facts.map((f) => (
-                  <li key={f.id}><span className="font-bold">{f.subject}:</span> <span className="text-muted">{f.text}</span>{f.ref && <span className="font-mono text-[11px] text-faint"> · {f.ref}</span>}</li>
-                ))}
-              </ul>
-              <div className="eyebrow mb-2">Canon</div>
-            </>
-          )}
-          <p className="text-sm text-muted mb-4">Canon passages from the iFairy Universe that the Archivist drew on along this path.</p>
-          {codex.length ? (
-            <ul className="space-y-3">
-              {codex.map((l) => (
-                <li key={l.ref} className="card p-4">
-                  <div className="font-serif font-semibold leading-snug">{l.title}</div>
-                  <div className="font-mono text-[11px] text-faint mt-0.5 break-all">{l.ref}</div>
-                  <p className="text-sm text-muted mt-2 whitespace-pre-line">{l.excerpt}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-faint">No canon cited yet on this path.</p>
-          )}
-        </Sheet>
-      )}
     </div>
   );
 }
@@ -831,12 +692,10 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 /** One choice: glowing kind icon, label, and its number key. */
 function ChoiceCard({
   index,
-  letter,
   id,
   kind,
   label,
   kindLabel: kindLabelOverride,
-  risky,
   disabled,
   committed,
   onPick,
@@ -844,14 +703,10 @@ function ChoiceCard({
   children,
 }: {
   index: number | null;
-  /** iFairy options are lettered A and B, per the canon's choice block. */
-  letter?: string;
   id?: string;
   kind: ChoiceKind | 'custom';
   label: string;
   kindLabel?: string;
-  /** iFairy Game Master: picking this option rolls the dice. */
-  risky?: boolean;
   disabled?: boolean;
   committed?: boolean;
   onPick?: (e: React.MouseEvent) => void;
@@ -886,11 +741,10 @@ function ChoiceCard({
         )}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[16px] font-bold leading-snug">{letter && <span className="mr-1.5 font-serif" style={{ color }}>{letter})</span>}{label}</span>
+        <span className="block text-[16px] font-bold leading-snug">{label}</span>
         <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide" style={{ color }}>
           {kindLabel}
           {kind === 'sudo' && <span className="text-faint">· −{SUDO_MANA_COST} mana</span>}
-          {risky && <span className="text-faint normal-case">· 🎲 risky</span>}
         </span>
       </span>
       {index !== null && <Kbd>{index}</Kbd>}

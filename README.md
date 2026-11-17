@@ -1,28 +1,17 @@
 # IGNIS // OS: Grimm Protocol
 
-Gra „wybierz własną przygodę” w klimacie cyber-magii. Sarkastyczna księga-robot **Ignis** opowiada klasyczne baśnie jako zabugowany kod: Czerwony Kapturek kontra atak MITM, Trzy Świnki kontra DDoS, Kopciuszek z wygasającą sesją. Każdy wybór forkuje linię czasu. Dla widzów w stylu *Ricka i Morty'ego* (16+).
+Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 lat**. Zadziorna księga-robot **Ignis** opowiada klasyczne baśnie jako zabugowany kod: Czerwony Kapturek kontra atak MITM, Trzy Świnki kontra DDoS, Kopciuszek z wygasającą sesją. Każdy wybór forkuje linię czasu. Humor jak z dobrego familijnego filmu animowanego: absurd, kalambury, slapstick i proste żarty o grach i technice. Bez przemocy na serio, bez przekleństw, bez złośliwości wobec gracza.
 
-**Drugi świat: iFairy Universe** (13+). Przygody z kanonu iFairy (6 haków z portali, Saga If-AI w 8 aktach, 26 Dzielnic Podróżników) opowiada Narrator-Archiwista, a treść i lore na żywo przychodzą z API iFairy Universe. Świat pojawia się na stronie głównej, gdy sysadmin go włączy i zsynchronizuje. Opcjonalnie prowadzi go **AI Game Master**: kości 2d6 i reguły działają w kodzie jako narzędzia Claude'a, model tylko wybiera regułę i opowiada wynik.
+## Gdzie jesteśmy (2026-11-17)
 
-## Gdzie jesteśmy (2026-10-31)
+**Na żywo:** https://demo.ifairy.co.uk/ · PM2 `demo-ifairy-book` na porcie 8803 za nginx · dane w `/var/www/demo.ifairy.co.uk/data/` (konfiguracja, klucze, historie).
 
-**Na żywo:** https://demo.ifairy.co.uk/ · wersja **5.1.0** · PM2 `demo-ifairy-book` na porcie 8803 za nginx (`proxy_read_timeout 180s`) · dane w `/var/www/demo.ifairy.co.uk/data/` (konfiguracja, klucze, historie, snapshoty kanonu).
-
-| Obszar | Stan |
-|---|---|
-| **Grimm Protocol** (16+) | Bez zmian od 4.2: 5 baśni, Ignis. Dokładne zapytania do Claude'a pilnuje test `grimm-golden` |
-| **iFairy Universe** (13+) | Włączony. 40 przygód zsynchronizowanych z kanonu 2.2.0-EN (konsument `demo-book`, grant `book-gm`). Narrator-Archiwista z regułami bezpieczeństwa i humoru, lore na żywo z cytatami w Codexie |
-| **AI Game Master** | Włączony na **Claude Haiku 5.5** (effort `low`, 4 rundy, 75 s, recenzja treści po ruchach własnymi słowami). Kości 2d6 + siła w kodzie, postacie z relacjami i sekretami, questy, konsekwencje, czas, zegary, kampania sagi |
-| **Wygląd iFairy** | Kanon R6 („visual lock”): narrator cytuje sekcje o wyglądzie; ilustracje z iFairy dostają tekst blokady z kanonu, inne istoty (Krasnoludki, wróżki z dzielnic) nie |
-| **Ewaluacje na żywo** | `npm run eval:gm`, 11 scenariuszy: 100% (zdarza się pojedyncza wpadka na przebieg), humor 3,7–3,9/5 wg sędziego Haiku, p95 ok. 12–15 s, ok. 0,001 USD za turę |
+**Wersja 6.0.0:** jeden świat, Grimm Protocol (5 baśni, narrator Ignis, 12+). Świat iFairy Universe, AI Game Master i połączenie z API Universe zostały usunięte. Dokładne zapytania do Claude'a pilnuje test `grimm-golden`.
 
 **Otwarte sprawy:**
-- **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty. Po włączeniu blokada wyglądu iFairy zadziała sama.
-- **Przy smutnym graczu** model często łamie kontrakt dwóch opcji (kosztuje rundę naprawy), a raz na ok. 10 przebiegów strona kończy się błędem 422. Do osobnego przyjrzenia się.
-- **Polskie nazwy własne:** model tłumaczy nazwy z kanonu („Złote Miasto”). Zostawione celowo; da się wymusić oryginały w prompcie.
-- **Zmiana kanonu dociera do gry** dopiero po reindeksie Universe i *Sync now* w panelu. Trwające historie zostają przy swoim snapshocie.
+- **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty.
 
-**Wdrożenie:** kopia `data/`, `git pull`, `npm install`, `npm run build`, `pm2 restart demo-ifairy-book`, potem w panelu *iFairy Universe → Sync now*. Powiązane repo: [ifairy-universe](https://github.com/reception-ifairy/ifairy-universe) (kanon i API) i [ifairy-narrative-engine](https://github.com/reception-ifairy/ifairy-narrative-engine) (osobny silnik z tym samym guardem obrazów).
+**Wdrożenie:** kopia `data/`, `git pull`, `npm install`, `npm run build`, `pm2 restart demo-ifairy-book`.
 
 **Multimodalnie:**
 - **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
@@ -41,16 +30,14 @@ bun run dev            # http://localhost:3000
 1. Otwórz `http://localhost:3000/#/admin`, wklej klucz Anthropic, kliknij **Test**, a potem **Save**.
 2. Opcjonalnie dodaj klucz Gemini lub OpenAI i wybierz modele ilustracji i głosu.
 3. Opcjonalnie: sekcja **Art kit**, czyli *Plan with Claude* → *Render all 19* → *Publish* (potrzebny klucz OpenAI).
-4. Opcjonalnie: sekcja **iFairy Universe**, czyli klucz konsumenta → *Test* → *Save* → *Sync now* → *iFairy world: On*.
-5. Wróć na stronę główną, wpisz imię i wybierz baśń albo przygodę.
+4. Wróć na stronę główną, wpisz imię i wybierz baśń.
 
 Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASSWORD`.
 
 ## Sprawdzanie
 
 ```bash
-bun run check   # typecheck + 80 testów (bez kluczy, na sztucznych API) + build
-npm run eval:gm # ewaluacje Game Mastera na żywym modelu (klucz Anthropic, poza CI)
+bun run check   # typecheck + 37 testów (bez kluczy, na sztucznych API) + build
 ```
 
 To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
