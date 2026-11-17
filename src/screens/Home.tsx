@@ -32,6 +32,7 @@ const QUIPS = [
   'Choose wisely. Or don’t. Bad choices make better stories.',
   'The wolf guessed the password. Again. It was “password”.',
   'I have seen 14 million timelines. You turn into a frog in most of them.',
+  'House rule: if you can explain it, it can exist. “Because magic” is not an explanation.',
 ];
 
 /** What the home screen says. */
@@ -238,7 +239,7 @@ export function Home() {
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>Claude writes the story · Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // OS v6.0 · cozy workshop</span>
+        <span className="font-pixel">IGNIS // OS v6.2 · cozy workshop</span>
       </footer>
     </div>
     </>

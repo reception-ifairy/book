@@ -20,6 +20,14 @@ i sposób prowadzenia gracza**, a nie lore.
 | **Iteracja warunkowa** — dalsze kroki zależą od odpowiedzi gracza | „Krok 2: Iteracja Warunkowa” | Już było: wybory forkują linię czasu, a stan (statystyki, kanon, ekwipunek) wraca do modelu w bloku `STATE` |
 | Nauka przemycona w przygodzie („Transform Complex Concepts”) | Educational Enhancement | Prompt zna teraz wprost `tale.tech`, więc żart i wyjaśnienie trzymają się jednej technologii |
 
+## Co weszło (6.2.0)
+
+| Pomysł z kanonu | Gdzie w kanonie | Co z tego jest w grze |
+|---|---|---|
+| Zagadki zależne od odpowiedzi, mikstura „w odpowiedniej kolejności”, wzór do powtórzenia | „Krok 2: Iteracja Warunkowa”, „Krok 3: Iteracja Rekurencyjna”, przykłady Brzechwy | **Glitch-łamigłówki** co 3–4 strony, każda zamknięta w jednej stronie: odpowiedź jako własny ruch, podpowiedź jako rozsądny wybór, zła odpowiedź nigdy nie kończy gry |
+| **Provocation of Questions**: „a co, jeśli artefakt ma ukrytą wadę?” | Filar 3 | Raz lub dwa razy na baśń zwrot akcji: ukryta wada przedmiotu, sekret pomocnika, strona historii pomijanej postaci |
+| Retelling z perspektywy pomijanych postaci | „Fairy Tale Retelling” | Część tych zwrotów akcji (wilk ma swój powód, przyrodnia siostra prowadzi dziennik bugów) |
+
 ## Co świadomie odrzucone
 
 - **Świat iFairy Universe, Rada Mędrców, laboratoria, akcelerator cząstek magii.** Usunięte w 6.0.0
@@ -34,7 +42,7 @@ i sposób prowadzenia gracza**, a nie lore.
   gracza (jedno zdanie o rozmowie z zaufanym dorosłym).
 - **„Filary Doskonałości” i zestaw narzędzi twórcy treści** (SEO, propozycje grantów, analiza
   skuteczności, generator nagłówków). To opis asystenta do pisania treści, nie narratora gry.
-- **Iteracja rekurencyjna i zagnieżdżona** jako mechanika. W kanonie służą one dopieszczaniu
+- **Iteracja rekurencyjna i zagnieżdżona** jako wieloturowa mechanika (w 6.2.0 weszły tylko jako treść jednostronicowych łamigłówek). W kanonie służą one dopieszczaniu
   obrazka albo planowaniu uczty; w grze jedna tura to jedna strona i jeden ruch gracza, więc
   pętla „poprawiajmy to razem” psułaby tempo.
 - **Przykłady humoru z kanonu** („skalibrowałem obwody empatii splątaniem kwantowym”). Żart ma

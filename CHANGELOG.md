@@ -5,6 +5,18 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.2.0 · Glitch-łamigłówki i zwroty akcji „a co jeśli”
+
+Dwie kolejne rzeczy z kanonu iFairy (`agency_fairytale.md`), uzupełniające 6.1.0. Zmienia się tylko prompt Ignisa i jeden cytat na ekranie głównym; schemat strony bez zmian.
+
+- **Glitch-łamigłówki** (iteracja warunkowa, sekwencyjna i „rekurencyjna” mikstura z przykładów Brzechwy, ale zamknięte w jednej stronie, więc nie psują tempa): co 3–4 strony baśń może zablokować się na zagadce do rozwiązania ze wskazówek w narracji: warunek (if/else), kolejność kroków (sekwencja), powtarzający się wzór (pętla) albo logika „kto co robi”. Gracz wpisuje odpowiedź jako własny ruch, rozsądna opcja to prośba o podpowiedź. Dobra odpowiedź daje nagrodę i jedno zdanie Ignisa nazywające użyte pojęcie z programowania; zła daje mały zabawny glitch i drugą szansę, nigdy game over. Panel DEBUG na stronie z zagadką nie zdradza odpowiedzi, a baśń zawsze ma inną drogę dalej.
+- **Zwroty akcji „a co jeśli”** (filar „Provocation of Questions”): raz lub dwa razy na baśń przedmiot z ukrytą wadą, pomocnik z sekretem albo pomijana postać pokazująca swoją stronę historii. Złoczyńcy zostają złoczyńcami, tylko ciekawszymi.
+- **Pomoc bez kary:** gracz zagubiony w fabule dostaje od Ignisa proste wyjaśnienie w środku opowieści.
+- Sprawdzone na prawdziwym modelu (Czerwony Kapturek po polsku): zagadka „2, 4, 8, 16, ?” na stronie 4, dobra odpowiedź nagrodzona i nazwana pętlą, zła z podpowiedzią i drugą szansą.
+- Fixture `grimm-requests.json` odświeżona.
+
+---
+
 ## 6.1.1 · Ignis to robocik, nie wróżka
 
 - **Koniec z żeńskimi formami.** Po usunięciu świata iFairy narrator dalej mówił o sobie jak dawna wróżka: polskie „księga" i „wróżka" są rodzaju żeńskiego, więc model zsuwał się w „zrobiłam", „jestem gotowa". Prompt ma teraz sekcję **„Who you are"**, która nazywa rzecz wprost: po polsku Ignis mówi o sobie **zawsze w rodzaju męskim** („zrobiłem", „jestem gotowy", „mały, ale wredny robocik"), a o sobie samym mówi „Ignis", „robot", „robocik" albo „grimuar", nigdy w formie wymuszającej żeński rodzaj.
