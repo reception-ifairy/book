@@ -1,7 +1,15 @@
 # Historia zmian
 
-Wszystkie zmiany od pierwotnej aplikacji z Google AI Studio do obecnej gry **IGNIS // OS: Grimm Protocol**.
-Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
+Wszystkie zmiany od pierwotnej aplikacji z Google AI Studio do obecnej gry **ARB · Arcane Rescue Bureau**.
+
+---
+
+## 6.8.1 · Arcane Rescue Bureau i nowe główne repozytorium
+
+- **Nowa nazwa:** ARB to teraz **Arcane Rescue Bureau** (wcześniej Arcane Retellings Bureau): w nagłówku i tytule strony, na stronie głównej, w prompcie Ignisa, u art-directora Art Kitu i w bazie postaci. Skrót ARB bez zmian.
+- **Główne repozytorium:** `reception-ifairy/arcaneagency`, gałąź `main` (pełna historia z `reception-ifairy/book`).
+- README napisane od nowa: gra, panel admina, uruchomienie, zmienne, baza t1000, testy, CI, wdrożenie, struktura i bezpieczeństwo.
+- Fixture `grimm-requests.json` odświeżona (zmiana nazwy w prompcie jest zamierzona).
 
 ---
 
