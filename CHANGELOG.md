@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.6.0 · Daily ops: dzienne zadania i glitch dnia
+
+- **Nowa karta *Daily ops* na stronie głównej:** poranna odprawa Ignisa, *glitch dnia* (ciemny ekranik) i trzy dzienne zadania z paskami postępu i nagrodą w XP. Postęp liczy się z własnych spraw agenta (tylko strony napisane dziś, dzień według czasu warszawskiego), więc nie trzeba kont graczy.
+- **Glitch dnia trafia do opowieści:** prompt dostaje sekcję `# Glitch of the day` i Ignis wplata go w każdą baśń tego dnia (np. pasek ładowania „Abandoning… 99%” nad nożyczkami w Jasiu i Małgosi). Bez glitcha prompt jest bez zmian.
+- **Panel admina → *Daily ops*:** dzisiejsza tablica, pula zadań (tworzenie, edycja, status active/draft/retired, nagroda XP, typ celu z parametrami), pula glitchy i planowanie konkretnych dni (glitch, do 5 zadań, odprawa Ignisa). Dni bez planu losują 3 aktywne zadania i 1 glitch, tak samo dla wszystkich przez cały dzień.
+- **Typy zadań:** zamknij sprawę, osiągnij zakończenie, wybierz rodzaj ruchu N razy, własne ruchy, liczba stron, próg statystyki, zamknięcie z kanonem ≥ X%, otwórz sprawę.
+- **Baza:** tabele `t1000.ignis_quests`, `ignis_glitches`, `ignis_daily` (`db/t1000/003_ignis_daily.sql`), konto `ignis_book` może je edytować. Startowa pula 14 zadań i 10 glitchy: `npm run -s t1000:daily | mysql t1000` (dodaje tylko brakujące, edycji z panelu nie nadpisuje).
+- Testy: 59 (nowy `tests/daily.test.ts`: postęp zadań, granice dnia przy zmianie czasu, rotacja, API, sekcja promptu).
+
+---
+
 ## 6.5.0 · Główny motyw: ARB · The Arcane Retellings Bureau
 
 - **Nowa strona główna** w motywie ARB: „Old tales. Enchanted code. Hilarious side effects.”, „Someone has enchanted the plot.” z trzema zaczarowanymi incydentami (pantofelek Kopciuszka, lustro Śnieżki, chata Baby Jagi) i powitaniem w Biurze.

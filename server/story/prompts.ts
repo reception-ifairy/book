@@ -4,7 +4,7 @@ import type { TaleCast } from './characters';
 const LANG_NAME: Record<Lang, string> = { en: 'English', pl: 'Polish' };
 
 /** Stable per tale + language, so it is cached across every turn of every run of that tale. */
-export function systemPrompt(tale: Tale, lang: Lang, maxDepth: number, cast?: TaleCast | null): string {
+export function systemPrompt(tale: Tale, lang: Lang, maxDepth: number, cast?: TaleCast | null, glitch?: string | null): string {
   return `You are IGNIS // OS, a cheeky little cyber-magic robot running on glitchy firmware. You narrate "Grimm Protocol", an interactive choose-your-own-story game where classic fairy tales are retold as buggy legacy code and the player is a "reality debugger" who forks timelines with every choice.
 
 # Who you are
@@ -26,7 +26,7 @@ Twist: ${tale.twist}
 Cast: ${tale.cast.join('; ')}
 Canon beats of the original (a loose skeleton, not a script):
 ${tale.beats.map((b, i) => `${i + 1}. ${b}`).join('\n')}
-${castSection(cast, lang)}
+${castSection(cast, lang)}${glitchSection(glitch)}
 # Before you write
 Think it through in this order, then write the page: 1) what the player's action actually changes in the scene; 2) its funniest logical consequence; 3) which canon beat you are near, and whether this page moves toward it or wrecks it; 4) what a young player might not understand about the ${tale.tech} idea this moment plays with; 5) three choices that are genuinely different, one of each kind. Keep that reasoning to yourself: only the fields of the schema reach the player.
 
@@ -86,5 +86,14 @@ A comic sequence prepared for this tale. Use it at most once, only when the play
 # Characters
 From the character registry. Keep every character's fixed facts true and their voice recognisable on every page; let their wants and blind spots drive what they do. The notes are written in Polish: use them as notes only and write everything in the story language. In English stories use the names given here.
 ${who.join('\n')}${setPiece}
+`;
+}
+
+/** The Bureau's glitch of the day (admin panel → Daily ops). Empty without one, so the prompt is then unchanged. */
+export function glitchSection(glitch: string | null | undefined): string {
+  if (!glitch?.trim()) return '';
+  return `
+# Glitch of the day
+Today the whole Public Domain has a glitch: ${glitch.trim()} Let it show up at least once in this tale in a small, funny way. It never overrides the rules above.
 `;
 }

@@ -1,11 +1,22 @@
 import type { Page, PublicConfig, Story, Tale } from '../shared/types';
 import type { ArtKitState, ArtSlot } from '../shared/artkit';
+import type { DailyBoard, Glitch, Quest } from '../shared/daily';
 
 export interface ArtKitView {
   slots: ArtSlot[];
   kit: ArtKitState;
   settings: { model: string; quality: 'low' | 'medium' | 'high' };
   ready: { anthropic: boolean; openai: boolean };
+}
+
+export interface DailyAdminView {
+  enabled: boolean;
+  today: DailyBoard | null;
+  quests: (Quest & { status: string })[];
+  glitches: (Glitch & { status: string })[];
+  planned: { day: string; briefing: string | null; glitch_slug: string | null; quest_slugs: string[] }[];
+  kinds: string[];
+  tales: { id: string; title: string }[];
 }
 
 export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
@@ -23,6 +34,7 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
 
 export const api = {
   config: () => call<PublicConfig>('GET', '/api/config'),
+  daily: () => call<DailyBoard>('GET', '/api/daily'),
   tales: () => call<TaleCard[]>('GET', '/api/tales'),
   start: (taleId: string, lang: string, heroName: string) => call<Story>('POST', '/api/story', { taleId, lang, heroName }),
   story: (id: string) => call<Story>('GET', `/api/story/${id}`),
@@ -55,6 +67,14 @@ export const adminApi = (creds: AdminCredentials) => {
     save: (body: unknown) => call<any>('PUT', '/api/admin/config', body, h),
     models: (provider: string, key?: string) => call<any>('POST', `/api/admin/providers/${provider}/models`, { key }, h),
     probe: (role: string) => call<any>('POST', `/api/admin/probe/${role}`, {}, h),
+    daily: {
+      get: () => call<DailyAdminView>('GET', '/api/admin/daily', undefined, h),
+      saveQuest: (q: Quest & { status: string }) => call<DailyAdminView>('PUT', `/api/admin/daily/quests/${q.slug}`, q, h),
+      saveGlitch: (g: Glitch & { status: string }) => call<DailyAdminView>('PUT', `/api/admin/daily/glitches/${g.slug}`, g, h),
+      planDay: (day: string, plan: { briefing: string | null; glitch_slug: string | null; quest_slugs: string[] }) =>
+        call<DailyAdminView>('PUT', `/api/admin/daily/days/${day}`, plan, h),
+      unplanDay: (day: string) => call<DailyAdminView>('DELETE', `/api/admin/daily/days/${day}`, undefined, h),
+    },
     artkit: {
       get: () => call<ArtKitView>('GET', '/api/admin/artkit', undefined, h),
       plan: (notes: string) => call<ArtKitView>('POST', '/api/admin/artkit/plan', { notes }, h),

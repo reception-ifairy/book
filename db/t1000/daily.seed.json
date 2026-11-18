@@ -1,0 +1,31 @@
+{
+  "_comment": "Starter pool for daily ops (t1000.ignis_quests / ignis_glitches). node scripts/t1000-daily.mjs | mysql t1000 adds missing entries only; edit live ones in /#/admin → Daily ops.",
+  "quests": [
+    { "slug": "close-any-case", "title": "Close a case", "description": "Take any case to an ending. Any ending. IGNIS is not picky today.", "kind": "close_case", "params": {}, "reward_xp": 60 },
+    { "slug": "canon-keeper", "title": "By the book (sort of)", "description": "Close a case with canon integrity at 80% or more. The Bureau loves tidy paperwork.", "kind": "canon_finish", "params": { "min_canon": 80 }, "reward_xp": 90 },
+    { "slug": "secret-ending", "title": "Find the hidden door", "description": "Unlock a secret ending in any case.", "kind": "ending", "params": { "ending": "secret" }, "reward_xp": 150 },
+    { "slug": "beautiful-disaster", "title": "Beautiful disaster", "description": "Reach a cursed ending. On purpose. Probably.", "kind": "ending", "params": { "ending": "cursed" }, "reward_xp": 80 },
+    { "slug": "chaos-agent", "title": "Agent of chaos", "description": "Pick the chaos move three times today.", "kind": "choice_kind", "params": { "choice": "chaos", "count": 3 }, "reward_xp": 50 },
+    { "slug": "sensible-shoes", "title": "Sensible shoes", "description": "Pick the sane move four times. IGNIS is shocked and proud.", "kind": "choice_kind", "params": { "choice": "sane", "count": 4 }, "reward_xp": 50 },
+    { "slug": "banana-peel", "title": "Banana peel protocol", "description": "Pick the dumb move twice. For science.", "kind": "choice_kind", "params": { "choice": "dumb", "count": 2 }, "reward_xp": 40 },
+    { "slug": "sudo-make-me-a-sandwich", "title": "sudo make it happen", "description": "Use a sudo power move once.", "kind": "choice_kind", "params": { "choice": "sudo", "count": 1 }, "reward_xp": 60 },
+    { "slug": "explain-it", "title": "If you can explain it…", "description": "Type two moves of your own. Bonus points (from IGNIS, not the Bureau) if you explain how they work.", "kind": "custom_moves", "params": { "count": 2 }, "reward_xp": 70 },
+    { "slug": "field-report", "title": "Long field report", "description": "Play eight pages today, across any cases.", "kind": "pages", "params": { "count": 8 }, "reward_xp": 60 },
+    { "slug": "chaos-meter-80", "title": "Red zone", "description": "Push the chaos meter to 80 or more in any case.", "kind": "stat", "params": { "stat": "chaos", "op": "gte", "value": 80 }, "reward_xp": 70 },
+    { "slug": "saint-mode", "title": "Halo update installed", "description": "Raise karma to 50 or more in any case.", "kind": "stat", "params": { "stat": "karma", "op": "gte", "value": 50 }, "reward_xp": 70 },
+    { "slug": "dragon-duty", "title": "Dragon duty", "description": "Open case ARB-005 and check on the Wawel Dragon's input validation.", "kind": "open_case", "params": { "tale_id": "wawel-dragon" }, "reward_xp": 40 },
+    { "slug": "midnight-deadline", "title": "Before the token expires", "description": "Close case ARB-004 (Cinderella) with any ending.", "kind": "close_case", "params": { "tale_id": "cinderella" }, "reward_xp": 80 }
+  ],
+  "glitches": [
+    { "slug": "rhyming-wolves", "text": "Every wolf in the Public Domain speaks only in rhymes today, and is very proud of it." },
+    { "slug": "sideways-gravity", "text": "Gravity points slightly sideways today: everything rolls gently to the left." },
+    { "slug": "doors-want-passwords", "text": "Every door asks for a password today, and they all reject \"password\"." },
+    { "slug": "autocorrect-spells", "text": "Spells are autocorrected today, so magic words sometimes come out as similar, sillier words." },
+    { "slug": "loading-bars", "text": "Big actions show a floating loading bar above them today, and it always sticks at 99%." },
+    { "slug": "polite-villains", "text": "Villains must say please and thank you today. They hate it." },
+    { "slug": "talking-objects", "text": "Ordinary objects have opinions today and share them out loud at the worst moments." },
+    { "slug": "everything-subscriptions", "text": "Magic items run on free trials today and pop up a renewal reminder at dramatic moments." },
+    { "slug": "lag-day", "text": "The Public Domain is lagging today: some reactions arrive one beat late." },
+    { "slug": "snow-day", "text": "It is snowing pixels across every tale today; they melt into tiny sparkles when touched." }
+  ]
+}

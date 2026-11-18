@@ -238,3 +238,18 @@ Model postaci jest zgodny z ARB (szkielet: [postacie.sql](postacie.sql); wdroże
 - **Schemat:** `mysql t1000 < db/t1000/002_ignis_characters.sql` (można uruchamiać wielokrotnie; nadaje `ignis_book` tylko `SELECT`).
 - **W grze:** prompt baśni dostaje sekcję `# Characters` (pragnienie, ślepa plamka, stałe fakty, rekwizyty, głos, reakcja pod presją) i opcjonalną scenę z aktywnego retellingu tej baśni. Narrator Ignis jest w bazie dla porządku, ale do promptu nie trafia: opisuje go sekcja „Who you are”. Bez bazy sekcji nie ma i gra działa jak wcześniej.
 - **Zgodność z ARB:** te same kolumny i gałęzie JSON, więc zapytania ARB działają po zmianie prefiksu. Odpowiedniki w ARB: Kapturek 28, Wilk 29, Babcia 30, Gajowy 31, Kopciuszek 20, Książę 21, Macocha 22, Wróżka Chrzestna 23, Smok 24, Skuba 25 (u nich Szewczyk Dratewka), Król Krak 26.
+
+### Daily ops (od 6.6.0)
+
+| Tabela | Co zawiera |
+|---|---|
+| `ignis_quests` | Pula zadań: `slug`, tytuł, opis, `kind` (typ celu), `params` (JSON: `tale_id`, `count`, `ending`, `choice`, `stat`/`op`/`value`, `min_canon`), `reward_xp`, `status` (`active` rotuje, `draft`, `retired`) |
+| `ignis_glitches` | Pula glitchy dnia: jedno zdanie po angielsku, które trafia też do promptu opowieści |
+| `ignis_daily` | Dni zaplanowane ręcznie: odprawa Ignisa, glitch, lista zadań |
+
+- **Edycja:** panel `/#/admin` → *Daily ops*. Zmiany działają od razu (pamięć podręczna tablicy jest czyszczona przy zapisie, a poza tym odświeża się co 5 minut).
+- **Rotacja:** dzień bez planu losuje 3 aktywne zadania i 1 glitch, deterministycznie po dacie, więc wszyscy agenci widzą to samo przez cały dzień. Dzień Biura liczy się według czasu warszawskiego.
+- **Postęp:** liczy przeglądarka gracza z jego spraw, tylko ze stron napisanych w danym dniu. XP nie jest jeszcze nigdzie zapisywane: to pierwszy krok pod przyszły pulpit agenta.
+- **Glitch w grze:** prompt dostaje sekcję `# Glitch of the day`; serwer bierze glitch z pamięci podręcznej, więc strona nigdy nie czeka na bazę.
+- **Start:** `mysql t1000 < db/t1000/003_ignis_daily.sql`, potem `npm run -s t1000:daily | mysql t1000`.
+

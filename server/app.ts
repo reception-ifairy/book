@@ -3,6 +3,7 @@ import { api } from './routes';
 import { admin } from './admin';
 import { MEDIA_DIR } from './story/store';
 import { artkitPublic } from './artkit/routes';
+import { dailyPublic } from './daily';
 
 /**
  * Builds the HTTP app without listening, so tests can drive it on an ephemeral port.
@@ -24,6 +25,7 @@ export function createApp() {
   app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: Math.round(process.uptime()) }));
   app.use(artkitPublic);
   app.use('/api/admin', admin);
+  app.use('/api', dailyPublic);
   app.use('/api', api);
   app.use('/media', express.static(MEDIA_DIR, { maxAge: '7d', fallthrough: false }));
 

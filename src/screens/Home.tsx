@@ -6,6 +6,7 @@ import { api, loadRuns, rememberRun, type TaleCard } from '../api';
 import { navigate } from '../App';
 import { Badge, Logo, Segmented, SnowToggle, StatusDot, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
+import { DailyOps } from '../components/DailyOps';
 import type { Lang, PublicConfig } from '../../shared/types';
 import { ago, coverStyle } from '../meta';
 import { useArt } from '../artkit';
@@ -255,6 +256,8 @@ export function Home() {
         </ol>
       </section>
 
+      <DailyOps />
+
       <section className="pb-14">
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
           <h2 className="toon-title text-3xl sm:text-4xl text-ink">{copy.casesTitle}</h2>
@@ -294,7 +297,7 @@ export function Home() {
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>ARB · The Arcane Retellings Bureau · Claude writes the story, Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // field assistant v6.5</span>
+        <span className="font-pixel">IGNIS // field assistant v6.6</span>
       </footer>
     </div>
     </>
