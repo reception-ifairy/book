@@ -39,7 +39,7 @@ const QUIPS = [
 
 /** What the home screen says. */
 const COPY = {
-  eyebrow: 'ARB · The Arcane Retellings Bureau',
+  eyebrow: 'ARB · The Arcane Rescue Bureau',
   title: ['Old', 'tales.', 'Enchanted', 'code.'],
   accent: 'Hilarious side effects.',
   hook: 'Someone has enchanted the plot.',
@@ -48,7 +48,7 @@ const COPY = {
     'Snow White’s mirror has started answering questions before they’re asked.',
     'And Baba Yaga’s cottage has installed a navigation spell. It now takes the scenic route to its own front door.',
   ],
-  welcome: 'Welcome to the Arcane Retellings Bureau, where you step into familiar tales, investigate what went wrong and decide what happens next.',
+  welcome: 'Welcome to the Arcane Rescue Bureau, where you step into familiar tales, investigate what went wrong and decide what happens next.',
   nameLabel: 'Agent codename',
   placeholder: 'e.g. Agent Pixel_Pip',
   needName: 'The Bureau needs your codename first, Agent.',
@@ -296,7 +296,7 @@ export function Home() {
       )}
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
-        <span>ARB · The Arcane Retellings Bureau · Claude writes the story, Gemini / OpenAI paint and speak</span>
+        <span>ARB · The Arcane Rescue Bureau · Claude writes the story, Gemini / OpenAI paint and speak</span>
         <span className="font-pixel">IGNIS // field assistant v6.8</span>
       </footer>
     </div>

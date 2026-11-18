@@ -41,7 +41,7 @@ export const ART_SLOTS: ArtSlot[] = [
     group: 'scene',
     label: 'Workshop backdrop',
     brief:
-      "The Arcane Retellings Bureau field office at night: a cozy cyber-magic workshop crossed with a detective agency. Timber beams, a stone fireplace, a cork case board with red string linking fairy-tale clues (a glass slipper, a red hood, a gingerbread crumb), filing cabinets with glowing rune locks, floating holographic case files, fairy-light garlands, a frosty window with falling snow. Leave the left half calm and darker so a headline can sit over it.",
+      "The Arcane Rescue Bureau field office at night: a cozy cyber-magic workshop crossed with a detective agency. Timber beams, a stone fireplace, a cork case board with red string linking fairy-tale clues (a glass slipper, a red hood, a gingerbread crumb), filing cabinets with glowing rune locks, floating holographic case files, fairy-light garlands, a frosty window with falling snow. Leave the left half calm and darker so a headline can sit over it.",
     usedIn: 'Full-width background behind the home screen hero, dimmed under the text.',
     size: '1536x1024',
     transparent: false,

@@ -1,67 +1,260 @@
-# IGNIS // OS: Grimm Protocol
+# ARB · Arcane Rescue Bureau
 
-Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 lat**. Zadziorna księga-robot **Ignis** opowiada klasyczne baśnie jako zabugowany kod: Czerwony Kapturek kontra atak MITM, Trzy Świnki kontra DDoS, Kopciuszek z wygasającą sesją. Każdy wybór forkuje linię czasu. Humor jak z dobrego familijnego filmu animowanego: absurd, kalambury, slapstick i proste żarty o grach i technice. Bez przemocy na serio, bez przekleństw, bez złośliwości wobec gracza.
+> Old tales. Enchanted code. Hilarious side effects.
 
-## Gdzie jesteśmy (2026-11-17)
+Interaktywna gra „wybierz własną przygodę” w klimacie **cyber-magii** dla graczy **od 12 lat**. Ktoś zaczarował fabułę baśni z Domeny Publicznej: pantofelek Kopciuszka śledzi nie tego tancerza, a chatka Baby Jagi wybiera „malowniczą trasę” do własnych drzwi. Gracz jest **agentem Arcane Rescue Bureau (ARB)**. Wchodzi w baśń, bada, co się zepsuło, i decyduje, co dalej: naprawia opowieść, przekręca ją albo psuje ją pięknie. Każdy wybór rozgałęzia linię czasu.
 
-**Na żywo:** https://demo.ifairy.co.uk/ · PM2 `demo-ifairy-book` na porcie 8803 za nginx · dane w `/var/www/demo.ifairy.co.uk/data/` (konfiguracja, klucze, historie).
+Obok agenta jest **IGNIS**, jego asystent terenowy: latający robocik z ekranikiem CRT zamiast twarzy, ciałem-latarnią pełną wirującej magii, skrzydłami ważki i płomykiem-anteną. Ignis prowadzi narrację, komentuje i ma zdanie o wszystkim.
 
-**Wersja 6.2.0:** jeden świat, Grimm Protocol (5 baśni, narrator Ignis, 12+), z glitch-łamigłówkami, panelem DEBUG i zasadą „jak wyjaśnisz, to zaistnieje”. Świat iFairy Universe, AI Game Master i połączenie z API Universe zostały usunięte w 6.0.0. Dokładne zapytania do Claude'a pilnuje test `grimm-golden`.
+**To jest główne repozytorium projektu** (`reception-ifairy/arcaneagency`, gałąź `main`). Wcześniejsza historia powstawała w `reception-ifairy/book` i jest tu zachowana w całości.
 
-**Co nowego w 6.1.1:** Ignis to **cybermagiczny robocik ze skrzydłami**, a nie dawna wróżka — po polsku mówi o sobie w rodzaju męskim („zrobiłem", „jestem gotowy"), a zapytany, czy jest chłopcem, czy dziewczynką, odpowiada niezmiennie, że **czuje się kwiatkiem**.
+**Na żywo:** https://demo.ifairy.co.uk/
 
-**Co nowego w 6.1.0:** pod każdą stroną jest zwijany **panel DEBUG** (klawisz `D`) — Ignis wychodzi na chwilę z baśni i tłumaczy krok po kroku prawdziwą technologię, na której ta strona stoi (atak MITM, DDoS, ciasteczka śledzące, wygasła sesja, trojan). Obowiązuje też zasada domu **„jak wyjaśnisz, to zaistnieje”**: własny ruch z uzasadnieniem działa mocniej niż ruch bez niego.
+---
 
-**Panel admina i magazyn t1000:** do `/#/admin` loguje się loginem i hasłem z MariaDB `t1000` (tabela `ignis_admins`); są tam też zaszyfrowane klucze API i **rejestr 23 postaci** (model ARB, plik źródłowy `db/t1000/characters.grimm.json`), z którego gra bierze głosy i fakty postaci (opis w [docs/OPERATORZY.md](docs/OPERATORZY.md#6-magazyn-w-bazie-t1000)). **Zapomniane hasło:** `npm run admin:reset`, `pm2 restart demo-ifairy-book`, kod z `cat data/admin-setup-code.txt`, potem `/#/admin`.
+## Spis treści
 
-**Otwarte sprawy:**
-- **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty.
+1. [Jak się gra](#jak-się-gra)
+2. [Co jest w środku](#co-jest-w-środku)
+3. [Panel admina (`/#/admin`)](#panel-admina-admin)
+4. [Szybki start](#szybki-start)
+5. [Zmienne środowiskowe](#zmienne-środowiskowe)
+6. [Baza t1000](#baza-t1000)
+7. [Skrypty, testy i CI](#skrypty-testy-i-ci)
+8. [Wdrożenie na produkcji](#wdrożenie-na-produkcji)
+9. [Struktura repozytorium](#struktura-repozytorium)
+10. [Bezpieczeństwo](#bezpieczeństwo)
+11. [Dokumentacja](#dokumentacja)
 
-**Wdrożenie:** kopia `data/`, `git pull`, `npm install`, `npm run build`, `pm2 restart demo-ifairy-book`.
+---
 
-**Multimodalnie:**
-- **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
-- **Gemini** albo **OpenAI** rysuje ilustracje i czyta tekst na głos (głos z przeglądarki działa bez klucza);
-- przeglądarka obsługuje dyktowanie;
-- **Branding:** w panelu admina nazwa, logo, karta do udostępniania, motyw kolorów (*Cozy Workshop* albo *Cyber-Magic Nebula*) i styl kart (*Paper sticker* albo *Holo tech*), z podglądem na żywo.
-- **Art Kit:** Claude planuje całą szatę graficzną (style bible + prompty), a OpenAI ją maluje: tło, Ignisa, okładki, ikony, odznaki, logo i kartę do udostępniania.
+## Jak się gra
+
+1. Na stronie głównej agent wpisuje **kryptonim** i wybiera język opowieści (angielski albo polski).
+2. Wybiera **akta sprawy**, czyli jedną z pięciu baśni:
+
+   | Sprawa | Co się zepsuło |
+   |---|---|
+   | **Little Red Packet** | Czerwony Kapturek kontra atak man-in-the-middle |
+   | **Three Little Firewalls** | Trzy Świnki kontra DDoS |
+   | **Hansel & Gretel & Cookies** | Ciasteczka śledzące i piernikowy honeypot |
+   | **Cinderella: Session Expired** | O północy wygasa token sesji |
+   | **The Wawel Dragon Exploit** | Szewczyk-pentester, owca-trojan i smok bez walidacji danych |
+
+3. **Każda strona** to narracja Ignisa, ilustracja (opcjonalnie), czytanie na głos (opcjonalnie) i wybory:
+   - **Sane** (rozsądny), **Chaos** (szalony), **Dumb** (oczywiście głupi), **sudo** (łamanie zasad);
+   - **własny ruch:** tekst, dyktowanie, a nawet dołączony obrazek, który Claude zobaczy. Zasada domu: **„jak wyjaśnisz, to zaistnieje”**, czyli ruch z uzasadnieniem działa mocniej.
+4. Wskaźniki (kanon, karma, mana itp.) zmieniają się z każdą decyzją. Historia kończy się jednym z zakończeń: **kanonicznym, przekręconym, przeklętym, sekretnym** albo *garbage collected*.
+5. Można cofnąć się do dowolnej strony. Następny ruch tworzy nową gałąź na **mapie linii czasu**.
+6. **Panel DEBUG** pod stroną (klawisz `D`): Ignis na chwilę wychodzi z baśni i wyjaśnia prawdziwą technologię, na której stoi ta scena.
+7. **Daily ops:** codziennie są nowe zadania z nagrodą XP i **glitch dnia**, który zmienia wszystkie opowieści (np. „pasek ładowania zawsze stoi na 99%”).
+
+Ton: jak w dobrym familijnym filmie animowanym. Absurd, kalambury, slapstick i proste żarty o grach i technice. Bez przemocy na serio, bez przekleństw i bez złośliwości wobec gracza.
+
+---
+
+## Co jest w środku
+
+**Modele AI:**
+- **Claude** (Anthropic) pisze każdą stronę jako uporządkowany JSON: narrację, wybory, zmiany wskaźników, zakończenia i opis ilustracji. Rozumie też obrazki dołączane przez gracza. Prompt systemowy jest cache'owany.
+- **Gemini albo OpenAI** rysuje ilustracje stron i czyta tekst na głos. Głos przeglądarki działa bez żadnego klucza.
+- **Art Kit:** Claude planuje całą szatę graficzną (style bible i prompt dla każdego slotu), a OpenAI ją maluje. Grafiki z Ignisem powstają na wzór jednego obrazu referencyjnego, więc Ignis wszędzie wygląda tak samo.
+
+**Świat:**
+- **Rejestr postaci** w bazie t1000, w modelu zgodnym z ARB (DNA, persona, retelling, relacje). Gra wstrzykuje do promptu postacie danej baśni, więc mają stałe fakty i rozpoznawalne głosy.
+- **Daily ops:** pula zadań i glitchy rotuje codziennie (dzień liczony według czasu warszawskiego). Admin może też ręcznie zaplanować konkretny dzień.
+
+**Wygląd** (ustawiany w panelu, sekcja *Branding*):
+- **Motywy:**
+  - *Cozy Workshop*: drewniane biuro nocą, kominek, lampki, śnieg.
+  - *Cyber-Magic Nebula*: kosmiczne niebo, mgławice, tęczowy łuk, złoty księżyc, neonowy róż i cyjan.
+- **Style kart:**
+  - *Paper sticker*: kremowy papier z grubym konturem.
+  - *Holo tech*: ciemne szkło, neonowa ramka, narożniki HUD, scanlines.
+- **Własne logo, karta do udostępniania i kolory.** Serwer wpisuje branding do `index.html`, więc strona od pierwszej klatki ma właściwą nazwę i wygląd.
+
+**Stos:** Node + Express · React 19 · Vite · Tailwind 4 · motion · zod · `@anthropic-ai/sdk` · `@google/genai` · `openai` · mysql2 (MariaDB) · Vitest · bun (lockfile).
+
+---
+
+## Panel admina (`/#/admin`)
+
+**Logowanie:**
+- Z bazą t1000 logujesz się **loginem i hasłem** z tabeli `ignis_admins`. Przy pierwszym uruchomieniu serwer zapisuje jednorazowy kod konfiguracji.
+- Bez bazy panel używa `ADMIN_PASSWORD`, a bez hasła odpowiada tylko z localhosta.
+
+| Sekcja | Co robi |
+|---|---|
+| **API keys** | Klucze Anthropic, Gemini i OpenAI: *Test* (lista modeli bez zapisu), potem *Save*. Klucz z panelu wygrywa ze zmienną środowiskową; klucze nie wracają do przeglądarki w całości |
+| **Story engine** | Model i effort Claude'a, liczba stron do zakończenia, test na żywo |
+| **Illustrations** | Dostawca i model ilustracji, test na żywo |
+| **Voice** | Dostawca, model i głos czytania na głos |
+| **Branding** | Nazwa, skrót, tagline, opis, logo, karta do udostępniania, motyw, styl kart, kolory; podgląd na żywo przed zapisem |
+| **Art kit** | *Plan with Claude* → przegląd style bible → render wszystkich lub brakujących slotów → poprawki promptów → *Publish* (albo powrót do wbudowanego wyglądu) |
+| **Daily ops** | Pula zadań i glitchy, dzisiejsza tablica, ręczne planowanie dni |
+| **Limits** | Akcje na minutę na gracza i ilustracje dziennie dla wszystkich |
+
+Na górze panelu karty statusu pokazują stan kluczy i liczbę postaci załadowanych z t1000.
+
+**Zapomniane hasło:**
+1. `npm run admin:reset`
+2. `pm2 restart demo-ifairy-book`
+3. Odczytaj kod: `cat data/admin-setup-code.txt`
+4. Wejdź na `/#/admin` i ustaw nowe hasło. Haseł nie zapisuj w notatkach ani w rozmowach z AI.
+
+---
 
 ## Szybki start
 
 ```bash
-bun install            # albo npm install
-cp .env.example .env   # opcjonalnie: klucze można też wpisać w panelu admina
-bun run dev            # http://localhost:3000
+bun install              # albo npm install
+cp .env.example .env     # klucze można też wpisać później w panelu admina
+bun run dev              # http://localhost:3000
 ```
 
-1. Otwórz `http://localhost:3000/#/admin`, wklej klucz Anthropic, kliknij **Test**, a potem **Save**.
-2. Opcjonalnie dodaj klucz Gemini lub OpenAI i wybierz modele ilustracji i głosu.
-3. Opcjonalnie: sekcja **Art kit**, czyli *Plan with Claude* → *Render all 19* → *Publish* (potrzebny klucz OpenAI).
-4. Wróć na stronę główną, wpisz imię i wybierz baśń.
+1. Otwórz `http://localhost:3000/#/admin`. Lokalnie, bez hasła i bazy, panel działa z localhosta.
+2. Wklej klucz Anthropic, kliknij **Test**, potem **Save**.
+3. Opcjonalnie dodaj klucz Gemini lub OpenAI dla ilustracji i głosu.
+4. Opcjonalnie w sekcji **Art kit** kliknij *Plan with Claude* → *Render all* → *Publish* (potrzebny klucz OpenAI).
+5. Wróć na stronę główną, wpisz kryptonim i otwórz sprawę.
 
-Produkcja: `bun run build && bun run start`. Przed wdrożeniem ustaw `ADMIN_PASSWORD`.
+**Build produkcyjny:** `bun run build && bun run start`. Serwer serwuje `dist/` i wpisuje branding do `index.html`.
 
-## Sprawdzanie
+---
+
+## Zmienne środowiskowe
+
+| Zmienna | Wymagana | Opis |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | tak* | Klucz do Claude'a (*albo ustawiony w panelu) |
+| `GEMINI_API_KEY` | nie | Ilustracje i/lub głos przez Gemini |
+| `OPENAI_API_KEY` | nie | Ilustracje, głos i Art Kit przez OpenAI |
+| `T1000_DATABASE_URL` | zalecana | Konto MariaDB z dostępem tylko do tabel `t1000.ignis_*`. Włącza logowanie loginem i hasłem, rejestr postaci i Daily ops |
+| `IGNIS_T1000_SECRET` | nie | 32 bajty hex (`openssl rand -hex 32`). Szyfruje klucze API w bazie. **Bez niego zapisane klucze są nie do odczytania** |
+| `ADMIN_PASSWORD` | nie | Stare hasło panelu, używane tylko bez `T1000_DATABASE_URL` |
+| `DATA_DIR` | nie | Katalog danych: konfiguracja, historie, media, Art Kit, branding (domyślnie `data`) |
+| `PORT` | nie | Port HTTP (domyślnie 3000; produkcja 8803) |
+| `TRUST_PROXY` | nie | Za reverse proxy (np. `1`), żeby limity widziały prawdziwe IP |
+
+Pełna lista: [docs/OPERATORZY.md](docs/OPERATORZY.md#5-zmienne-środowiskowe).
+
+---
+
+## Baza t1000
+
+MariaDB `t1000`, tabele z prefiksem `ignis_*`. Pliki SQL są w `db/t1000/`.
+
+| Plik | Tabele |
+|---|---|
+| `001_ignis_storage.sql` | `ignis_admins` (superadmin, hasła scrypt), `ignis_api_keys` (klucze szyfrowane) |
+| `002_ignis_characters.sql` | `ignis_characters`, `_dna`, `_personas`, `_retellings`, `_relationships` (model zgodny z ARB) |
+| `003_ignis_daily.sql` | `ignis_quests`, `ignis_glitches`, `ignis_daily` (plan dni) |
+
+**Zasiewanie danych** (skrypty wypisują SQL, który przekazujesz do `mysql`):
 
 ```bash
-bun run check   # typecheck + 40 testów (bez kluczy, na sztucznych API) + build
+mysql t1000 < db/t1000/001_ignis_storage.sql   # i kolejne pliki DDL
+npm run t1000:seed        | mysql t1000          # superadmin i klucze z config.json
+npm run t1000:characters  | mysql t1000          # postacie z db/t1000/characters.grimm.json
+npm run t1000:daily       | mysql t1000          # zadania i glitche z db/t1000/daily.seed.json
 ```
 
-To samo uruchamia CI w GitHub Actions przy każdym pushu i PR.
+Serwer odświeża postacie co 10 minut, a tablicę Daily ops co 5 minut. Bez bazy gra działa dalej, tylko bez postaci i Daily ops.
+
+---
+
+## Skrypty, testy i CI
+
+| Polecenie | Co robi |
+|---|---|
+| `bun run dev` | Serwer deweloperski z Vite (hot reload) |
+| `bun run build` | Frontend do `dist/` i serwer do `dist/server.cjs` |
+| `bun run start` | Produkcja (`NODE_ENV=production`) |
+| `bun run typecheck` | TypeScript bez emisji |
+| `bun run test` | Vitest: wszystkie testy na sztucznych API, bez kluczy |
+| `bun run check` | Typecheck, testy i build w jednym |
+| `npm run admin:reset` | Unieważnia hasło superadmina i tworzy nowy kod konfiguracji |
+
+Test `grimm-golden` pilnuje dokładnych zapytań do Claude'a. Po zamierzonej zmianie promptu odśwież go poleceniem `UPDATE_GOLDEN=1 npx vitest run tests/grimm-golden.test.ts`.
+
+**CI** (`.github/workflows/ci.yml`) uruchamia `bun install --frozen-lockfile`, typecheck, testy i build przy każdym pushu na `main` i `claude/**` oraz przy każdym PR.
+
+**Sposób pracy:**
+1. Gałąź `claude/<temat>` → PR → zielone CI → merge do `main`.
+2. Potem wdrożenie (sekcja niżej).
+3. Nie buduj niescalonej gałęzi w katalogu produkcyjnym: pm2 serwuje `dist/` właśnie stamtąd.
+
+---
+
+## Wdrożenie na produkcji
+
+| | |
+|---|---|
+| Serwer | `/var/www/demo.ifairy.co.uk` |
+| Proces | PM2 `demo-ifairy-book` (`dist/server.cjs`), port 8803, za nginx |
+| Dane | `data/` (poza repozytorium): `config.json`, historie, media, `artkit/`, `branding/` |
+
+**Kroki:**
+
+```bash
+git pull
+tar czf /root/backups/demo.ifairy.co.uk/data-$(date +%Y%m%d-%H%M%S).tgz data   # kopia danych
+npx -y bun@1.3.14 install --frozen-lockfile
+npm run build
+pm2 restart demo-ifairy-book --update-env
+curl -s https://demo.ifairy.co.uk/api/health
+```
+
+---
+
+## Struktura repozytorium
+
+```
+server.ts               start: Vite (dev) albo dist/ z brandingiem w index.html (prod)
+server/
+  app.ts                aplikacja Express (nagłówki, trasy, błędy JSON)
+  routes.ts             API gry: historie, ruchy, ilustracje, głos
+  admin.ts              API panelu (za logowaniem)
+  adminAuth.ts          logowanie z t1000, sesje, jednorazowy kod konfiguracji
+  branding.ts           branding: zapis, wgrywanie obrazów, index.html, favicon / og
+  daily.ts              Daily ops: tablica dnia, rotacja, API
+  db.ts                 pula połączeń MariaDB t1000
+  config.ts             konfiguracja i klucze w data/config.json
+  media.ts              ilustracje i głos (Gemini / OpenAI)
+  story/                silnik opowieści: prompty, wywołania Claude'a, postacie, zapis historii
+  artkit/               Art Kit: planer (Claude), generator (OpenAI), magazyn, trasy
+  providers/            klienci Anthropic, Gemini, OpenAI
+shared/                 typy i dane wspólne: baśnie, Art Kit, branding, Daily ops
+src/
+  screens/              Home, Story, Admin, ArtKitPanel, BrandingPanel, DailyOpsPanel
+  components/           SVGCharacter (Ignis), DailyOps, efekty, mapa linii czasu
+  ui.tsx                przyciski, odznaki, wskaźniki, toasty, logo
+  index.css             motywy, karty, animacje
+db/t1000/               DDL i dane do zasiania bazy
+scripts/                admin:reset i skrypty zasiewające t1000
+tests/                  Vitest + sztuczne API Anthropic i OpenAI
+docs/                   dokumentacja szczegółowa
+```
+
+---
+
+## Bezpieczeństwo
+
+- Klucze API nigdy nie wracają do przeglądarki w całości. W bazie są szyfrowane (`IGNIS_T1000_SECRET`).
+- Hasła admina to hashe scrypt. Sesje trwają 12 godzin, logowanie ma limit prób, a porównania są odporne na ataki czasowe.
+- Konto bazy aplikacji ma dostęp tylko do tabel `ignis_*`; tabele postaci tylko do odczytu.
+- Wgrywane obrazy (logo, karta) muszą być PNG, JPEG lub WebP, sprawdzane po bajtach. SVG jest odrzucane.
+- Limity: akcje na minutę na IP i dzienny budżet ilustracji.
+- Sekrety (`.env`, `data/`) są poza repozytorium.
+
+---
 
 ## Dokumentacja
 
 | Dokument | Zawartość |
 |---|---|
-| [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md) | Struktura repo plik po pliku, przebieg tury (diagramy), model danych, zapis danych, frontend i motyw |
-| [docs/OPERATORZY.md](docs/OPERATORZY.md) | Kto co obsługuje: modele AI, gracz i sysadmin, wszystkie endpointy, zabezpieczenia, skrypty, testy, CI, zmienne środowiskowe |
-| [docs/ZRODLO-IFAIRY.md](docs/ZRODLO-IFAIRY.md) | Analiza dokumentu kanonu iFairy: co weszło do gry, co odrzucone i dlaczego |
-| [CHANGELOG.md](CHANGELOG.md) | Wszystkie zmiany od wersji z AI Studio do obecnej |
-
-## Stos
-
-Node + Express · React 19 · Vite 6 · Tailwind 4 · motion · zod · `@anthropic-ai/sdk` · `@google/genai` · `openai` · Vitest.
-
-## Styl: Cozy Workshop
-
-Przytulny warsztat nocą: deski, kominek, lampki i śnieg, kremowe karty-naklejki z grubym konturem, komiksowe efekty „ZAP!” i „BONK!”. Ignis to księga-robot z ekranową twarzą i skrzydłami wróżki. Tokeny motywu są w `src/index.css`, a komponenty w `src/ui.tsx`.
+| [docs/OPERATORZY.md](docs/OPERATORZY.md) | Modele AI, gracz i sysadmin, wszystkie endpointy, zabezpieczenia, skrypty, CI, zmienne środowiskowe, baza t1000 |
+| [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md) | Struktura plik po pliku, przebieg tury, model danych, frontend i motyw |
+| [docs/postacie.sql](docs/postacie.sql) | Szkielet modelu postaci ARB (DNA, persona, retelling) |
+| [docs/ZRODLO-IFAIRY.md](docs/ZRODLO-IFAIRY.md) | Archiwalna analiza dawnego kanonu iFairy |
+| [CHANGELOG.md](CHANGELOG.md) | Historia zmian od pierwszej wersji |

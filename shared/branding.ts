@@ -65,7 +65,7 @@ export const CARD_STYLE_INFO: Record<CardStyle, { label: string; description: st
 };
 
 export const DEFAULT_BRANDING: Branding = {
-  name: 'Arcane Retellings Bureau',
+  name: 'Arcane Rescue Bureau',
   shortName: 'ARB',
   tagline: 'ARB · IGNIS assist',
   description:
