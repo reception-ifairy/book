@@ -9,6 +9,7 @@ import { generateImage, generateSpeech, IMAGE_STYLE } from './media';
 import { probeStoryModel } from './story/engine';
 import { artkitAdmin } from './artkit/routes';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
+import { adminAuth, dbLoginEnabled, requireAdminSession } from './adminAuth';
 
 export const admin = Router();
 
@@ -16,10 +17,12 @@ const sha = (s: string) => createHash('sha256').update(s).digest();
 const isLoopback = (ip?: string) => !!ip && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip);
 
 /**
- * With ADMIN_PASSWORD set, every request needs it in `x-admin-password`.
- * Without it, the panel only answers requests from this machine (local dev).
+ * With the t1000 database configured, every request needs a session from /api/admin/auth/login (adminAuth.ts).
+ * Otherwise, with ADMIN_PASSWORD set, every request needs it in `x-admin-password`.
+ * Without either, the panel only answers requests from this machine (local dev).
  */
 function guard(req: Request, res: Response, next: NextFunction) {
+  if (dbLoginEnabled()) return requireAdminSession(req, res, next);
   const expected = process.env.ADMIN_PASSWORD;
   if (expected) {
     const given = String(req.header('x-admin-password') ?? '');
@@ -29,6 +32,7 @@ function guard(req: Request, res: Response, next: NextFunction) {
   if (isLoopback(req.socket.remoteAddress)) return next();
   return res.status(403).json({ error: 'Admin panel is local-only. Set ADMIN_PASSWORD on the server to use it remotely.' });
 }
+admin.use('/auth', adminAuth);
 admin.use(guard);
 admin.use('/artkit', artkitAdmin);
 
@@ -39,7 +43,8 @@ function publicView() {
   return {
     ...rest,
     providers: Object.fromEntries(PROVIDERS.map((p) => [p, { source: keySource(p), masked: maskKey(getKey(p)) }])),
-    passwordProtected: !!process.env.ADMIN_PASSWORD,
+    passwordProtected: dbLoginEnabled() || !!process.env.ADMIN_PASSWORD,
+    loginMode: dbLoginEnabled() ? 'db' : process.env.ADMIN_PASSWORD ? 'password' : 'local',
   };
 }
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, LogOut, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { ArtKitPanel } from './ArtKitPanel';
-import { adminApi } from '../api';
+import { adminApi, adminAuthApi, type AdminAuthStatus } from '../api';
 import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
 
@@ -30,23 +30,26 @@ const NAV = [
   { id: 'limits', label: 'Limits', icon: Gauge },
 ];
 
-const PW_KEY = 'ignis.adminPw';
-const session = {
+/** One value in sessionStorage; reads and writes never throw (private windows, blocked storage). */
+const stored = (key: string) => ({
   get: () => {
     try {
-      return sessionStorage.getItem(PW_KEY) || '';
+      return sessionStorage.getItem(key) || '';
     } catch {
       return '';
     }
   },
   set: (v: string) => {
     try {
-      sessionStorage.setItem(PW_KEY, v);
+      if (v) sessionStorage.setItem(key, v);
+      else sessionStorage.removeItem(key);
     } catch {
       /* ignore */
     }
   },
-};
+});
+const session = stored('ignis.adminPw');
+const tokenStore = stored('ignis.adminToken');
 
 /** The editable settings sections; everything else in the config view is status from the server. */
 const ROLE_SECTIONS = ['story', 'image', 'tts', 'limits', 'artkit'] as const;
@@ -56,7 +59,25 @@ const rolesOf = (c: any) => c && JSON.stringify(sectionsOf(c));
 export function Admin() {
   const toast = useToast();
   const [password, setPassword] = useState(session.get);
-  const client = useMemo(() => adminApi(password), [password]);
+  const [token, setToken] = useState(tokenStore.get);
+  const [auth, setAuth] = useState<AdminAuthStatus | null>(null);
+  const dbMode = auth?.mode === 'db';
+  const client = useMemo(() => adminApi(dbMode ? { token } : { password }), [dbMode, token, password]);
+  const saveToken = (t: string) => {
+    tokenStore.set(t);
+    setToken(t);
+  };
+  const logout = async () => {
+    await adminAuthApi.logout(token).catch(() => {});
+    setCfg(null);
+    saveToken('');
+  };
+
+  useEffect(() => {
+    adminAuthApi.status(token)
+      .then(setAuth)
+      .catch(() => setAuth({ mode: 'password', needsSetup: false, loggedIn: false }));
+  }, [token]);
   const [saved, setSaved] = useState<any>(null);
   const [cfg, setCfg] = useState<any>(null);
   const [authError, setAuthError] = useState('');
@@ -103,6 +124,7 @@ export function Admin() {
   };
 
   useEffect(() => {
+    if (!auth || (auth.mode === 'db' && !auth.loggedIn)) return;
     client.get()
       .then((c) => {
         apply(c);
@@ -110,8 +132,12 @@ export function Admin() {
         // Verify every configured key straight away so the status cards are live.
         for (const p of PROVIDERS) if (c.providers[p.id].source !== 'none') testProvider(p.id, undefined, true);
       })
-      .catch((e) => setAuthError(e.message));
-  }, [client]);
+      .catch((e) => {
+        // A session that died with a server restart sends the panel back to the login screen.
+        if (auth.mode === 'db') saveToken('');
+        else setAuthError(e.message);
+      });
+  }, [client, auth]);
 
   /** Takes the server's view after a key change but keeps any unsaved section edits in the form. */
   const keepEdits = (next: any) => {
@@ -159,6 +185,14 @@ export function Admin() {
     return tagged.length ? tagged : list;
   };
   const dirty = !!cfg && rolesOf(cfg) !== rolesOf(saved);
+
+  if (!auth) {
+    return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin text-muted" /></div>;
+  }
+
+  if (auth.mode === 'db' && !auth.loggedIn) {
+    return <AuthGate needsSetup={auth.needsSetup} onSession={(t) => saveToken(t)} />;
+  }
 
   if (authError && !cfg) {
     return (
@@ -212,7 +246,11 @@ export function Admin() {
       ok: cfg.tts.provider === 'browser' ? true : ready(cfg.tts.provider),
       value: cfg.tts.provider === 'browser' ? 'Browser voice' : ready(cfg.tts.provider) ? `${cfg.tts.provider} · ${cfg.tts.model || 'no model'}` : problem(cfg.tts.provider),
     },
-    { label: 'Admin access', ok: cfg.passwordProtected, value: cfg.passwordProtected ? 'Password protected' : 'Localhost only' },
+    {
+      label: 'Admin access',
+      ok: cfg.passwordProtected,
+      value: dbMode ? `Logged in as ${auth.login ?? 'admin'}` : cfg.passwordProtected ? 'Password protected' : 'Localhost only',
+    },
   ];
 
   return (
@@ -225,6 +263,11 @@ export function Admin() {
           <div className="ml-auto flex items-center gap-2">
             <SnowToggle />
             <a href="#/" className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold"><ArrowLeft size={16} /> Back to tales</a>
+            {dbMode && (
+              <button type="button" onClick={logout} className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-gold ml-2" title={`Log out ${auth.login ?? ''}`}>
+                <LogOut size={16} /> Log out
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -439,6 +482,64 @@ export function Admin() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/**
+ * Login screen for the t1000 database login, or the one-time setup screen when no admin password is set.
+ * Setup needs the code the server printed at startup, so nobody else can claim the panel.
+ */
+function AuthGate({ needsSetup, onSession }: { needsSetup: boolean; onSession: (token: string) => void }) {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const get = (k: string) => String(f.get(k) ?? '');
+    if (needsSetup) {
+      if (get('password').length < 10) return setError('Password: at least 10 characters.');
+      if (get('password') !== get('repeat')) return setError('The two passwords are different.');
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const s = needsSetup
+        ? await adminAuthApi.setup(get('code'), get('login').trim(), get('password'))
+        : await adminAuthApi.login(get('login').trim(), get('password'));
+      onSession(s.token);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen grid place-items-center px-4">
+      <form onSubmit={submit} className="card w-full max-w-sm p-6">
+        <div className="grid place-items-center w-12 h-12 rounded-xl bg-screen text-pixel border-[2.5px] border-outline shadow-[0_3px_0_var(--color-outline)] mb-4">
+          {needsSetup ? <KeyRound size={22} /> : <Lock size={22} />}
+        </div>
+        <h1 className="font-serif font-bold text-2xl">{needsSetup ? 'Set the admin password' : 'Sysadmin login'}</h1>
+        <p className="text-sm text-muted mt-1 mb-5">
+          {needsSetup
+            ? 'Enter the one-time setup code from the server log (or data/admin-setup-code.txt), then choose your login and password.'
+            : 'Log in with your admin login and password.'}
+        </p>
+        <div className="space-y-3">
+          {needsSetup && <input name="code" placeholder="Setup code (XXXX-XXXX-XXXX)" className="field font-mono" autoComplete="one-time-code" autoFocus required />}
+          <input name="login" placeholder="Login" defaultValue={needsSetup ? 'superadmin' : ''} className="field" autoComplete="username" autoFocus={!needsSetup} required />
+          <input name="password" type="password" placeholder={needsSetup ? 'New password (10+ characters)' : 'Password'} className="field" autoComplete={needsSetup ? 'new-password' : 'current-password'} required />
+          {needsSetup && <input name="repeat" type="password" placeholder="Repeat the password" className="field" autoComplete="new-password" required />}
+        </div>
+        {error && <p className="text-sm text-danger mt-3" role="alert">{error}</p>}
+        <Button variant="primary" className="w-full mt-4" disabled={busy}>
+          {busy ? <Loader2 size={16} className="animate-spin" /> : needsSetup ? 'Save and log in' : 'Log in'}
+        </Button>
+        <a href="#/" className="block text-center text-sm text-faint hover:text-ink mt-4">Back to the tales</a>
+      </form>
     </div>
   );
 }

@@ -33,8 +33,23 @@ export const api = {
   speech: (id: string, pageId: string) => call<{ url: string | null }>('POST', `/api/story/${id}/page/${pageId}/speech`, {}),
 };
 
-export const adminApi = (password: string) => {
-  const h = password ? { 'x-admin-password': password } : {};
+/** How the admin panel proves who it is: a session token from the t1000 login, or the legacy ADMIN_PASSWORD. */
+export type AdminCredentials = { token?: string; password?: string };
+const authHeaders = ({ token, password }: AdminCredentials): Record<string, string> =>
+  token ? { Authorization: `Bearer ${token}` } : password ? { 'x-admin-password': password } : {};
+
+export type AdminAuthStatus = { mode: 'db' | 'password' | 'local'; needsSetup: boolean; loggedIn: boolean; login?: string | null };
+type AdminSession = { token: string; login: string; expiresIn: number };
+
+export const adminAuthApi = {
+  status: (token?: string) => call<AdminAuthStatus>('GET', '/api/admin/auth/status', undefined, authHeaders({ token })),
+  login: (login: string, password: string) => call<AdminSession>('POST', '/api/admin/auth/login', { login, password }),
+  setup: (code: string, login: string, password: string) => call<AdminSession>('POST', '/api/admin/auth/setup', { code, login, password }),
+  logout: (token: string) => call<{ ok: true }>('POST', '/api/admin/auth/logout', {}, authHeaders({ token })),
+};
+
+export const adminApi = (creds: AdminCredentials) => {
+  const h = authHeaders(creds);
   return {
     get: () => call<any>('GET', '/api/admin/config', undefined, h),
     save: (body: unknown) => call<any>('PUT', '/api/admin/config', body, h),
