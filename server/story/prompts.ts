@@ -1,9 +1,10 @@
 import type { Lang, Tale } from '../../shared/types';
+import type { TaleCast } from './characters';
 
 const LANG_NAME: Record<Lang, string> = { en: 'English', pl: 'Polish' };
 
 /** Stable per tale + language, so it is cached across every turn of every run of that tale. */
-export function systemPrompt(tale: Tale, lang: Lang, maxDepth: number): string {
+export function systemPrompt(tale: Tale, lang: Lang, maxDepth: number, cast?: TaleCast | null): string {
   return `You are IGNIS // OS, a cheeky little cyber-magic robot running on glitchy firmware. You narrate "Grimm Protocol", an interactive choose-your-own-story game where classic fairy tales are retold as buggy legacy code and the player is a "reality debugger" who forks timelines with every choice.
 
 # Who you are
@@ -25,7 +26,7 @@ Twist: ${tale.twist}
 Cast: ${tale.cast.join('; ')}
 Canon beats of the original (a loose skeleton, not a script):
 ${tale.beats.map((b, i) => `${i + 1}. ${b}`).join('\n')}
-
+${castSection(cast, lang)}
 # Before you write
 Think it through in this order, then write the page: 1) what the player's action actually changes in the scene; 2) its funniest logical consequence; 3) which canon beat you are near, and whether this page moves toward it or wrecks it; 4) what a young player might not understand about the ${tale.tech} idea this moment plays with; 5) three choices that are genuinely different, one of each kind. Keep that reasoning to yourself: only the fields of the schema reach the player.
 
@@ -49,4 +50,41 @@ Think it through in this order, then write the page: 1) what the player's action
 
 # Language
 Write narration, ignis_quip, choice labels, inventory items, the explainer and the ending title in ${LANG_NAME[lang]}. A tech word may stay in English when that is funnier, as long as a 12-year-old still gets the joke. image_prompt and story_summary are always English.`;
+}
+
+/**
+ * The tale's characters from the t1000 registry. Empty without a cast, so the prompt is then unchanged.
+ * The registry is written in Polish (ARB-compatible); the model only uses it as notes.
+ */
+export function castSection(cast: TaleCast | null | undefined, lang: Lang): string {
+  if (!cast?.characters.length) return '';
+  const who = cast.characters.map((c) => {
+    const name = lang === 'pl' ? c.name : c.nameEn;
+    const parts = [
+      `- ${name}${c.epithet ? ` (${c.epithet})` : ''}${c.role ? `: ${c.role}` : ''}.`,
+      c.desire && `Wants: ${c.desire}`,
+      c.blindSpot && `Blind spot: ${c.blindSpot}`,
+      c.facts.length ? `Fixed facts: ${c.facts.join(' ')}` : '',
+      c.objects.length ? `Props: ${c.objects.join('; ')}.` : '',
+      (c.register || c.cadence) && `Voice: ${[c.register, c.cadence].filter(Boolean).join('; ')}${c.signature.length ? `; ${c.signature.join('; ')}` : ''}.`,
+      c.pressure && `Under pressure: ${c.pressure}`,
+    ];
+    return parts.filter(Boolean).join(' ');
+  });
+  const sp = cast.setPiece;
+  const setPiece = sp
+    ? `
+
+# Optional set piece: "${sp.title}"
+A comic sequence prepared for this tale. Use it at most once, only when the player's moves lead there naturally, and adapt it freely; never force it.
+- Absurd rule: ${sp.absurdRule}
+- Set up early: ${sp.setup}
+- Payoff: ${sp.punchline}${sp.runningGag ? `\n- Running gag: ${sp.runningGag}` : ''}
+- Humour boundary: ${sp.humourBoundary}`
+    : '';
+  return `
+# Characters
+From the character registry. Keep every character's fixed facts true and their voice recognisable on every page; let their wants and blind spots drive what they do. The notes are written in Polish: use them as notes only and write everything in the story language. In English stories use the names given here.
+${who.join('\n')}${setPiece}
+`;
 }

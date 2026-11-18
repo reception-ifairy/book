@@ -5,6 +5,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { getConfig, getKey } from '../config';
 import { anthropicClient, describeAnthropicError } from '../providers/anthropic';
 import { systemPrompt } from './prompts';
+import { charactersFor } from './characters';
 import { getTale } from '../../shared/tales';
 import { MAX_EXPLAINER_STEPS, SUDO_MANA_COST, type ChoiceKind, type Explainer, type Lang, type Page, type Stats, type Story } from '../../shared/types';
 
@@ -142,7 +143,7 @@ async function callClaude(story: Story, parent: Page | null, action: PlayerActio
       max_tokens: 16000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      system: [{ type: 'text', text: systemPrompt(tale, story.lang, cfg.maxDepth), cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt(tale, story.lang, cfg.maxDepth, charactersFor(tale.id)), cache_control: { type: 'ephemeral' } }],
       messages: buildMessages(story, parent, action, cfg.maxDepth),
       output_config: { effort: cfg.effort, format: betaZodOutputFormat(PageOutput) },
     });

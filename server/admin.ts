@@ -10,6 +10,7 @@ import { probeStoryModel } from './story/engine';
 import { artkitAdmin } from './artkit/routes';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
 import { adminAuth, dbLoginEnabled, requireAdminSession } from './adminAuth';
+import { characterStats } from './story/characters';
 
 export const admin = Router();
 
@@ -45,6 +46,7 @@ function publicView() {
     providers: Object.fromEntries(PROVIDERS.map((p) => [p, { source: keySource(p), masked: maskKey(getKey(p)) }])),
     passwordProtected: dbLoginEnabled() || !!process.env.ADMIN_PASSWORD,
     loginMode: dbLoginEnabled() ? 'db' : process.env.ADMIN_PASSWORD ? 'password' : 'local',
+    characters: characterStats(),
   };
 }
 
