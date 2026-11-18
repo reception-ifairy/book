@@ -193,10 +193,31 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `ANTHROPIC_API_KEY` | tak* | Klucz do Claude (*albo ustawiony w panelu) |
 | `GEMINI_API_KEY` | nie | Ilustracje i/lub głos przez Gemini |
 | `OPENAI_API_KEY` | nie | Ilustracje i/lub głos przez OpenAI |
-| `ADMIN_PASSWORD` | zalecana | Hasło panelu. Bez niego panel działa tylko z localhosta |
+| `ADMIN_PASSWORD` | nie | Stare hasło panelu, używane tylko bez `T1000_DATABASE_URL`. Bez obu panel działa tylko z localhosta |
 | `DATA_DIR` | nie | Katalog danych (domyślnie `data`) |
 | `PORT` | nie | Port HTTP (domyślnie 3000) |
 | `TRUST_PROXY` | nie | Za proxy / Cloud Run (np. `1`), żeby limit widział prawdziwe IP |
 | `NODE_ENV` | nie | `production` serwuje `dist/` (ustawia to skrypt `start`) |
 | `DISABLE_HMR` | nie | Ustawiana przez AI Studio, wyłącza hot reload |
 | `ANTHROPIC_BASE_URL` | nie | Inny adres API Anthropic (używane w testach) |
+| `T1000_DATABASE_URL` | zalecana | Konto MariaDB `ignis_book` z dostępem tylko do tabel `t1000.ignis_*`. Włącza logowanie loginem i hasłem (sekcja 6) |
+| `IGNIS_T1000_SECRET` | nie | 32 bajty hex. Szyfruje klucze API w `t1000.ignis_api_keys`. **Bez niego zapisane klucze są nie do odczytania** |
+
+## 6. Magazyn w bazie t1000
+
+Od 6.2.1 projekt ma własne tabele we wspólnej bazie MariaDB `t1000` (tej samej, w której panel T1000 trzyma `panel_users`, `tc_*`, `gr_*`, `diag_*`). Prefiks `ignis_` oddziela je od tabel panelu.
+
+| Tabela | Co zawiera |
+|---|---|
+| `ignis_admins` | Konta admina gry. Na start jedno: `superadmin` (rola `superadmin`) z hashem scrypt hasła `ADMIN_PASSWORD`, nigdy z samym hasłem |
+| `ignis_api_keys` | Klucze dostawców (`anthropic`, `gemini`, `openai`) zaszyfrowane AES-256-GCM kluczem `IGNIS_T1000_SECRET`; nazwa dostawcy jest AAD, a `key_hint` to 4 ostatnie znaki do rozpoznania klucza |
+
+- **Schemat:** `db/t1000/001_ignis_storage.sql` (`CREATE TABLE IF NOT EXISTS`, można uruchamiać wielokrotnie): `mysql t1000 < db/t1000/001_ignis_storage.sql`.
+- **Zapis i odświeżenie:** `node scripts/t1000-seed.mjs | mysql t1000`. Skrypt czyta `ADMIN_PASSWORD`, klucze z `data/config.json` (a gdy ich brak, z `.env`) i wypisuje SQL z samym hashem i szyfrogramem. Upsert, więc po zmianie klucza w panelu wystarczy uruchomić go ponownie.
+- **Sprawdzenie:** `node scripts/t1000-seed.mjs --verify` odszyfrowuje wiersze i porównuje je z obecnymi wartościami. Nie wypisuje żadnego sekretu.
+- **Konto aplikacji:** `ignis_book@localhost` ma tylko `SELECT, INSERT, UPDATE, DELETE` na dwóch tabelach `ignis_*`; reszta bazy `t1000` jest dla niego zamknięta.
+- **Logowanie do panelu (od 6.3.0) idzie przez `ignis_admins`:** login + hasło, sesja 12 h w pamięci serwera. `ADMIN_PASSWORD` jest używane tylko wtedy, gdy nie ma `T1000_DATABASE_URL`.
+- **Ustawianie hasła przy starcie:** gdy superadmin nie ma hasła, serwer przy uruchomieniu tworzy jednorazowy kod (24 h) w logu PM2 i w `data/admin-setup-code.txt` (0600). Panel prosi o kod, login i nowe hasło; po użyciu kod i plik znikają.
+- **Zapomniane hasło:** `npm run admin:reset` → `pm2 restart demo-ifairy-book` → `cat data/admin-setup-code.txt` → `/#/admin`. Reset czyści tylko hasło, login zostaje.
+- **Klucze API to na razie magazyn, nie źródło prawdy:** gra dalej czyta je z `data/config.json` i `.env`. Zmiana klucza w panelu gry nie trafia sama do bazy: trzeba ponownie uruchomić `npm run t1000:seed -- | mysql t1000` (albo `node scripts/t1000-seed.mjs | mysql t1000`).
+- **Kopie:** baza `t1000` jest w nocnych kopiach MariaDB serwera. Szyfrogram bez `IGNIS_T1000_SECRET` jest bezużyteczny, więc sekret trzeba przechowywać razem z kopią `.env`.

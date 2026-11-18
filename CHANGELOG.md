@@ -5,6 +5,26 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.3.0 · Logowanie do panelu: login, hasło i ustawianie hasła przy starcie
+
+- **Panel `/#/admin` loguje teraz loginem i hasłem z bazy `t1000.ignis_admins`** (gdy w `.env` jest `T1000_DATABASE_URL`). Hasło to hash scrypt; sesja to losowy token na 12 godzin (restart serwera wylogowuje). W nagłówku panelu jest przycisk *Log out*, a karta *Admin access* pokazuje, kto jest zalogowany.
+- **Ustawianie hasła przy uruchomieniu:** gdy żaden superadmin nie ma hasła (nowa instalacja albo po `npm run admin:reset`), serwer przy starcie tworzy jednorazowy kod `XXXX-XXXX-XXXX` (ważny 24 h), zapisuje go w logu PM2 i w `data/admin-setup-code.txt` (tylko root). Panel pokazuje wtedy ekran *Set the admin password*: kod + login + nowe hasło (min. 10 znaków, dwa razy). Bez kodu nikt z internetu nie przejmie panelu; po użyciu kod znika.
+- **Zapomniane hasło:** `npm run admin:reset` czyści hasło superadmina (login zostaje), potem `pm2 restart demo-ifairy-book` i kod z `cat data/admin-setup-code.txt`.
+- Logowanie i ustawianie hasła mają limit 10 nieudanych prób na 15 minut z jednego IP. Odpowiedź na nieznany login i na złe hasło jest taka sama.
+- Bez `T1000_DATABASE_URL` panel działa jak dotąd (`ADMIN_PASSWORD` albo tylko localhost).
+- Nowa zależność `mysql2`. Testy: 44 (nowy `tests/admin-auth.test.ts` z bazą w pamięci).
+
+---
+
+## 6.2.1 · Magazyn w bazie t1000: superadmin i klucze API
+
+- **Nowe tabele we wspólnej bazie MariaDB `t1000`** (prefiks `ignis_`, schemat `db/t1000/001_ignis_storage.sql`): `ignis_admins` z kontem `superadmin` (hash scrypt hasła `ADMIN_PASSWORD`) i `ignis_api_keys` z kluczami Anthropic, Gemini i OpenAI zaszyfrowanymi AES-256-GCM (`IGNIS_T1000_SECRET`, nazwa dostawcy jako AAD, `key_hint` = 4 ostatnie znaki).
+- **Skrypt `scripts/t1000-seed.mjs`** zapisuje i odświeża te dane (`| mysql t1000`) i je sprawdza (`--verify`), nie wypisując żadnego sekretu.
+- **Osobne konto MariaDB `ignis_book`** z dostępem tylko do tych dwóch tabel (`T1000_DATABASE_URL` w `.env`).
+- Gra jeszcze nie czyta z bazy: na razie to zaszyfrowany magazyn obok `data/config.json` i `.env`. Opis w `docs/OPERATORZY.md`, sekcja 6.
+
+---
+
 ## 6.2.0 · Glitch-łamigłówki i zwroty akcji „a co jeśli”
 
 Dwie kolejne rzeczy z kanonu iFairy (`agency_fairytale.md`), uzupełniające 6.1.0. Zmienia się tylko prompt Ignisa i jeden cytat na ekranie głównym; schemat strony bez zmian.
