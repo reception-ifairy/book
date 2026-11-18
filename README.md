@@ -12,6 +12,8 @@ Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 l
 
 **Co nowego w 6.1.0:** pod każdą stroną jest zwijany **panel DEBUG** (klawisz `D`) — Ignis wychodzi na chwilę z baśni i tłumaczy krok po kroku prawdziwą technologię, na której ta strona stoi (atak MITM, DDoS, ciasteczka śledzące, wygasła sesja, trojan). Obowiązuje też zasada domu **„jak wyjaśnisz, to zaistnieje”**: własny ruch z uzasadnieniem działa mocniej niż ruch bez niego.
 
+**Magazyn t1000:** superadmin i zaszyfrowane klucze API są też w MariaDB `t1000` (tabele `ignis_*`, opis w [docs/OPERATORZY.md](docs/OPERATORZY.md#6-magazyn-w-bazie-t1000)). Gra czyta je jeszcze z `data/config.json` i `.env`.
+
 **Otwarte sprawy:**
 - **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty.
 

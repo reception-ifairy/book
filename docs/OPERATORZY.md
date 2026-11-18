@@ -200,3 +200,21 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `NODE_ENV` | nie | `production` serwuje `dist/` (ustawia to skrypt `start`) |
 | `DISABLE_HMR` | nie | Ustawiana przez AI Studio, wyłącza hot reload |
 | `ANTHROPIC_BASE_URL` | nie | Inny adres API Anthropic (używane w testach) |
+| `T1000_DATABASE_URL` | nie | Konto MariaDB `ignis_book` z dostępem tylko do tabel `t1000.ignis_*` (sekcja 6) |
+| `IGNIS_T1000_SECRET` | nie | 32 bajty hex. Szyfruje klucze API w `t1000.ignis_api_keys`. **Bez niego zapisane klucze są nie do odczytania** |
+
+## 6. Magazyn w bazie t1000
+
+Od 6.2.1 projekt ma własne tabele we wspólnej bazie MariaDB `t1000` (tej samej, w której panel T1000 trzyma `panel_users`, `tc_*`, `gr_*`, `diag_*`). Prefiks `ignis_` oddziela je od tabel panelu.
+
+| Tabela | Co zawiera |
+|---|---|
+| `ignis_admins` | Konta admina gry. Na start jedno: `superadmin` (rola `superadmin`) z hashem scrypt hasła `ADMIN_PASSWORD`, nigdy z samym hasłem |
+| `ignis_api_keys` | Klucze dostawców (`anthropic`, `gemini`, `openai`) zaszyfrowane AES-256-GCM kluczem `IGNIS_T1000_SECRET`; nazwa dostawcy jest AAD, a `key_hint` to 4 ostatnie znaki do rozpoznania klucza |
+
+- **Schemat:** `db/t1000/001_ignis_storage.sql` (`CREATE TABLE IF NOT EXISTS`, można uruchamiać wielokrotnie): `mysql t1000 < db/t1000/001_ignis_storage.sql`.
+- **Zapis i odświeżenie:** `node scripts/t1000-seed.mjs | mysql t1000`. Skrypt czyta `ADMIN_PASSWORD`, klucze z `data/config.json` (a gdy ich brak, z `.env`) i wypisuje SQL z samym hashem i szyfrogramem. Upsert, więc po zmianie klucza w panelu wystarczy uruchomić go ponownie.
+- **Sprawdzenie:** `node scripts/t1000-seed.mjs --verify` odszyfrowuje wiersze i porównuje je z obecnymi wartościami. Nie wypisuje żadnego sekretu.
+- **Konto aplikacji:** `ignis_book@localhost` ma tylko `SELECT, INSERT, UPDATE, DELETE` na dwóch tabelach `ignis_*`; reszta bazy `t1000` jest dla niego zamknięta.
+- **Na razie to magazyn, nie źródło prawdy:** działająca gra dalej czyta klucze z `data/config.json` i `.env`, a hasło z `ADMIN_PASSWORD`. Zmiana klucza w panelu gry nie trafia sama do bazy: trzeba ponownie uruchomić skrypt zapisu.
+- **Kopie:** baza `t1000` jest w nocnych kopiach MariaDB serwera. Szyfrogram bez `IGNIS_T1000_SECRET` jest bezużyteczny, więc sekret trzeba przechowywać razem z kopią `.env`.
