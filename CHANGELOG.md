@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.5.0 · Główny motyw: ARB · The Arcane Retellings Bureau
+
+- **Nowa strona główna** w motywie ARB: „Old tales. Enchanted code. Hilarious side effects.”, „Someone has enchanted the plot.” z trzema zaczarowanymi incydentami (pantofelek Kopciuszka, lustro Śnieżki, chata Baby Jagi) i powitaniem w Biurze.
+- **Gracz jest agentem, Ignis jego asystentem terenowym:** pole „Agent codename”, odprawy Ignisa w dymku („Agent! Five tales are throwing errors…”), podpis *IGNIS · your field assistant*. Na telefonie Ignis ma kompaktową kartę z odprawą.
+- **Baśnie to akta spraw:** *Open case files* z numerami ARB-001…005, przycisk *Open case*, sekcja *Your active cases*. Jedno zdanie spina je z Domeną Publiczną.
+- Nowa sekcja „jak działa sprawa”: Step in · Investigate · Decide.
+- Logo i tytuł strony: *Arcane Retellings Bureau* / *ARB · IGNIS assist* (na telefonie samo „ARB”), link *Bureau console* do panelu.
+- Sama strona główna i marka: prompt opowieści i ekran historii zostają na razie bez zmian.
+
+---
+
 ## 6.4.0 · Postacie z bazy t1000 (model ARB)
 
 - **Rejestr postaci w `t1000`**, zgodny z modelem ARB (`docs/postacie.sql`, wdrożony w `arb_narratoriusz.character_*`): tabele `ignis_characters`, `ignis_character_dna` (gałąź `arb_character_v1`), `ignis_character_personas` (tryb `grimm`, gałąź `arb_voice_v1`), `ignis_character_retellings` i `ignis_character_relationships`. Te same nazwy kolumn i JSON-ów co w ARB; doszły `name_en` (gra jest dwujęzyczna) i `arb_character_id` (odpowiednik w ARB, bez klucza obcego między bazami).
