@@ -221,3 +221,20 @@ Od 6.2.1 projekt ma własne tabele we wspólnej bazie MariaDB `t1000` (tej samej
 - **Zapomniane hasło:** `npm run admin:reset` → `pm2 restart demo-ifairy-book` → `cat data/admin-setup-code.txt` → `/#/admin`. Reset czyści tylko hasło, login zostaje.
 - **Klucze API to na razie magazyn, nie źródło prawdy:** gra dalej czyta je z `data/config.json` i `.env`. Zmiana klucza w panelu gry nie trafia sama do bazy: trzeba ponownie uruchomić `npm run t1000:seed -- | mysql t1000` (albo `node scripts/t1000-seed.mjs | mysql t1000`).
 - **Kopie:** baza `t1000` jest w nocnych kopiach MariaDB serwera. Szyfrogram bez `IGNIS_T1000_SECRET` jest bezużyteczny, więc sekret trzeba przechowywać razem z kopią `.env`.
+
+### Postacie (od 6.4.0)
+
+Model postaci jest zgodny z ARB (szkielet: [postacie.sql](postacie.sql); wdrożenie ARB: `arb_narratoriusz.character_*`). Jedna postać to wiersz rejestru i warstwy połączone jej `id`:
+
+| Tabela | Co zawiera |
+|---|---|
+| `ignis_characters` | Rejestr: `slug`, `name` (pl), `name_en`, przydomek, rola, rodzaj (`postac`/`grupa`/`istota`/`obiekt`), `tale_id` z `shared/tales.ts` (NULL dla narratora), `arb_character_id` |
+| `ignis_character_dna` | Kim jest i co pamięta: gatunek, temat, profil emocji, `dna_json.arb_character_v1` (pragnienie, potrzeba, ślepa plamka, stałe fakty, rekwizyty, prawa świata, łuk) |
+| `ignis_character_personas` | Jak mówi, w trybie `grimm`: opis, powitanie, prompt odgrywania (generowany ze wzoru szkieletu), `interaction_style.arb_voice_v1` |
+| `ignis_character_retellings` | Komiczna scena do zagrania: absurdalna reguła, przygotowanie, eskalacja, puenta, granica humoru, wybory A/B/C |
+| `ignis_character_relationships` | Kto z kim i jakie jest między nimi napięcie |
+
+- **Źródło treści:** `db/t1000/characters.grimm.json`. Zmiana postaci = edycja tego pliku, `npm test` (sprawdza kontrakty), potem `npm run -s t1000:characters | mysql t1000`. Serwer wczyta zmiany w ciągu 10 minut albo po restarcie.
+- **Schemat:** `mysql t1000 < db/t1000/002_ignis_characters.sql` (można uruchamiać wielokrotnie; nadaje `ignis_book` tylko `SELECT`).
+- **W grze:** prompt baśni dostaje sekcję `# Characters` (pragnienie, ślepa plamka, stałe fakty, rekwizyty, głos, reakcja pod presją) i opcjonalną scenę z aktywnego retellingu tej baśni. Narrator Ignis jest w bazie dla porządku, ale do promptu nie trafia: opisuje go sekcja „Who you are”. Bez bazy sekcji nie ma i gra działa jak wcześniej.
+- **Zgodność z ARB:** te same kolumny i gałęzie JSON, więc zapytania ARB działają po zmianie prefiksu. Odpowiedniki w ARB: Kapturek 28, Wilk 29, Babcia 30, Gajowy 31, Kopciuszek 20, Książę 21, Macocha 22, Wróżka Chrzestna 23, Smok 24, Skuba 25 (u nich Szewczyk Dratewka), Król Krak 26.

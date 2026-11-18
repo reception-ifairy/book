@@ -247,6 +247,11 @@ export function Admin() {
       value: cfg.tts.provider === 'browser' ? 'Browser voice' : ready(cfg.tts.provider) ? `${cfg.tts.provider} · ${cfg.tts.model || 'no model'}` : problem(cfg.tts.provider),
     },
     {
+      label: 'Characters',
+      ok: cfg.characters?.loaded ? true : null,
+      value: cfg.characters?.loaded ? `${cfg.characters.loaded} in ${cfg.characters.tales} tales (t1000)` : 'Not loaded',
+    },
+    {
       label: 'Admin access',
       ok: cfg.passwordProtected,
       value: dbMode ? `Logged in as ${auth.login ?? 'admin'}` : cfg.passwordProtected ? 'Password protected' : 'Localhost only',
@@ -278,7 +283,7 @@ export function Admin() {
         <h1 className="toon-title text-4xl sm:text-5xl text-ink">Console</h1>
         <p className="text-muted mt-3">Wire up the models behind IGNIS. Claude writes the story; Gemini or OpenAI paint and speak.</p>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-6">
           {overview.map((o) => (
             <motion.div key={o.label} layout className="spotlight card p-4" style={{ ['--spot' as string]: o.ok === null ? 'var(--color-faint)' : o.ok ? 'var(--color-ok)' : 'var(--color-danger)' }}>
               <div className="flex items-center gap-2">

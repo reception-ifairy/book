@@ -1,7 +1,7 @@
 {
   "name": "ignis-grimm-protocol",
   "private": true,
-  "version": "6.3.0",
+  "version": "6.4.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "admin:reset": "node scripts/admin-reset.mjs",
     "t1000:seed": "node scripts/t1000-seed.mjs",
+    "t1000:characters": "node scripts/t1000-characters.mjs",
     "check": "tsc --noEmit && vitest run && npm run build"
   },
   "dependencies": {

@@ -12,7 +12,7 @@ Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 l
 
 **Co nowego w 6.1.0:** pod każdą stroną jest zwijany **panel DEBUG** (klawisz `D`) — Ignis wychodzi na chwilę z baśni i tłumaczy krok po kroku prawdziwą technologię, na której ta strona stoi (atak MITM, DDoS, ciasteczka śledzące, wygasła sesja, trojan). Obowiązuje też zasada domu **„jak wyjaśnisz, to zaistnieje”**: własny ruch z uzasadnieniem działa mocniej niż ruch bez niego.
 
-**Panel admina i magazyn t1000:** do `/#/admin` loguje się loginem i hasłem z MariaDB `t1000` (tabela `ignis_admins`); są tam też zaszyfrowane klucze API (opis w [docs/OPERATORZY.md](docs/OPERATORZY.md#6-magazyn-w-bazie-t1000)). **Zapomniane hasło:** `npm run admin:reset`, `pm2 restart demo-ifairy-book`, kod z `cat data/admin-setup-code.txt`, potem `/#/admin`.
+**Panel admina i magazyn t1000:** do `/#/admin` loguje się loginem i hasłem z MariaDB `t1000` (tabela `ignis_admins`); są tam też zaszyfrowane klucze API i **rejestr 23 postaci** (model ARB, plik źródłowy `db/t1000/characters.grimm.json`), z którego gra bierze głosy i fakty postaci (opis w [docs/OPERATORZY.md](docs/OPERATORZY.md#6-magazyn-w-bazie-t1000)). **Zapomniane hasło:** `npm run admin:reset`, `pm2 restart demo-ifairy-book`, kod z `cat data/admin-setup-code.txt`, potem `/#/admin`.
 
 **Otwarte sprawy:**
 - **Ilustracje są wyłączone na produkcji:** dostawca to Gemini, a `GEMINI_API_KEY` jest pusty.

@@ -4,6 +4,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { createApp } from './server/app';
 import { initAdminAuth } from './server/adminAuth';
+import { startCharacterRefresh } from './server/story/characters';
 
 const app = createApp();
 const PORT = Number(process.env.PORT) || 3000;
@@ -30,3 +31,4 @@ async function startServer() {
 
 startServer();
 initAdminAuth();
+startCharacterRefresh();

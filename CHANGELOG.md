@@ -5,6 +5,18 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.4.0 · Postacie z bazy t1000 (model ARB)
+
+- **Rejestr postaci w `t1000`**, zgodny z modelem ARB (`docs/postacie.sql`, wdrożony w `arb_narratoriusz.character_*`): tabele `ignis_characters`, `ignis_character_dna` (gałąź `arb_character_v1`), `ignis_character_personas` (tryb `grimm`, gałąź `arb_voice_v1`), `ignis_character_retellings` i `ignis_character_relationships`. Te same nazwy kolumn i JSON-ów co w ARB; doszły `name_en` (gra jest dwujęzyczna) i `arb_character_id` (odpowiednik w ARB, bez klucza obcego między bazami).
+- **Nasze 23 postacie:** cała obsada 5 baśni (22) i narrator Ignis, każda z DNA (pragnienie, ślepa plamka, stałe fakty, rekwizyty, prawa świata) i personą (rejestr, rytm, powiedzonka, reakcja pod presją, powitanie). 21 relacji i 5 retellingów, po jednym na baśń: „Certyfikat, który mówi prawdę”, „Zero zaufania, zero gości”, „Ptak, który zjadł reklamę z dachem”, „Licencja próbna do północy”, „Smok bez walidacji danych”. 11 postaci ma odpowiednik w ARB (np. Wilk 29, Babcia 30, Król Krak 26).
+- **Treść żyje w `db/t1000/characters.grimm.json`**, a `npm run t1000:characters | mysql t1000` zapisuje ją idempotentnie (literały hex, jedna transakcja). Prompt persony jest generowany ze wzoru z sekcji 3 szkieletu, jak w ARB.
+- **Gra czyta postacie z bazy:** serwer ładuje je przy starcie i co 10 minut, a prompt Ignisa dostaje sekcję `# Characters` z postaciami tej baśni (imiona w języku opowieści) i opcjonalną scenę z retellingu, którą model może zagrać najwyżej raz. Bez bazy prompt jest bajt w bajt taki jak wcześniej (golden test bez zmian).
+- Panel admina pokazuje kartę *Characters* („22 in 5 tales”). Konto `ignis_book` ma do nowych tabel tylko `SELECT`.
+- Sprawdzone na prawdziwym modelu: Smok Wawelski po polsku (Królewna „technicznie rzecz biorąc”, Król myli klaud z kluską, Smok „MNIAM”) i Czerwony Kapturek po angielsku (Mama „just in case”, Wilk „for your safety” z literówką na plakietce, bez polskich wtrąceń).
+- Testy: 53 (nowy `tests/characters.test.ts`: kontrakty JSON, pokrycie obsady, linki do ARB, bezpieczny SQL, sekcja promptu).
+
+---
+
 ## 6.3.0 · Logowanie do panelu: login, hasło i ustawianie hasła przy starcie
 
 - **Panel `/#/admin` loguje teraz loginem i hasłem z bazy `t1000.ignis_admins`** (gdy w `.env` jest `T1000_DATABASE_URL`). Hasło to hash scrypt; sesja to losowy token na 12 godzin (restart serwera wylogowuje). W nagłówku panelu jest przycisk *Log out*, a karta *Admin access* pokazuje, kto jest zalogowany.

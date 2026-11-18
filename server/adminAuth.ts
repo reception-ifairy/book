@@ -5,6 +5,7 @@ import { Router, type NextFunction, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { DATA_DIR } from './config';
+import { t1000Configured, t1000Pool } from './db';
 
 /**
  * Admin login backed by the t1000 database (table ignis_admins, see db/t1000/).
@@ -59,16 +60,8 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 // ---------- MariaDB store ----------
 
-function mariaStore(url: string): AdminStore {
-  // Loaded lazily so tests and setups without a database never touch the driver.
-  let pool: import('mysql2/promise').Pool | null = null;
-  const db = async () => {
-    if (!pool) {
-      const mysql = await import('mysql2/promise');
-      pool = mysql.createPool({ uri: url, connectionLimit: 3, waitForConnections: true });
-    }
-    return pool;
-  };
+function mariaStore(): AdminStore {
+  const db = t1000Pool;
   const one = async (sql: string, params: unknown[]) => {
     const [rows] = await (await db()).query(sql, params);
     return ((rows as AdminRow[])[0] ?? null) as AdminRow | null;
@@ -93,7 +86,7 @@ function mariaStore(url: string): AdminStore {
   };
 }
 
-let store: AdminStore | null = process.env.T1000_DATABASE_URL ? mariaStore(process.env.T1000_DATABASE_URL) : null;
+let store: AdminStore | null = t1000Configured() ? mariaStore() : null;
 
 /** Tests swap in an in-memory store; null turns database login off. */
 export function setAdminStore(next: AdminStore | null) {

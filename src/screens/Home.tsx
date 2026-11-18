@@ -239,7 +239,7 @@ export function Home() {
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>Claude writes the story · Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // OS v6.2 · cozy workshop</span>
+        <span className="font-pixel">IGNIS // OS v6.4 · cozy workshop</span>
       </footer>
     </div>
     </>
