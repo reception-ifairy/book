@@ -11,6 +11,7 @@ import { artkitAdmin } from './artkit/routes';
 import { cleanProviderMessage, type ModelInfo } from './providers/types';
 import { adminAuth, dbLoginEnabled, requireAdminSession } from './adminAuth';
 import { characterStats } from './story/characters';
+import { dailyAdmin } from './daily';
 
 export const admin = Router();
 
@@ -36,6 +37,7 @@ function guard(req: Request, res: Response, next: NextFunction) {
 admin.use('/auth', adminAuth);
 admin.use(guard);
 admin.use('/artkit', artkitAdmin);
+admin.use('/daily', dailyAdmin);
 
 const PROVIDERS = ProviderId.options;
 

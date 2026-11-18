@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, LogOut, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarCheck, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, LogOut, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { ArtKitPanel } from './ArtKitPanel';
+import { DailyOpsPanel } from './DailyOpsPanel';
 import { adminApi, adminAuthApi, type AdminAuthStatus } from '../api';
 import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
@@ -27,6 +28,7 @@ const NAV = [
   { id: 'image', label: 'Illustrations', icon: ImageIcon },
   { id: 'tts', label: 'Voice', icon: Mic2 },
   { id: 'artkit', label: 'Art kit', icon: Palette },
+  { id: 'daily', label: 'Daily ops', icon: CalendarCheck },
   { id: 'limits', label: 'Limits', icon: Gauge },
 ];
 
@@ -453,6 +455,10 @@ export function Admin() {
                 imageModels={options('openai', 'image')}
                 dirty={dirty}
               />
+            </Section>
+
+            <Section id="daily" title="Daily ops" desc="Quests and the glitch of the day for every agent. Plan a day by hand or let it rotate from the active pools.">
+              <DailyOpsPanel client={client} />
             </Section>
 
             <Section id="limits" title="Limits" desc="Protect your API bill from enthusiastic timeline-breakers.">

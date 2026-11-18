@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { createApp } from './server/app';
 import { initAdminAuth } from './server/adminAuth';
 import { startCharacterRefresh } from './server/story/characters';
+import { todayBoard } from './server/daily';
 
 const app = createApp();
 const PORT = Number(process.env.PORT) || 3000;
@@ -32,3 +33,6 @@ async function startServer() {
 startServer();
 initAdminAuth();
 startCharacterRefresh();
+// Keep today's board (and its glitch for the story prompt) warm.
+void todayBoard();
+setInterval(() => void todayBoard(), 5 * 60 * 1000).unref();
