@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.7.0 · Nowy Ignis: latarnia-asystent agenta (koncept B)
+
+- **Ignis nie jest już książką.** Właścicielka wybrała koncept B i ten obraz jest awatarem Ignisa (`ignis-hero` w Art Kicie oraz obraz referencyjny dla każdej grafiki z Ignisem). Głowa jak dotąd (ekranik CRT z pikselową twarzą, płomyk-antena) z mosiężnymi soczewkami i czapeczką z klejnotem; ciało to ozdobna latarnia z mosiądzu i szkła z wirującą galaktyką magii (szybciej, gdy Ignis mówi), pierścień glifów wokół, holograficzna podkładka z aktami sprawy, lewitująca podstawa ze świetlnym pierścieniem zamiast nóg, skrzydła ważki z siatką kodu. Nowy rysunek SVG, opis w prompcie, w bazie postaci i w art-directorze Art Kitu.
+- **Gracz jest agentem ARB, Ignis jego asystentem terenowym** także w samej opowieści: prompt zaczyna się od Biura i Domeny Publicznej, Ignis zwraca się „Agent” (także po polsku, jak do stopnia), „rookie”, „hero”. Komunikaty serwera mówią o kryptonimie agenta zamiast o debuggerze.
+- **Renderowanie z obrazem referencyjnym:** gdy w `data/artkit/reference/ignis.png` leży wybrany awatar, każdy slot z Ignisem idzie przez edycję obrazu OpenAI (`images.edit`) z tym obrazem jako wzorem, więc Ignis wygląda tak samo na każdej grafice. Pozostałe sloty generują się jak dotąd.
+- **Art Kit pod ARB:** art-director zna nową tożsamość i styl „cyber-magia w przytulnym biurze detektywistycznym” (tablica spraw z czerwonym sznurkiem, holograficzne akta, zamki z runami). Nowe sloty: `ignis-briefing` (Ignis przy tablicy spraw, karta *Daily ops*) i `icon-glitch` (ramka glitcha dnia). Tło strony głównej to teraz biuro terenowe ARB, karta do udostępniania ma napis „ARB”.
+- **Poprawka:** dwie kopie Ignisa na stronie głównej (duża i ukryta karta mobilna) dzieliły identyfikatory gradientów, więc w przeglądarce znikały wypełnienia ciała. Każda kopia ma teraz własne identyfikatory.
+- Fixture `grimm-requests.json` odświeżona (zmiana promptu jest zamierzona). Testy: 60.
+
+---
+
 ## 6.6.0 · Daily ops: dzienne zadania i glitch dnia
 
 - **Nowa karta *Daily ops* na stronie głównej:** poranna odprawa Ignisa, *glitch dnia* (ciemny ekranik) i trzy dzienne zadania z paskami postępu i nagrodą w XP. Postęp liczy się z własnych spraw agenta (tylko strony napisane dziś, dzień według czasu warszawskiego), więc nie trzeba kont graczy.

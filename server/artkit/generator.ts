@@ -1,10 +1,10 @@
 import { getConfig, getKey } from '../config';
-import { openaiArt } from '../providers/openai';
+import { openaiArt, openaiArtFromReference } from '../providers/openai';
 import { cleanProviderMessage } from '../providers/types';
 import { ModalityUnavailable } from '../media';
 import { StoryError } from '../story/engine';
-import { composePrompt } from './planner';
-import { getKit, removeArtFile, saveKit, updateAsset, writeArtFile } from './store';
+import { composePrompt, showsIgnis } from './planner';
+import { getKit, readReference, removeArtFile, saveKit, updateAsset, writeArtFile } from './store';
 import { ART_SLOTS, getSlot } from '../../shared/artkit';
 
 /** Images rendered at once. OpenAI image calls are slow, so a little parallelism helps without hammering limits. */
@@ -36,7 +36,11 @@ export function startGeneration(slotIds?: string[]) {
     for (let slot = queue.shift(); slot; slot = queue.shift()) {
       updateAsset(slot.id, { status: 'rendering' });
       try {
-        const img = await openaiArt(apiKey, model, composePrompt(plan, slot), { size: slot.size, transparent: slot.transparent, quality });
+        const opts = { size: slot.size, transparent: slot.transparent, quality };
+        const reference = showsIgnis(plan, slot) ? readReference() : null;
+        const img = reference
+          ? await openaiArtFromReference(apiKey, model, composePrompt(plan, slot, true), reference, opts)
+          : await openaiArt(apiKey, model, composePrompt(plan, slot), opts);
         const previous = getKit().assets[slot.id].url;
         updateAsset(slot.id, { status: 'done', url: writeArtFile(slot.id, img.data), error: null });
         removeArtFile(previous);

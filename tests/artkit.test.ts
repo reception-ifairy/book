@@ -5,7 +5,7 @@ import type { AddressInfo } from 'net';
 import type { Server } from 'http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startFakeAnthropic } from './fakeAnthropic';
-import { startFakeOpenAI } from './fakeOpenAI';
+import { startFakeOpenAI, TINY_PNG } from './fakeOpenAI';
 import { ART_SLOTS } from '../shared/artkit';
 
 const anthropic = await startFakeAnthropic();
@@ -141,6 +141,24 @@ describe('art kit', () => {
 
     await call('DELETE', '/api/admin/artkit/published');
     expect((await call('GET', '/api/artkit')).body.version).toBe(0);
+  });
+
+  it('draws IGNIS slots from the chosen avatar as a reference, other slots as before', async () => {
+    const refDir = path.join(process.env.DATA_DIR!, 'artkit', 'reference');
+    fs.mkdirSync(refDir, { recursive: true });
+    fs.writeFileSync(path.join(refDir, 'ignis.png'), Buffer.from(TINY_PNG, 'base64'));
+    try {
+      const before = openai.requests.length;
+      await call('POST', '/api/admin/artkit/generate', { slots: ['ignis-briefing', 'icon-sane'] });
+      await waitForRender();
+      const sent = openai.requests.slice(before);
+      const edit = sent.find((r) => r.url.endsWith('/images/edits'));
+      expect(edit?.body.prompt).toContain('the attached picture is IGNIS');
+      expect(sent.find((r) => r.url.endsWith('/images/generations'))?.body.prompt).not.toContain('attached picture');
+      expect(sent).toHaveLength(2);
+    } finally {
+      fs.rmSync(refDir, { recursive: true, force: true });
+    }
   });
 
   it('needs an OpenAI key to render', async () => {

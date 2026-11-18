@@ -12,7 +12,13 @@ export async function startFakeOpenAI() {
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
-      const json = JSON.parse(body || '{}');
+      // Image edits arrive as multipart form data; keep the prompt so tests can match on it.
+      let json: any;
+      try {
+        json = JSON.parse(body || '{}');
+      } catch {
+        json = { multipart: true, prompt: /name="prompt"\r\n\r\n([\s\S]*?)\r\n--/.exec(body)?.[1] ?? '' };
+      }
       requests.push({ url: req.url, body: json });
       if (failWhen?.test(json.prompt ?? '')) {
         res.writeHead(400, { 'content-type': 'application/json' });

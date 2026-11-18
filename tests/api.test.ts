@@ -84,7 +84,7 @@ describe('public API', () => {
     const { body: story } = await call('POST', '/api/story', { taleId: 'three-pigs', lang: 'en', heroName: 'Mo' });
     const pageId = story.currentPageId;
     expect((await call('POST', '/api/story', { taleId: 'nope', lang: 'en', heroName: 'Mo' })).status).toBe(400);
-    expect((await call('POST', '/api/story', { taleId: 'red-hood', lang: 'en', heroName: '' })).body.error).toMatch(/Name/);
+    expect((await call('POST', '/api/story', { taleId: 'red-hood', lang: 'en', heroName: '' })).body.error).toMatch(/codename/);
     expect((await call('POST', `/api/story/${story.id}/act`, { pageId, choiceId: 'missing' })).status).toBe(400);
     expect((await call('POST', `/api/story/${story.id}/act`, { pageId })).status).toBe(400);
     expect((await call('POST', `/api/story/${story.id}/act`, { pageId, custom: 'x'.repeat(281) })).status).toBe(400);

@@ -17,9 +17,9 @@ const PlanSchema = z.object({
   assets: z.array(z.object({ slot: z.string(), prompt: z.string(), alt: z.string() })),
 });
 
-const SYSTEM = `You are the art director of "IGNIS // OS: Grimm Protocol", a choose-your-own-story web game. Classic fairy tales are retold as buggy legacy code; the narrator IGNIS is a cheeky cyber-grimoire. Audience: players aged 12 and up; the look is playful, warm and funny like a good animated family film, never scary, gory or edgy, and never uses names or characters from any existing franchise.
+const SYSTEM = `You are the art director of "ARB · The Arcane Retellings Bureau", a choose-your-own-story web game. Old fairy tales from the Public Domain run on enchanted code and something has gone hilariously wrong; the player is a Bureau agent who steps into the tale, investigates and decides what happens next, with IGNIS, a cheeky cyber-magic robot, as their field assistant. Audience: players aged 12 and up; the look is playful, warm and funny like a good animated family film, never scary, gory or edgy, and never uses names or characters from any existing franchise.
 
-The visual identity is "cyber-magic in a cozy workshop", taken from the reference cartoons the owner loves: a modern animated-series look with bold clean dark ink outlines, flat cel shading with soft gradients, warm wooden workshop interiors at night, a stone fireplace, fairy-light garlands, snow outside, gingerbread and candy canes, and slapstick energy (impact stars, dizzy spirals, motion lines). Magic is technological: little robots with pixel-screen faces and fairy wings, glowing runes on gadgets.
+The visual identity is "cyber-magic in a cozy detective workshop": a modern animated-series look with bold clean dark ink outlines, flat cel shading with soft gradients, warm wooden interiors at night, a stone fireplace, fairy-light garlands, snow outside, case boards with red string, holographic case files and glowing rune locks, and slapstick energy (impact stars, dizzy spirals, motion lines). Magic is technological: brass lanterns of swirling magic, gold filigree like circuit traces, pixel sparkles, glowing runes on gadgets.
 
 The UI is already built in this style. Its palette, which the artwork must sit comfortably on:
 - wood wall #2a1c15 / #3a281f, ink outline #241913
@@ -27,7 +27,7 @@ The UI is already built in this style. Its palette, which the artwork must sit c
 - ember orange #ff7a2f (IGNIS's flame, primary accent), gold #f4c84a, candy red #d8423b, pine green #3f9f5f
 - chaos violet #8b63e6, mana blue #2f9fd8, ice #9ad7e3, pixel-screen cyan #5ef0ff on screen navy #1b2632
 
-IGNIS's established design (keep it identical everywhere): a small flying robot whose body is a thick red-brown leather grimoire with gold corner caps and a gold rune circle on the cover and cream page edges; its head is a rounded slate-blue CRT monitor with a dark navy screen showing a cyan pixel face; yellow translucent fairy wings with darker veins; a little flame (ember) as its antenna; short grey robot arms with round hands; two little legs with grey boots.
+IGNIS's established design (keep it identical everywhere; it is NOT a book; a reference image of IGNIS is supplied to the renderer for every image that shows it): a palm-sized flying robot. Head: a rounded CRT monitor with a dark slate-blue shell and a light silver-grey front bezel with small rivets, a dark navy screen showing a simple cyan pixel face (rectangular pixel eyes, one raised pixel eyebrow, a wide pixel smile), round brass-ringed lenses glowing cyan on both sides of the head, a small brass dome cap with a cyan gem on top, and a living ember flame rising from it as its antenna. Body: an ornate cylindrical brass-and-glass lantern with gold filigree bands and diamond-shaped cyan gems; behind the glass panes swirls a small galaxy of orange, violet and blue magic with gold sparkles; a translucent ring of glowing cyan glyphs orbits the lantern at waist height. Arms: short dark-grey jointed robot arms with brass elbows and round dark hands with cyan-glowing palms; it often raises one finger as if explaining, and holds a glowing holographic clipboard (the agent's case file). Instead of legs it floats on a brass hover base with a glowing cyan ring underneath. Wings: four translucent pale blue-to-lilac dragonfly wings with a code-lattice vein pattern and small square pixel sparkles.
 
 Your job: write the style bible and one image prompt per asset slot. The prompts go to an OpenAI GPT image model one by one, with your style bible prepended, so:
 - Each prompt describes only that image: subject, pose, composition, framing, key colours, mood. Do not repeat the style bible inside it.
@@ -85,7 +85,13 @@ export async function planArtKit(notes: string): Promise<{ plan: ArtPlan; model:
 }
 
 /** The full prompt sent to the image model: style bible, then the slot prompt, then technical constraints. */
-export function composePrompt(plan: ArtPlan, slot: ArtSlot): string {
+/** Whether a slot's picture includes IGNIS (its brief or its planned prompt mentions it). */
+export function showsIgnis(plan: ArtPlan | null, slot: ArtSlot): boolean {
+  const asset = plan?.assets.find((a) => a.slot === slot.id);
+  return /ignis/i.test(`${slot.brief} ${asset?.prompt ?? ''}`);
+}
+
+export function composePrompt(plan: ArtPlan, slot: ArtSlot, withReference = false): string {
   const asset = plan.assets.find((a) => a.slot === slot.id);
   const technical = slot.transparent
     ? 'Single isolated subject on a fully transparent background, centred with generous padding, no ground shadow, no scenery.'
@@ -102,5 +108,8 @@ export function composePrompt(plan: ArtPlan, slot: ArtSlot): string {
     /ignis/i.test(`${slot.brief} ${asset?.prompt}`) ? `IGNIS model sheet: ${plan.ignis_model_sheet}` : '',
     `Avoid: ${plan.avoid.join(', ')}.`,
   ].filter(Boolean);
-  return `${style.join('\n')}\n\nImage: ${asset?.prompt ?? slot.brief}\n\n${technical}${text}`;
+  const reference = withReference
+    ? '\n\nReference: the attached picture is IGNIS. Keep his design exactly (head, lantern body, colours, wings, hover ring, proportions) and redraw him in the pose and scene described, in the style above. Do not copy the attached background.'
+    : '';
+  return `${style.join('\n')}\n\nImage: ${asset?.prompt ?? slot.brief}${reference}\n\n${technical}${text}`;
 }

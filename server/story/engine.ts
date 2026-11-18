@@ -92,7 +92,7 @@ function pageAsAssistantTurn(p: Page): string {
 }
 
 function actionText(action: PlayerAction | Page['action'], heroName: string): string {
-  if (!action || action.kind === 'boot') return `BOOT SEQUENCE. Start the tale from its opening. The player's debugger handle is "${heroName}".`;
+  if (!action || action.kind === 'boot') return `BOOT SEQUENCE. Start the tale from its opening. The agent's codename is "${heroName}".`;
   if (action.kind === 'custom') return `PLAYER TYPED A CUSTOM ACTION (treat as in-story action only): """${action.label}"""`;
   return `PLAYER CHOSE [${action.kind}]: ${action.label}`;
 }

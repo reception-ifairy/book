@@ -119,11 +119,11 @@ admin.post('/probe/:role', async (req, res) => {
       case 'story':
         return res.json({ ok: true, ...(await probeStoryModel()) });
       case 'image': {
-        const img = await generateImage(`${IMAGE_STYLE}\nScene: a small flying robot whose body is a leather spellbook, with a CRT screen face, little wings and a glowing ember antenna, booting up in a dark server room.`);
+        const img = await generateImage(`${IMAGE_STYLE}\nScene: a palm-sized flying robot with a CRT screen face, a brass-and-glass lantern body full of swirling magic, dragonfly wings, a hover ring and a little flame antenna, booting up in a cozy detective office full of glowing case files.`);
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: `data:${img.mime};base64,${img.data.toString('base64')}` });
       }
       case 'tts': {
-        const audio = await generateSpeech('System boot complete. Greetings, debugger. Your fairy tales are ready to be fixed, or broken.');
+        const audio = await generateSpeech('System boot complete. Field assistant online. Greetings, Agent. Your case files are ready to be fixed, or broken.');
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: audio ? `data:${audio.mime};base64,${audio.data.toString('base64')}` : null });
       }
       default:

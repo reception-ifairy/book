@@ -17,7 +17,7 @@ export const navigate = (path: string) => {
 function Loading() {
   return (
     <div className="min-h-screen grid place-items-center">
-      <span className="eyebrow animate-pulse">Opening the grimoire…</span>
+      <span className="eyebrow animate-pulse">Opening the case file…</span>
     </div>
   );
 }

@@ -6,6 +6,16 @@ import { ART_SLOT_IDS, type ArtAsset, type ArtKitState } from '../../shared/artk
 const DIR = path.join(DATA_DIR, 'artkit');
 export const ART_FILES_DIR = path.join(DIR, 'files');
 const STATE_FILE = path.join(DIR, 'kit.json');
+/** The chosen IGNIS avatar. When present, every image that shows IGNIS is drawn from it as a reference. */
+export const ART_REFERENCE_FILE = path.join(DIR, 'reference', 'ignis.png');
+
+export function readReference(): Buffer | null {
+  try {
+    return fs.readFileSync(ART_REFERENCE_FILE);
+  } catch {
+    return null;
+  }
+}
 
 const emptyAsset = (slot: string): ArtAsset => ({ slot, status: 'idle', url: null, error: null, updatedAt: 0 });
 

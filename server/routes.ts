@@ -59,7 +59,7 @@ api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, tech, hue, tit
 const StartBody = z.object({
   taleId: z.string(),
   lang: z.enum(['en', 'pl']),
-  heroName: z.string().trim().min(1, 'Name your debugger.').max(24),
+  heroName: z.string().trim().min(1, 'Give the Bureau your agent codename.').max(24),
 });
 
 api.post('/story', actionLimiter, async (req, res) => {
@@ -99,7 +99,7 @@ api.post('/story/:id/act', actionLimiter, async (req, res) => {
   try {
     const story = loadStory(req);
     const { pageId, ...input } = ActBody.parse(req.body);
-    if (writing.has(story.id)) throw new StoryError('IGNIS is still writing the last page. Patience, debugger.', 409);
+    if (writing.has(story.id)) throw new StoryError('IGNIS is still writing the last page. Patience, Agent.', 409);
     writing.add((locked = story.id));
     const page = await act(story, pageId, input);
     saveStory(story);
