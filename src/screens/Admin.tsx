@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpen, CalendarCheck, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, LogOut, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brush, CalendarCheck, FlaskConical, Gauge, Image as ImageIcon, KeyRound, Loader2, Lock, LogOut, Mic2, Palette, PlugZap, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { ArtKitPanel } from './ArtKitPanel';
 import { DailyOpsPanel } from './DailyOpsPanel';
+import { BrandingPanel } from './BrandingPanel';
 import { adminApi, adminAuthApi, type AdminAuthStatus } from '../api';
 import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
@@ -27,6 +28,7 @@ const NAV = [
   { id: 'story', label: 'Story engine', icon: BookOpen },
   { id: 'image', label: 'Illustrations', icon: ImageIcon },
   { id: 'tts', label: 'Voice', icon: Mic2 },
+  { id: 'branding', label: 'Branding', icon: Brush },
   { id: 'artkit', label: 'Art kit', icon: Palette },
   { id: 'daily', label: 'Daily ops', icon: CalendarCheck },
   { id: 'limits', label: 'Limits', icon: Gauge },
@@ -445,6 +447,10 @@ export function Admin() {
                 )}
                 <Probe role="tts" state={probes.tts} onRun={() => probe('tts')} dirty={dirty} />
               </div>
+            </Section>
+
+            <Section id="branding" title="Branding" desc="Name, logo, share card, colour theme and card style for the whole site. Edits preview live on this page; Save makes them the look for every visitor.">
+              <BrandingPanel client={client} />
             </Section>
 
             <Section id="artkit" title="Art kit" desc="Claude art-directs the whole cyber-magic look, OpenAI paints it: backdrop, IGNIS, tale covers, choice icons, ending badges, logo and share card.">

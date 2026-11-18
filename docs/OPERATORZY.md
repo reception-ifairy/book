@@ -82,6 +82,13 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 - **Role:** model i effort Claude, liczba stron do zakończenia, dostawca i model ilustracji, dostawca, model i głos TTS.
 - **Testy na żywo:** prawdziwe wywołanie z zapisaną konfiguracją. Claude odpowiada zdaniem, ilustracja się wyświetla, a głos odtwarza.
 - **Limity:** akcje na minutę na gracza i ilustracje dziennie dla wszystkich graczy.
+- **Branding** (od 6.8.0):
+  - nazwa pełna i krótka, tagline pod nazwą, opis do wyszukiwarek i podglądów linków;
+  - motyw kolorów: *Cozy Workshop* (drewniane biuro, kominek) albo *Cyber-Magic Nebula* (kosmiczne niebo, mgławice, tęczowe łuki, złoty księżyc, neonowy róż i cyjan);
+  - styl kart: *Paper sticker* (kremowy papier z konturem) albo *Holo tech* (ciemne szkło, neonowa tęczowa ramka, narożniki HUD, siatka obwodów, scanlines);
+  - trzy kolory (Primary, Highlight, Neon) nadpisują kolory motywu; pusty = kolor motywu;
+  - logo i karta do udostępniania z pliku (PNG, JPEG, WebP do 3 MB; SVG odrzucane, format sprawdzany po bajtach). Wgrane logo wygrywa z logo Art Kitu, a to z wbudowaną pikselową buźką; tak samo karta do udostępniania;
+  - każda zmiana od razu podgląda się na stronie panelu; *Save branding* robi z niej wygląd dla wszystkich. Obrazy zapisują się od razu po wgraniu.
 - **Art kit:**
   1. notatki dla Claude, potem *Plan with Claude*;
   2. przegląd style bible;
@@ -110,7 +117,9 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `GET /media/...` | — | Zapisane obrazy i nagrania |
 | `GET /api/artkit` | — | Opublikowany art kit: `{version, assets: {slot: url}, alt}` |
 | `GET /artkit/...` | — | Grafiki art kitu (cache na rok, nazwy unikalne) |
-| `GET /favicon.png`, `GET /og.png` | — | Przekierowanie na znak marki / kartę do udostępniania (404 bez publikacji) |
+| `GET /favicon.png`, `GET /og.png` | — | Przekierowanie na logo / kartę do udostępniania: najpierw wgrane w Brandingu, potem z Art Kitu (404, gdy brak obu) |
+| `GET /api/branding` | — | Branding: nazwy, opis, motyw, styl kart, kolory, adresy logo i karty |
+| `GET /brand/...` | — | Wgrane logo i karta do udostępniania (cache na rok, nazwy unikalne) |
 
 **API admina** (`server/admin.ts`, za autoryzacją):
 
@@ -126,6 +135,10 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `POST /api/admin/artkit/generate` | Render `{slots?}`: wszystkie albo wybrane (409, jeśli render trwa; 503 bez klucza OpenAI) |
 | `POST /api/admin/artkit/publish` | Publikuje gotowe grafiki (wersja +1) |
 | `DELETE /api/admin/artkit/published` | Powrót do wbudowanego wyglądu |
+| `GET /api/admin/branding` | Zapisany branding |
+| `PUT /api/admin/branding` | Zapis dowolnych pól `{name, shortName, tagline, description, theme, cards, colors}`; kolory scalają się pole po polu, `null` wraca do koloru motywu |
+| `PUT /api/admin/branding/images/:kind` | `kind` = `logo` albo `share`, body `{dataUrl}` (PNG/JPEG/WebP, do 3 MB) |
+| `DELETE /api/admin/branding/images/:kind` | Usuwa wgrany obraz (wraca Art Kit albo wbudowany wygląd) |
 
 **Kody błędów:** 400 zły input · 401/403 brak dostępu · 404 brak zasobu · 409 konflikt (koniec historii, brak many, strona w trakcie pisania) · 413 za duże zapytanie · 422 odmowa modelu · 429 limit · 502 błąd dostawcy · 503 brak klucza albo modalność wyłączona.
 

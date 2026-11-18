@@ -552,3 +552,144 @@
   55% { transform: translate(calc(var(--dx) * 0.8), var(--dy)) rotate(calc(var(--rot) * 0.6)) scale(1); opacity: 1; }
   100% { transform: translate(var(--dx), calc(var(--dy) + 40px)) rotate(var(--rot)) scale(1); opacity: 0; }
 }
+
+/* ======================================================================
+ * Branding (admin → Branding). The server puts data-theme / data-cards on <html>.
+ * ====================================================================== */
+
+/* ---------- Theme: Cyber-Magic Nebula ----------
+ * Fairy-tale castles under a cosmic sky: deep violet night, nebula clouds, rainbow arcs,
+ * a golden moon and neon pink / cyan tech. Same token names, so every component follows. */
+html[data-theme="nebula"] {
+  --color-bg: #0d0b26;
+  --color-surface: #191540;
+  --color-raised: #251e55;
+  --color-field: #120f30;
+  --color-line: #372e74;
+  --color-line-strong: #5547a3;
+  --color-ink: #f4efff;
+  --color-muted: #cbc0f2;
+  --color-faint: #9389c9;
+  --color-outline: #0a0820;
+  --color-ember: #ff4f9a;
+  --color-ember-soft: #ff4f9a2e;
+  --color-gold: #ffc24a;
+  --color-candy: #ff5a6e;
+  --color-pine: #4fd18b;
+  --color-ice: #9fe6ff;
+  --color-screen: #110e2c;
+  --color-pixel: #5ef0ff;
+  --color-sane: #4fd18b;
+  --color-chaos: #a86bff;
+  --color-dumb: #ffb02e;
+  --color-mana: #4aa8ff;
+  --color-danger: #ff5a6e;
+  --color-ok: #4fd18b;
+}
+
+html[data-theme="nebula"] body::before {
+  background:
+    /* golden moon, top right */
+    radial-gradient(70px circle at 88% 13%, #fff1c4 0%, #ffcf6e 45%, #f39a3d 88%, transparent 100%),
+    radial-gradient(260px circle at 88% 13%, #ffc24a40, transparent 70%),
+    /* two small planets */
+    radial-gradient(26px circle at 9% 22%, #ffd0ec 0%, #ff7fbf 60%, #b23c86 95%, transparent 100%),
+    radial-gradient(16px circle at 72% 8%, #c6fff4 0%, #4fd1b5 70%, transparent 100%),
+    /* rainbow arc rising from the lower right */
+    radial-gradient(circle at 78% 135%, transparent 0 58%, #ff4f9a2a 59%, #ffc24a26 61.5%, #4fd18b22 64%, #4aa8ff26 66.5%, #a86bff2a 69%, transparent 71.5%),
+    /* nebula clouds */
+    radial-gradient(900px 560px at 8% 18%, #a86bff3d, transparent 62%),
+    radial-gradient(760px 520px at 96% 72%, #ff4f9a2e, transparent 62%),
+    radial-gradient(1000px 420px at 50% 112%, #4aa8ff26, transparent 66%),
+    /* stars */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='23' cy='41' r='1.1' opacity='.9'/%3E%3Ccircle cx='97' cy='160' r='.7' opacity='.6'/%3E%3Ccircle cx='181' cy='27' r='1.4' opacity='.8'/%3E%3Ccircle cx='260' cy='112' r='.8' opacity='.5'/%3E%3Ccircle cx='331' cy='58' r='1' opacity='.9'/%3E%3Ccircle cx='392' cy='201' r='.7' opacity='.6'/%3E%3Ccircle cx='57' cy='287' r='1.2' opacity='.7'/%3E%3Ccircle cx='148' cy='352' r='.8' opacity='.6'/%3E%3Ccircle cx='233' cy='248' r='1.3' opacity='.9'/%3E%3Ccircle cx='301' cy='330' r='.7' opacity='.5'/%3E%3Ccircle cx='366' cy='397' r='1.1' opacity='.8'/%3E%3Ccircle cx='12' cy='395' r='.6' opacity='.5'/%3E%3Ccircle cx='205' cy='170' r='.6' opacity='.5'/%3E%3C/g%3E%3Cg fill='%235ef0ff'%3E%3Crect x='120' y='88' width='2' height='2' opacity='.8'/%3E%3Crect x='350' y='270' width='2' height='2' opacity='.7'/%3E%3C/g%3E%3Cg fill='%23ff8ac4'%3E%3Crect x='70' y='210' width='2' height='2' opacity='.7'/%3E%3Crect x='280' y='15' width='2' height='2' opacity='.6'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #0a0820 0%, #15103a 55%, #23134a 100%);
+}
+
+/* Instead of the fireplace: slow twinkling of a second star layer and a drifting aurora. */
+html[data-theme="nebula"] body::after {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='40' cy='70' r='1.5'/%3E%3Ccircle cx='210' cy='40' r='1.2'/%3E%3Ccircle cx='150' cy='220' r='1.6'/%3E%3Ccircle cx='270' cy='160' r='1.1'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(1200px 300px at 30% -40px, #5ef0ff14, transparent 70%);
+  animation: nebula-twinkle 5s ease-in-out infinite;
+}
+@keyframes nebula-twinkle {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* No snow piles in space; garland bulbs become floating neon orbs on an invisible wire. */
+html[data-theme="nebula"] .snowcap.snowcap::before { display: none; }
+html[data-theme="nebula"] .string-lights svg { display: none; }
+html[data-theme="nebula"] .bulb { width: 7px; height: 7px; margin-left: -3.5px; border-radius: 9999px; border: 0; }
+html[data-theme="nebula"] .bulb::before { display: none; }
+html[data-theme="nebula"] .frame {
+  background: linear-gradient(145deg, #3a2f86, #1b1550);
+  box-shadow: 5px 6px 0 var(--color-outline), 0 0 30px -8px var(--color-chaos), inset 0 2px 0 #ffffff22;
+}
+
+/* ---------- Card style: Holo tech ----------
+ * Dark glass panels with a neon rainbow rim, HUD corner brackets, a faint circuit grid,
+ * scanlines and a soft glow instead of the hard paper shadow. Works on either theme. */
+html[data-cards="holo"] { --holo-base: #121a2c; --holo-raised: #1a2540; }
+html[data-cards="holo"][data-theme="nebula"] { --holo-base: #130f35; --holo-raised: #1f1950; }
+
+html[data-cards="holo"] .card,
+html[data-cards="holo"] .paper {
+  --color-surface: var(--holo-base);
+  --color-raised: var(--holo-raised);
+  --color-field: #0a0d1c;
+  --color-line: #2c3a66;
+  --color-line-strong: #46599a;
+  --color-ink: #eef3ff;
+  --color-muted: #b9c4ea;
+  --color-faint: #8592c4;
+  --ruled: #2c3a6699;
+  --fold: var(--holo-raised);
+  color-scheme: dark;
+}
+
+html[data-cards="holo"] .card {
+  --hud: var(--color-pixel);
+  border-color: transparent;
+  background:
+    /* HUD corner brackets */
+    linear-gradient(var(--hud), var(--hud)) left 9px top 9px / 16px 2px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) left 9px top 9px / 2px 16px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) right 9px top 9px / 16px 2px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) right 9px top 9px / 2px 16px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) left 9px bottom 9px / 16px 2px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) left 9px bottom 9px / 2px 16px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) right 9px bottom 9px / 16px 2px no-repeat padding-box,
+    linear-gradient(var(--hud), var(--hud)) right 9px bottom 9px / 2px 16px no-repeat padding-box,
+    /* inner glow from the top-left, as if lit by the rim */
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--color-chaos) 22%, transparent), transparent 55%) padding-box,
+    radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--color-pixel) 12%, transparent), transparent 60%) padding-box,
+    /* scanlines and a faint circuit grid */
+    repeating-linear-gradient(180deg, #ffffff07 0 1px, transparent 1px 4px) padding-box,
+    linear-gradient(90deg, color-mix(in srgb, var(--color-pixel) 7%, transparent) 1px, transparent 1px) 0 0 / 28px 28px padding-box,
+    linear-gradient(0deg, color-mix(in srgb, var(--color-pixel) 7%, transparent) 1px, transparent 1px) 0 0 / 28px 28px padding-box,
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    /* the neon rainbow rim */
+    linear-gradient(135deg, var(--color-ember), var(--color-chaos) 35%, var(--color-pixel) 65%, var(--color-gold)) border-box;
+  box-shadow:
+    0 0 0 1px #00000080,
+    0 12px 28px -14px #000000cc,
+    0 0 26px -10px color-mix(in srgb, var(--color-pixel) 70%, transparent),
+    0 0 40px -18px var(--color-ember);
+}
+/* Cards whose header is a cover picture: brackets would sit on the art, so keep only the bottom pair visible enough. */
+html[data-cards="holo"] .card.snowcap { --hud: color-mix(in srgb, var(--color-pixel) 80%, transparent); }
+
+/* Choice buttons and drawers (paper stickers) get a neon edge and glow instead of the ink shadow. */
+html[data-cards="holo"] .sticker {
+  border-color: color-mix(in srgb, var(--color-pixel) 55%, var(--color-outline));
+  box-shadow: 0 0 0 1px #00000080, 0 0 18px -8px var(--color-pixel);
+}
+html[data-cards="holo"] .sticker:not(:disabled):hover {
+  border-color: var(--color-pixel);
+  box-shadow: 0 0 0 1px #00000080, 0 6px 26px -6px var(--color-pixel), 0 0 40px -16px var(--color-ember);
+}
+html[data-cards="holo"] .sticker:not(:disabled):active { box-shadow: 0 0 0 1px #00000080, 0 0 12px -4px var(--color-pixel); }
+html[data-cards="holo"] .bubble { box-shadow: 3px 4px 0 var(--color-outline), 0 0 22px -8px var(--color-pixel); }
+html[data-cards="holo"] .card .field { border-color: color-mix(in srgb, var(--color-pixel) 35%, var(--color-outline)); }

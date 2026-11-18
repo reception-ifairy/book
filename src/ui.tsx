@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { X, CheckCircle2, AlertTriangle, Snowflake } from 'lucide-react';
 import { setSnow, useSnow } from './prefs';
 import { useArt } from './artkit';
+import { useBranding } from './branding';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -234,9 +235,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** A tiny pixel-screen face, the same language as IGNIS. */
+/** The uploaded logo, else the Art Kit mark, else a tiny pixel-screen face in IGNIS's language. Names come from Branding. */
 export function Logo({ onClick }: { onClick?: () => void }) {
-  const mark = useArt().src('brand-mark');
+  const brand = useBranding();
+  const artMark = useArt().src('brand-mark');
+  const mark = brand.logo ?? artMark;
   return (
     <a href="#/" onClick={onClick} className="flex items-center gap-2.5 group">
       {mark ? (
@@ -248,8 +251,8 @@ export function Logo({ onClick }: { onClick?: () => void }) {
       </span>
       )}
       <span className="leading-none">
-        <span className="block font-serif font-bold text-lg tracking-tight"><span className="sm:hidden">ARB</span><span className="hidden sm:inline">Arcane Retellings Bureau</span></span>
-        <span className="block font-pixel text-[11px] text-faint mt-0.5">ARB · IGNIS assist</span>
+        <span className="block font-serif font-bold text-lg tracking-tight"><span className="sm:hidden">{brand.shortName}</span><span className="hidden sm:inline">{brand.name}</span></span>
+        {brand.tagline && <span className="block font-pixel text-[11px] text-faint mt-0.5">{brand.tagline}</span>}
       </span>
     </a>
   );

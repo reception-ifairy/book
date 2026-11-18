@@ -5,6 +5,17 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.8.0 · Branding w panelu admina i motyw Cyber-Magic Nebula
+
+- **Nowa sekcja *Branding* w `/#/admin`:** nazwa pełna i krótka, tagline, opis, logo i karta do udostępniania z pliku, motyw kolorów, styl kart i trzy kolory (Primary, Highlight, Neon). Każda zmiana od razu widać na stronie panelu (podgląd na żywo i karta próbna), a *Save branding* publikuje ją dla wszystkich.
+- **Motyw *Cyber-Magic Nebula*** według przykładu właścicielki: głęboki fiolet nocnego nieba, mgławice, gwiazdy, tęczowy łuk, złoty księżyc i planetki, neonowy róż i cyjan. Bez śniegu na kartach; girlanda staje się unoszącymi się neonowymi kulkami.
+- **Karty *Holo tech*:** ciemne szkło z neonową tęczową ramką, narożniki HUD, delikatna siatka obwodów, scanlines i poświata zamiast twardego cienia. Przyciski wyborów w opowieści dostają neonową krawędź. Działa z każdym motywem.
+- **Serwer wypieka branding w `index.html`:** tytuł, opis, `og:*`, `theme-color`, motyw i kolory na `<html>`, więc strona od pierwszej klatki ma właściwy wygląd i nazwę (także w podglądach linków). `/favicon.png` i `/og.png` biorą najpierw wgrane obrazy, potem Art Kit.
+- Wgrywanie obrazów: PNG, JPEG albo WebP do 3 MB, format sprawdzany po bajtach; SVG odrzucane (może zawierać skrypty).
+- Domyślnie wszystko wygląda jak dotąd (*Cozy Workshop* + *Paper sticker*). Testy: 67.
+
+---
+
 ## 6.7.0 · Nowy Ignis: latarnia-asystent agenta (koncept B)
 
 - **Ignis nie jest już książką.** Właścicielka wybrała koncept B i ten obraz jest awatarem Ignisa (`ignis-hero` w Art Kicie oraz obraz referencyjny dla każdej grafiki z Ignisem). Głowa jak dotąd (ekranik CRT z pikselową twarzą, płomyk-antena) z mosiężnymi soczewkami i czapeczką z klejnotem; ciało to ozdobna latarnia z mosiądzu i szkła z wirującą galaktyką magii (szybciej, gdy Ignis mówi), pierścień glifów wokół, holograficzna podkładka z aktami sprawy, lewitująca podstawa ze świetlnym pierścieniem zamiast nóg, skrzydła ważki z siatką kodu. Nowy rysunek SVG, opis w prompcie, w bazie postaci i w art-directorze Art Kitu.
