@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import type { Media, ModelInfo } from './types';
 
 const client = (apiKey: string) => new OpenAI({ apiKey });
@@ -76,6 +76,32 @@ export async function openaiArt(
           output_format: 'png',
         },
   );
+  const b64 = res.data?.[0]?.b64_json;
+  if (!b64) throw new Error('OpenAI returned no image.');
+  return { mime: 'image/png', data: Buffer.from(b64, 'base64') };
+}
+
+/**
+ * Like openaiArt, but the model also sees a reference picture (the IGNIS avatar), so a character keeps
+ * exactly the same design from image to image. Uses the image edit endpoint of the GPT image models.
+ */
+export async function openaiArtFromReference(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  reference: Buffer,
+  opts: { size: '1024x1024' | '1536x1024' | '1024x1536'; transparent: boolean; quality: 'low' | 'medium' | 'high' },
+): Promise<Media> {
+  const res = await client(apiKey).images.edit({
+    model,
+    image: await toFile(reference, 'ignis-reference.png', { type: 'image/png' }),
+    prompt,
+    n: 1,
+    size: opts.size,
+    quality: opts.quality,
+    background: opts.transparent ? 'transparent' : 'opaque',
+    output_format: 'png',
+  } as any);
   const b64 = res.data?.[0]?.b64_json;
   if (!b64) throw new Error('OpenAI returned no image.');
   return { mime: 'image/png', data: Buffer.from(b64, 'base64') };

@@ -68,7 +68,7 @@ const MOUTHS: Record<Mood, string> = {
   hyped: 'M 89 77 Q 100 92 111 77 Z',
 };
 
-/** IGNIS: a palm-sized cyber-magic robot with a CRT face, a faceted crystal body with a heart core, light wings and an ember antenna. */
+/** IGNIS: a palm-sized cyber-magic robot with a CRT face, a brass-and-glass lantern body full of swirling magic, code-lattice wings, a hover ring and an ember antenna. */
 export const SVGCharacter = memo(({ isTalking, mood = 'neutral', size = 160, sparks = size >= 100 }: { isTalking: boolean; mood?: Mood; size?: number; sparks?: boolean }) => {
   const flap = isTalking ? '0.28s' : '0.6s';
   // Several IGNIS can be on one page (one hidden on phones); unique ids keep each one's gradients its own.
@@ -96,15 +96,16 @@ export const SVGCharacter = memo(({ isTalking, mood = 'neutral', size = 160, spa
               <stop offset="55%" stopColor="#b9c8ff" stopOpacity="0.75" />
               <stop offset="100%" stopColor="#c9a8ff" stopOpacity="0.7" />
             </linearGradient>
-            <linearGradient id={uid("ig-crystal")} x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#d6f4ff" />
-              <stop offset="45%" stopColor="#9ab8f0" />
-              <stop offset="100%" stopColor="#8b63e6" />
+            <linearGradient id={uid("ig-brass")} x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#a8742a" />
+              <stop offset="45%" stopColor="#f4c84a" />
+              <stop offset="100%" stopColor="#9a6520" />
             </linearGradient>
-            <radialGradient id={uid("ig-heart")}>
-              <stop offset="0%" stopColor="#fff2ff" />
-              <stop offset="60%" stopColor="#f08bd8" />
-              <stop offset="100%" stopColor="#b25cf0" stopOpacity="0" />
+            <radialGradient id={uid("ig-magic")} cx="50%" cy="55%" r="60%">
+              <stop offset="0%" stopColor="#fff3c4" />
+              <stop offset="35%" stopColor="#ff9a4a" />
+              <stop offset="70%" stopColor="#b47cf0" />
+              <stop offset="100%" stopColor="#3b4f8f" />
             </radialGradient>
             <linearGradient id={uid("ig-case")} x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="#9fb3c4" />
@@ -152,48 +153,72 @@ export const SVGCharacter = memo(({ isTalking, mood = 'neutral', size = 160, spa
             </g>
           ))}
 
-          {/* Little legs with chunky boots and glowing soles */}
-          <g stroke={INK} strokeWidth="5" strokeLinecap="round">
-            <path d="M 89 166 L 86 180" />
-            <path d="M 111 166 L 114 180" />
-          </g>
-          {[84, 116].map((x) => (
-            <g key={x}>
-              <rect x={x - 11} y="178" width="22" height="13" rx="6" fill="#efe6d4" stroke={INK} strokeWidth="3" />
-              <rect x={x - 11} y="186" width="22" height="5" rx="2.5" fill="#55606c" stroke={INK} strokeWidth="2" />
-              <path d={`M ${x - 6} 193 L ${x + 6} 193`} stroke="#5ef0ff" strokeWidth="2.5" strokeLinecap="round" filter={`url(#${uid("pix-glow")})`} />
-            </g>
-          ))}
+          {/* Hover base with a glowing ring instead of legs */}
+          <ellipse cx="100" cy="186" rx="26" ry="7" fill="none" stroke="#5ef0ff" strokeWidth="3" filter={`url(#${uid("pix-glow")})`}>
+            <animate attributeName="rx" values="24;28;24" dur={isTalking ? '0.5s' : '1.6s'} repeatCount="indefinite" />
+          </ellipse>
+          <path d="M 80 172 L 120 172 L 114 184 Q 100 190 86 184 Z" fill={`url(#${uid("ig-brass")})`} stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+          <path d="M 94 178 L 100 172 L 106 178 L 100 184 Z" fill="#5ef0ff" stroke={INK} strokeWidth="1.5" />
 
-          {/* Arms: dark joints, cream cuffs, white hands; the right one waves while talking */}
-          <path d="M 70 116 Q 52 126 48 144" stroke={INK} strokeWidth="9" strokeLinecap="round" fill="none" />
-          <path d="M 70 116 Q 52 126 48 144" stroke="#4d5763" strokeWidth="4" strokeLinecap="round" fill="none" />
-          <rect x="40" y="138" width="16" height="12" rx="5" fill="#efe6d4" stroke={INK} strokeWidth="2.5" />
-          <circle cx="48" cy="155" r="6.5" fill="#ffffff" stroke={INK} strokeWidth="3" />
+          {/* Arms: dark joints, brass elbows, dark hands with a cyan glow; the right one holds the case file */}
+          <path d="M 74 112 Q 56 118 50 104" stroke={INK} strokeWidth="9" strokeLinecap="round" fill="none" />
+          <path d="M 74 112 Q 56 118 50 104" stroke="#4d5763" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="60" cy="115" r="4.5" fill="#f4c84a" stroke={INK} strokeWidth="2" />
+          <circle cx="50" cy="99" r="6.5" fill="#3a4350" stroke={INK} strokeWidth="3" />
+          <path d="M 50 94 L 50 84" stroke={INK} strokeWidth="6" strokeLinecap="round" />
+          <path d="M 50 94 L 50 85" stroke="#3a4350" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="50" cy="100" r="2.2" fill="#5ef0ff" filter={`url(#${uid("pix-glow")})`} />
           <g>
-            <path d="M 130 116 Q 150 120 156 104" stroke={INK} strokeWidth="9" strokeLinecap="round" fill="none" />
-            <path d="M 130 116 Q 150 120 156 104" stroke="#4d5763" strokeWidth="4" strokeLinecap="round" fill="none" />
-            <rect x="148" y="96" width="16" height="12" rx="5" fill="#efe6d4" stroke={INK} strokeWidth="2.5" />
-            <circle cx="156" cy="91" r="6.5" fill="#ffffff" stroke={INK} strokeWidth="3" />
-            <circle cx="156" cy="86" r="2" fill="#5ef0ff" filter={`url(#${uid("pix-glow")})`} />
-            {isTalking && <animateTransform attributeName="transform" type="rotate" values="0 130 116; -18 130 116; 6 130 116; 0 130 116" dur="0.7s" repeatCount="indefinite" />}
+            <path d="M 126 112 Q 146 120 150 134" stroke={INK} strokeWidth="9" strokeLinecap="round" fill="none" />
+            <path d="M 126 112 Q 146 120 150 134" stroke="#4d5763" strokeWidth="4" strokeLinecap="round" fill="none" />
+            <circle cx="140" cy="119" r="4.5" fill="#f4c84a" stroke={INK} strokeWidth="2" />
+            {/* Holographic case file */}
+            <g transform="rotate(8 160 136)">
+              <rect x="146" y="114" width="30" height="40" rx="4" fill="#5ef0ff" fillOpacity="0.28" stroke="#5ef0ff" strokeWidth="2" filter={`url(#${uid("pix-glow")})`} />
+              <rect x="155" y="111" width="12" height="6" rx="2" fill="#5ef0ff" fillOpacity="0.6" />
+              {[124, 132, 140].map((y) => (
+                <g key={y}>
+                  <rect x="151" y={y - 3} width="5" height="5" fill="none" stroke="#d9fbff" strokeWidth="1.2" />
+                  <path d={`M 159 ${y} L 171 ${y}`} stroke="#d9fbff" strokeWidth="1.5" strokeLinecap="round" />
+                </g>
+              ))}
+            </g>
+            <circle cx="150" cy="137" r="6.5" fill="#3a4350" stroke={INK} strokeWidth="3" />
+            {isTalking && <animateTransform attributeName="transform" type="rotate" values="0 126 112; -10 126 112; 4 126 112; 0 126 112" dur="0.7s" repeatCount="indefinite" />}
           </g>
 
-          {/* Crystal body: faceted, translucent, gold circuit traces and a pulsing heart core */}
-          <path d="M 76 100 L 124 100 L 134 118 L 116 162 L 100 172 L 84 162 L 66 118 Z" fill={`url(#${uid("ig-crystal")})`} fillOpacity="0.92" stroke={INK} strokeWidth="3.5" strokeLinejoin="round" />
-          <path d="M 76 100 L 88 120 L 66 118 M 124 100 L 112 120 L 134 118 M 88 120 L 112 120 M 88 120 L 84 162 M 112 120 L 116 162 M 88 120 L 100 172 L 112 120" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-          <path d="M 100 147 L 100 166 M 100 128 L 100 118 L 92 110 M 94 138 L 78 130 L 74 120 M 106 138 L 122 132 L 128 122" stroke="#f4c84a" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="100" cy="137" r="20" fill={`url(#${uid("ig-heart")})`}>
-            <animate attributeName="r" values="17;22;17" dur={isTalking ? '0.6s' : '1.8s'} repeatCount="indefinite" />
-          </circle>
-          <path d="M 100 147 C 86 138, 88 126, 95 127 C 98 127, 100 130, 100 132 C 100 130, 102 127, 105 127 C 112 126, 114 138, 100 147 Z" fill="#ffe0f6" stroke="#b25cf0" strokeWidth="1.5" />
-          {/* Gold shoulder caps and collar gem */}
-          <path d="M 64 108 Q 70 98 80 100 L 76 112 Z" fill="#f4c84a" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-          <path d="M 136 108 Q 130 98 120 100 L 124 112 Z" fill="#f4c84a" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-          <path d="M 94 100 L 106 100 L 100 108 Z" fill="#5ef0ff" stroke={INK} strokeWidth="2" strokeLinejoin="round" />
+          {/* Lantern body: brass frame, glass panes with swirling magic inside */}
+          <rect x="72" y="104" width="56" height="66" rx="10" fill={`url(#${uid("ig-magic")})`} stroke={INK} strokeWidth="3.5" />
+          <path d="M 100 120 C 112 122, 114 138, 102 142 C 92 145, 88 134, 96 131 C 102 129, 105 135, 100 137" stroke="#fff3c4" strokeWidth="2.5" fill="none" strokeLinecap="round">
+            <animateTransform attributeName="transform" type="rotate" values="0 100 134; 360 100 134" dur={isTalking ? '1.2s' : '4s'} repeatCount="indefinite" />
+          </path>
+          {[
+            [84, 118],
+            [116, 126],
+            [88, 156],
+            [113, 152],
+          ].map(([x, y]) => (
+            <path key={`${x}-${y}`} d={`M ${x} ${y - 4} L ${x + 3} ${y} L ${x} ${y + 4} L ${x - 3} ${y} Z`} fill="#ffe58a" />
+          ))}
+          <path d="M 86 104 L 86 170 M 114 104 L 114 170" stroke={`url(#${uid("ig-brass")})`} strokeWidth="5" />
+          <path d="M 86 104 L 86 170 M 114 104 L 114 170" stroke={INK} strokeWidth="1.2" strokeOpacity="0.6" />
+          <path d="M 76 110 Q 79 108 82 110" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          {/* Brass collar and base bands with cyan gems */}
+          <rect x="66" y="98" width="68" height="12" rx="5" fill={`url(#${uid("ig-brass")})`} stroke={INK} strokeWidth="3" />
+          <rect x="66" y="164" width="68" height="12" rx="5" fill={`url(#${uid("ig-brass")})`} stroke={INK} strokeWidth="3" />
+          {[100, 80, 120].map((x) => (
+            <path key={x} d={`M ${x} 100 L ${x + 4} 104 L ${x} 108 L ${x - 4} 104 Z`} fill="#5ef0ff" stroke={INK} strokeWidth="1.2" />
+          ))}
+          <path d="M 100 166 L 104 170 L 100 174 L 96 170 Z" fill="#5ef0ff" stroke={INK} strokeWidth="1.2" />
+          {/* Orbiting ring of glyphs */}
+          <ellipse cx="100" cy="150" rx="46" ry="9" fill="none" stroke="#5ef0ff" strokeWidth="2" strokeOpacity="0.85" strokeDasharray="6 5" filter={`url(#${uid("pix-glow")})`}>
+            <animate attributeName="stroke-dashoffset" values="0;-44" dur={isTalking ? '1s' : '3s'} repeatCount="indefinite" />
+          </ellipse>
 
-          {/* Ember antenna */}
+          {/* Ember antenna on a brass cap with a gem */}
           <path d="M 100 30 L 100 16" stroke={INK} strokeWidth="4" strokeLinecap="round" />
+          <path d="M 86 30 Q 100 16 114 30 Z" fill={`url(#${uid("ig-brass")})`} stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+          <circle cx="100" cy="25" r="3.5" fill="#5ef0ff" stroke={INK} strokeWidth="1.5" />
           <path d="M 100 -6 C 110 6, 112 12, 100 20 C 88 12, 90 6, 100 -6 Z" fill="#ff7a2f" stroke={INK} strokeWidth="3" strokeLinejoin="round">
             <animate
               attributeName="d"

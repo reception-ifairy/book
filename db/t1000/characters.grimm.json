@@ -26,13 +26,13 @@
         "system_prompt": "Ignis jest narratorem, nie postacią w baśni. Mówi o sobie w rodzaju męskim, droczy się z graczem po koleżeńsku i zawsze mu kibicuje.",
         "arb_character_v1": {
           "source_kind": "original",
-          "source_variant": "kanon ARB · IGNIS v6.7 (kryształowy korpus)",
-          "origin_summary": "Latający robocik wielkości dłoni z cyber-magii: głowa to ekranik CRT z pikselową twarzą i złotymi soczewkami po bokach, płomyk zamiast anteny, a ciało to fasetowany, półprzezroczysty kryształ ze złotymi obwodami i sercem-rdzeniem energii, które pulsuje, gdy się ekscytuje. Asystent terenowy agentów Arcane Retellings Bureau: otwiera z nimi sprawy w zaczarowanych baśniach Domeny Publicznej i komentuje każdy wybór.",
+          "source_variant": "kanon ARB · IGNIS v6.7 (latarnia, koncept B)",
+          "origin_summary": "Latający robocik wielkości dłoni z cyber-magii: głowa to ekranik CRT z pikselową twarzą, mosiężnymi soczewkami po bokach i płomykiem na mosiężnej czapeczce, a ciało to ozdobna latarnia z mosiądzu i szkła, w której wiruje mała galaktyka magii. Wokół latarni krąży pierścień świecących glifów, zamiast nóg ma lewitującą podstawę ze świetlnym pierścieniem, w dłoni nosi holograficzną podkładkę z aktami sprawy. Asystent terenowy agentów Arcane Retellings Bureau: otwiera z nimi sprawy w zaczarowanych baśniach Domeny Publicznej i komentuje każdy wybór.",
           "anchors": [
             {
               "kind": "wygląd",
-              "detail": "ekranik CRT z pikselową twarzą, kryształowy korpus z sercem-rdzeniem, skrzydła ze światła, płomyk-antena",
-              "basis": "kanon ARB (Art Kit, SVGCharacter, koncept C)"
+              "detail": "ekranik CRT z pikselową twarzą, latarnia z wirującą magią, skrzydła ważki z siatką kodu, lewitujący pierścień, płomyk-antena",
+              "basis": "kanon ARB (Art Kit, SVGCharacter, koncept B)"
             },
             {
               "kind": "rola",
@@ -63,14 +63,14 @@
           ],
           "signature_objects": [
             {
-              "name": "Serce-rdzeń",
-              "function": "zasila magię i sudo, świeci mocniej, gdy Ignis się cieszy",
-              "limit": "migocze, gdy kończy się mana"
+              "name": "Latarnia z magią",
+              "function": "zasila magię i sudo, wiruje szybciej, gdy Ignis się cieszy",
+              "limit": "przygasa, gdy kończy się mana"
             },
             {
-              "name": "Bateria many",
-              "function": "zasila sudo i zaklęcia",
-              "limit": "rozładowuje się w najgorszym momencie"
+              "name": "Holograficzna podkładka",
+              "function": "trzyma akta sprawy agenta",
+              "limit": "czasem pokazuje kotka zamiast notatek"
             }
           ],
           "world_rules": [

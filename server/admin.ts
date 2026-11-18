@@ -119,7 +119,7 @@ admin.post('/probe/:role', async (req, res) => {
       case 'story':
         return res.json({ ok: true, ...(await probeStoryModel()) });
       case 'image': {
-        const img = await generateImage(`${IMAGE_STYLE}\nScene: a palm-sized flying robot with a CRT screen face, a faceted see-through crystal body with a glowing heart core, shimmering light wings and a little flame antenna, booting up in a cozy detective office full of glowing case files.`);
+        const img = await generateImage(`${IMAGE_STYLE}\nScene: a palm-sized flying robot with a CRT screen face, a brass-and-glass lantern body full of swirling magic, dragonfly wings, a hover ring and a little flame antenna, booting up in a cozy detective office full of glowing case files.`);
         return res.json({ ok: true, ms: Date.now() - t0, dataUrl: `data:${img.mime};base64,${img.data.toString('base64')}` });
       }
       case 'tts': {
