@@ -5,6 +5,16 @@ Wersje odpowiadają commitom na gałęzi `claude/quirky-hopper-4ii20w`.
 
 ---
 
+## 6.7.0 · Nowy Ignis: kryształowy asystent agenta (koncept C)
+
+- **Ignis nie jest już książką.** Wybrany koncept C: głowa jak dotąd (ekranik CRT z pikselową twarzą, płomyk-antena) plus złote soczewki po bokach, a ciało to fasetowany, półprzezroczysty kryształ (lodowy błękit → fiolet) ze złotymi obwodami i sercem-rdzeniem energii, które pulsuje (szybciej, gdy Ignis mówi). Złote naramienniki, kremowe mankiety, białe dłonie, kremowe buty ze świecącymi podeszwami, skrzydła ze światła z pikselowymi iskrami. Nowy rysunek SVG, opis w prompcie, w bazie postaci i w art-directorze Art Kitu.
+- **Gracz jest agentem ARB, Ignis jego asystentem terenowym** także w samej opowieści: prompt zaczyna się od Biura i Domeny Publicznej, Ignis zwraca się „Agent” (także po polsku, jak do stopnia), „rookie”, „hero”. Komunikaty serwera mówią o kryptonimie agenta zamiast o debuggerze.
+- **Art Kit pod ARB:** art-director zna nową tożsamość i styl „cyber-magia w przytulnym biurze detektywistycznym” (tablica spraw z czerwonym sznurkiem, holograficzne akta, zamki z runami). Nowe sloty: `ignis-briefing` (Ignis przy tablicy spraw, karta *Daily ops*) i `icon-glitch` (ramka glitcha dnia). Tło strony głównej to teraz biuro terenowe ARB, karta do udostępniania ma napis „ARB”.
+- **Poprawka:** dwie kopie Ignisa na stronie głównej (duża i ukryta karta mobilna) dzieliły identyfikatory gradientów, więc w przeglądarce znikały wypełnienia ciała. Każda kopia ma teraz własne identyfikatory.
+- Fixture `grimm-requests.json` odświeżona (zmiana promptu jest zamierzona). Testy: 59.
+
+---
+
 ## 6.6.0 · Daily ops: dzienne zadania i glitch dnia
 
 - **Nowa karta *Daily ops* na stronie głównej:** poranna odprawa Ignisa, *glitch dnia* (ciemny ekranik) i trzy dzienne zadania z paskami postępu i nagrodą w XP. Postęp liczy się z własnych spraw agenta (tylko strony napisane dziś, dzień według czasu warszawskiego), więc nie trzeba kont graczy.

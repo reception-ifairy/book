@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { CheckCircle2, Circle, Zap } from 'lucide-react';
 import { api, loadRuns } from '../api';
+import { useArt } from '../artkit';
 import { questProgress, type DailyBoard, type QuestProgress } from '../../shared/daily';
 import type { Story } from '../../shared/types';
 
@@ -14,6 +15,9 @@ const DEFAULT_BRIEFING = 'Agent, today’s anomalies are on the board. I have pr
 export function DailyOps() {
   const [board, setBoard] = useState<DailyBoard | null>(null);
   const [progress, setProgress] = useState<Record<string, QuestProgress>>({});
+  const art = useArt();
+  const briefingArt = art.src('ignis-briefing');
+  const glitchIcon = art.src('icon-glitch');
 
   useEffect(() => {
     let alive = true;
@@ -44,13 +48,16 @@ export function DailyOps() {
       </div>
       <div className="grid lg:grid-cols-[1fr_1.4fr] gap-4">
         <div className="card p-5 flex flex-col gap-4">
-          <div>
-            <span className="eyebrow">IGNIS · morning briefing</span>
-            <p className="mt-1.5 font-semibold">“{board.briefing || DEFAULT_BRIEFING}”</p>
+          <div className="flex gap-3 items-start">
+            {briefingArt && <img src={briefingArt} alt={art.alt('ignis-briefing')} className="w-24 h-24 object-contain shrink-0 -my-2 -ml-2" />}
+            <div>
+              <span className="eyebrow">IGNIS · morning briefing</span>
+              <p className="mt-1.5 font-semibold">“{board.briefing || DEFAULT_BRIEFING}”</p>
+            </div>
           </div>
           {board.glitch && (
             <div className="rounded-xl border-[2.5px] border-outline bg-screen text-pixel p-4 shadow-[0_3px_0_var(--color-outline)]">
-              <span className="font-pixel text-[11px] flex items-center gap-1.5"><Zap size={13} /> GLITCH OF THE DAY</span>
+              <span className="font-pixel text-[11px] flex items-center gap-1.5">{glitchIcon ? <img src={glitchIcon} alt="" className="w-7 h-7 -my-1.5 object-contain" /> : <Zap size={13} />} GLITCH OF THE DAY</span>
               <p className="mt-1.5 text-[15px] font-semibold text-[#d9fbff]">{board.glitch.text}</p>
             </div>
           )}
