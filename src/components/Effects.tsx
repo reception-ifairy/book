@@ -113,7 +113,7 @@ export function StringLights({ count = 18, className = '' }: { count?: number; c
   );
   const wire = bulbs.map((b, i) => `${i ? 'L' : 'M'} ${b.x} ${b.y - 3}`).join(' ');
   return (
-    <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-8 ${className}`}>
+    <div aria-hidden className={`string-lights pointer-events-none absolute inset-x-0 top-0 h-8 ${className}`}>
       <svg viewBox="0 0 100 26" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
         <path d={`M 0 2 ${wire} L 100 2`} fill="none" stroke="#1a120d" strokeWidth="0.5" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 2 }} />
       </svg>

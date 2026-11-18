@@ -1,6 +1,7 @@
 import type { Page, PublicConfig, Story, Tale } from '../shared/types';
 import type { ArtKitState, ArtSlot } from '../shared/artkit';
 import type { DailyBoard, Glitch, Quest } from '../shared/daily';
+import type { BrandImageKind, Branding } from '../shared/branding';
 
 export interface ArtKitView {
   slots: ArtSlot[];
@@ -74,6 +75,12 @@ export const adminApi = (creds: AdminCredentials) => {
       planDay: (day: string, plan: { briefing: string | null; glitch_slug: string | null; quest_slugs: string[] }) =>
         call<DailyAdminView>('PUT', `/api/admin/daily/days/${day}`, plan, h),
       unplanDay: (day: string) => call<DailyAdminView>('DELETE', `/api/admin/daily/days/${day}`, undefined, h),
+    },
+    branding: {
+      get: () => call<Branding>('GET', '/api/admin/branding', undefined, h),
+      save: (patch: Partial<Branding>) => call<Branding>('PUT', '/api/admin/branding', patch, h),
+      upload: (kind: BrandImageKind, dataUrl: string) => call<Branding>('PUT', `/api/admin/branding/images/${kind}`, { dataUrl }, h),
+      removeImage: (kind: BrandImageKind) => call<Branding>('DELETE', `/api/admin/branding/images/${kind}`, undefined, h),
     },
     artkit: {
       get: () => call<ArtKitView>('GET', '/api/admin/artkit', undefined, h),

@@ -538,8 +538,8 @@ export function StoryScreen({ storyId }: { storyId: string }) {
 
               <div className="card relative overflow-hidden p-6 sm:p-8">
               {/* Ruled-paper hint and a folded corner. */}
-              <div aria-hidden className="pointer-events-none absolute inset-0 opacity-50 [background:repeating-linear-gradient(180deg,transparent_0_33px,#e8d6b4_33px_34px)]" />
-              <div aria-hidden className="absolute top-0 right-0 w-10 h-10 bg-[linear-gradient(225deg,var(--color-bg)_50%,#e9d4ac_50%)] border-l-[3px] border-b-[3px] border-outline rounded-bl-xl" />
+              <div aria-hidden className="pointer-events-none absolute inset-0 opacity-50 [background:repeating-linear-gradient(180deg,transparent_0_33px,var(--ruled,#e8d6b4)_33px_34px)]" />
+              <div aria-hidden className="absolute top-0 right-0 w-10 h-10 bg-[linear-gradient(225deg,var(--color-bg)_50%,var(--fold,#e9d4ac)_50%)] border-l-[3px] border-b-[3px] border-outline rounded-bl-xl" />
               <div className="relative flex flex-wrap items-center gap-2 mb-5">
                 <span className="eyebrow">Page {page.depth + 1}</span>
                 {page.action && (

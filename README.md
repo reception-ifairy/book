@@ -23,6 +23,7 @@ Gra „wybierz własną przygodę” w klimacie cyber-magii dla graczy **od 12 l
 - **Claude** pisze strukturę i narrację, a także rozumie obrazy dołączane przez gracza;
 - **Gemini** albo **OpenAI** rysuje ilustracje i czyta tekst na głos (głos z przeglądarki działa bez klucza);
 - przeglądarka obsługuje dyktowanie;
+- **Branding:** w panelu admina nazwa, logo, karta do udostępniania, motyw kolorów (*Cozy Workshop* albo *Cyber-Magic Nebula*) i styl kart (*Paper sticker* albo *Holo tech*), z podglądem na żywo.
 - **Art Kit:** Claude planuje całą szatę graficzną (style bible + prompty), a OpenAI ją maluje: tło, Ignisa, okładki, ikony, odznaki, logo i kartę do udostępniania.
 
 ## Szybki start

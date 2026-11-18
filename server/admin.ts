@@ -12,6 +12,7 @@ import { cleanProviderMessage, type ModelInfo } from './providers/types';
 import { adminAuth, dbLoginEnabled, requireAdminSession } from './adminAuth';
 import { characterStats } from './story/characters';
 import { dailyAdmin } from './daily';
+import { brandingAdmin } from './branding';
 
 export const admin = Router();
 
@@ -38,6 +39,7 @@ admin.use('/auth', adminAuth);
 admin.use(guard);
 admin.use('/artkit', artkitAdmin);
 admin.use('/daily', dailyAdmin);
+admin.use('/branding', brandingAdmin);
 
 const PROVIDERS = ProviderId.options;
 

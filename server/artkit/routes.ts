@@ -10,20 +10,10 @@ import { ART_SLOTS, getSlot, type PublicArtKit } from '../../shared/artkit';
 
 const EMPTY: PublicArtKit = { version: 0, assets: {}, alt: {} };
 
-/** Player-facing: the published kit, plus its images and the favicon / share-card shortcuts. */
+/** Player-facing: the published kit and its images. /favicon.png and /og.png live in branding.ts (uploads win). */
 export const artkitPublic = Router();
 artkitPublic.get('/api/artkit', (_req, res) => res.json(getKit().published ?? EMPTY));
 artkitPublic.use('/artkit', express.static(ART_FILES_DIR, { maxAge: '365d', immutable: true, fallthrough: false }));
-for (const [route, slot] of [
-  ['/favicon.png', 'brand-mark'],
-  ['/og.png', 'brand-share'],
-] as const) {
-  artkitPublic.get(route, (_req, res) => {
-    const url = getKit().published?.assets[slot];
-    if (url) res.redirect(302, url);
-    else res.status(404).end();
-  });
-}
 
 function fail(res: Response, e: unknown) {
   if (e instanceof z.ZodError) return res.status(400).json({ error: e.issues[0]?.message ?? 'Invalid request.' });

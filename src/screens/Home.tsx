@@ -297,7 +297,7 @@ export function Home() {
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>ARB · The Arcane Retellings Bureau · Claude writes the story, Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // field assistant v6.7</span>
+        <span className="font-pixel">IGNIS // field assistant v6.8</span>
       </footer>
     </div>
     </>
