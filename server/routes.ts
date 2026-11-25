@@ -8,8 +8,13 @@ import { extFor, mimeFromUrl, generateImage, generateSpeech, IMAGE_STYLE, Modali
 import { getTale, TALES } from '../shared/tales';
 import type { PublicConfig } from '../shared/types';
 import { ProviderError, type Media } from './providers/types';
+import { optionalAgent } from './agents/auth';
+import { afterPage } from './agents/xp';
+import type { XpUpdate } from '../shared/xp';
 
 export const api = Router();
+// Requests that carry an agent key get req.agent; anonymous play keeps working, it just earns no XP.
+api.use(optionalAgent);
 
 const actionLimiter = rateLimit({
   windowMs: 60_000,
@@ -43,6 +48,24 @@ const loadStory = (req: Request) => {
   return story;
 };
 
+/** Anyone with the link may read a case; only its agent may play it (cases from before v7 have no owner). */
+const ownStory = (req: Request) => {
+  const story = loadStory(req);
+  if (story.agentId && story.agentId !== req.agent?.id) throw new StoryError('This case belongs to another agent. Open your own copy from the dashboard.', 403);
+  return story;
+};
+
+/** XP never blocks the story: a ledger hiccup is logged and the page still arrives. */
+async function xpFor(req: Request, story: Parameters<typeof afterPage>[1], page: Parameters<typeof afterPage>[2]): Promise<XpUpdate | undefined> {
+  if (!req.agent || story.agentId !== req.agent.id) return undefined;
+  try {
+    return await afterPage(req.agent, story, page);
+  } catch (e) {
+    console.error('[xp] award failed:', (e as Error).message);
+    return undefined;
+  }
+}
+
 api.get('/config', (_req, res) => {
   const cfg = getConfig();
   const body: PublicConfig = {
@@ -54,7 +77,7 @@ api.get('/config', (_req, res) => {
   res.json(body);
 });
 
-api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, tech, hue, title, tagline }) => ({ id, emoji, tech, hue, title, tagline }))));
+api.get('/tales', (_req, res) => res.json(TALES.map(({ id, emoji, tech, hue, title, tagline, format }) => ({ id, emoji, tech, hue, title, tagline, format: format ?? 'case' }))));
 
 const StartBody = z.object({
   taleId: z.string(),
@@ -64,9 +87,11 @@ const StartBody = z.object({
 
 api.post('/story', actionLimiter, async (req, res) => {
   try {
-    const { taleId, lang, heroName } = StartBody.parse(req.body);
-    const story = await startStory(taleId, lang, heroName);
+    // An agent plays under their codename; anonymous callers still name their hero.
+    const { taleId, lang, heroName } = StartBody.parse(req.agent ? { ...req.body, heroName: req.agent.codename } : req.body);
+    const story = await startStory(taleId, lang, heroName, req.agent?.id);
     saveStory(story);
+    await xpFor(req, story, story.pages[story.rootPageId]);
     res.json(story);
   } catch (e) {
     fail(res, e);
@@ -97,13 +122,13 @@ const writing = new Set<string>();
 api.post('/story/:id/act', actionLimiter, async (req, res) => {
   let locked = '';
   try {
-    const story = loadStory(req);
+    const story = ownStory(req);
     const { pageId, ...input } = ActBody.parse(req.body);
     if (writing.has(story.id)) throw new StoryError('IGNIS is still writing the last page. Patience, Agent.', 409);
     writing.add((locked = story.id));
     const page = await act(story, pageId, input);
     saveStory(story);
-    res.json({ page, story });
+    res.json({ page, story, xp: await xpFor(req, story, page) });
   } catch (e) {
     fail(res, e);
   } finally {
@@ -112,9 +137,9 @@ api.post('/story/:id/act', actionLimiter, async (req, res) => {
 });
 
 /** Rolling back just moves the cursor; the next action from that page forks a new branch. */
-api.post('/story/:id/goto', (req, res) => {
+api.post('/story/:id/goto', async (req, res) => {
   try {
-    const story = loadStory(req);
+    const story = ownStory(req);
     const { pageId } = z.object({ pageId: z.string() }).parse(req.body);
     if (!story.pages[pageId]) throw new StoryError('Page not found.', 404);
     story.currentPageId = pageId;
@@ -129,7 +154,7 @@ const inflight = new Map<string, Promise<string>>();
 
 api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
   try {
-    const story = loadStory(req);
+    const story = ownStory(req);
     const page = story.pages[String(req.params.pageId)];
     if (!page) throw new StoryError('Page not found.', 404);
     if (page.imageUrl) return res.json({ url: page.imageUrl });
@@ -162,7 +187,7 @@ api.post('/story/:id/page/:pageId/image', actionLimiter, async (req, res) => {
 
 api.post('/story/:id/page/:pageId/speech', actionLimiter, async (req, res) => {
   try {
-    const story = loadStory(req);
+    const story = ownStory(req);
     const page = story.pages[String(req.params.pageId)];
     if (!page) throw new StoryError('Page not found.', 404);
     if (page.audioUrl) return res.json({ url: page.audioUrl });

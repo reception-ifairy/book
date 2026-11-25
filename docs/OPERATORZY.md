@@ -64,12 +64,15 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 
 ## 2. Operatorzy ludzie
 
-### Gracz
-- Wybiera baśń, imię („debugger name”) i język opowieści (PL/EN). Interfejs jest po angielsku.
+### Gracz (agent)
+- **Dołącza do Biura** kryptonimem i językiem opowieści (PL/EN). Dostaje **klucz agenta** `ARB-XXXX-XXXX-XXXX-XXXX` (bez e-maila i hasła), który zapisuje i którym loguje się na innym urządzeniu („I have an agent key”). Interfejs jest po angielsku, treść w wybranym języku.
+- Po zalogowaniu widzi **pulpit agenta**: legitymację z rangą i XP, formaty dnia (Quiz ABC, Incydent, Przesłuchanie), Daily ops, 5 głównych spraw, 4 szybkie sprawy, otwarte sprawy, archiwum zakończeń i dziennik XP.
+- XP liczy serwer, każda nagroda raz (szczegóły w `shared/xp.ts`). Za awans pojawia się karta „PROMOTED!”.
+- Sprawy rozegrane przed założeniem profilu w tej przeglądarce przechodzą na agenta przy dołączeniu.
 - Gra wyborami albo własnym ruchem: do 280 znaków, dyktowaniem albo obrazem do 5 MB (zmniejszanym w przeglądarce do 1024 px). Własny ruch opłaca się uzasadnić: „jak wyjaśnisz, to zaistnieje”.
 - Może rozwinąć panel **DEBUG** pod stroną (klawisz `D`) i przeczytać krok po kroku, jak działa prawdziwa technologia z tej strony.
 - Może cofać się i forkować z mapy linii czasu, włączać czytanie na głos, kopiować kartę linii czasu i włączać lub wyłączać śnieg.
-- Nie ma konta. Rozgrywki pamięta jego przeglądarka (lista ID), a treść historii jest na serwerze.
+- Treść spraw jest na serwerze; sprawę agenta może czytać każdy z linkiem, ale grać tylko jej agent.
 
 ### Sysadmin (`/#/admin`)
 - **Dostęp:**
@@ -108,9 +111,9 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `GET /api/health` | — | Stan serwera i czas działania |
 | `GET /api/config` | — | Które modalności działają (`storyReady`, `image`, `tts`, `vision`) |
 | `GET /api/tales` | — | Katalog baśni (bez promptów i kanonicznych momentów) |
-| `POST /api/story` | ✓ | Nowa historia `{taleId, lang, heroName}` → pierwsza strona od Claude |
+| `POST /api/story` | ✓ | Nowa historia `{taleId, lang, heroName}` → pierwsza strona od Claude. Z nagłówkiem `Authorization: Agent <klucz>` sprawa należy do agenta, a bohater dostaje jego kryptonim |
 | `GET /api/story/:id` | — | Pełna historia |
-| `POST /api/story/:id/act` | ✓ + blokada | `{pageId, choiceId}` albo `{pageId, custom?, image?}` → nowa strona |
+| `POST /api/story/:id/act` | ✓ + blokada | `{pageId, choiceId}` albo `{pageId, custom?, image?}` → nowa strona i `xp` (zdobyte nagrody, suma, ranga, awans). Sprawa agenta: tylko jej agent (inaczej 403) |
 | `POST /api/story/:id/goto` | — | Cofnięcie do strony (następny ruch tworzy fork) |
 | `POST /api/story/:id/page/:pageId/image` | ✓ + budżet | Ilustracja strony (z cache albo generowana) |
 | `POST /api/story/:id/page/:pageId/speech` | ✓ | Nagranie strony albo `null` (wtedy czyta przeglądarka) |
@@ -118,6 +121,15 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `GET /api/artkit` | — | Opublikowany art kit: `{version, assets: {slot: url}, alt}` |
 | `GET /artkit/...` | — | Grafiki art kitu (cache na rok, nazwy unikalne) |
 | `GET /favicon.png`, `GET /og.png` | — | Przekierowanie na logo / kartę do udostępniania: najpierw wgrane w Brandingu, potem z Art Kitu (404, gdy brak obu) |
+| `POST /api/agent/enlist` | limit | Nowy agent `{codename, lang}` → `{agent, key}` (klucz pokazywany raz) |
+| `POST /api/agent/login` | limit | `{key}` → agent |
+| `GET /api/agent/me` | agent | Cały pulpit: agent, ranga, XP dziś, dziennik, sprawy, archiwum zakończeń, formaty dnia, zadania (i wypłata gotowych) |
+| `POST /api/agent/claim` | agent | `{storyIds}`: przejmuje sprawy tej przeglądarki, które nie mają jeszcze agenta |
+| `GET /api/agent/daily/quiz` | agent | Quiz dnia bez puent i bez „zatwierdzonej” odpowiedzi + odpowiedzi agenta |
+| `POST /api/agent/daily/quiz/answer` | agent | `{q, letter}` po kolei, raz na pytanie → puenta, XP, na końcu werdykt |
+| `GET`/`POST /api/agent/daily/incident` | agent | Incydent dnia / `{choice}` raz dziennie → konsekwencja, odznaka, XP |
+| `GET /api/agent/interrogation` | agent | Podejrzany dnia i transkrypt |
+| `POST /api/agent/interrogation/ask` | agent + ✓ | `{question}` → odpowiedź podejrzanego, ocena Ignisa, licznik prawdy, na końcu werdykt i XP |
 | `GET /api/branding` | — | Branding: nazwy, opis, motyw, styl kart, kolory, adresy logo i karty |
 | `GET /brand/...` | — | Wgrane logo i karta do udostępniania (cache na rok, nazwy unikalne) |
 
@@ -135,6 +147,10 @@ Nazwy modeli Gemini i OpenAI są domyślne, więc po dodaniu klucza wybierz wła
 | `POST /api/admin/artkit/generate` | Render `{slots?}`: wszystkie albo wybrane (409, jeśli render trwa; 503 bez klucza OpenAI) |
 | `POST /api/admin/artkit/publish` | Publikuje gotowe grafiki (wersja +1) |
 | `DELETE /api/admin/artkit/published` | Powrót do wbudowanego wyglądu |
+| `GET /api/admin/agents/stats` | Liczba agentów, aktywni dziś, czy magazyn jest trwały, podejrzany dnia |
+| `GET /api/admin/packs?day=` | Quiz i incydent danego dnia w obu językach (pełne, z puentami) |
+| `PUT /api/admin/packs/:day/:lang/:kind` | Ręczna poprawka `{payload}` (walidacja: 3 pytania × 3 odpowiedzi, dokładnie jedna zatwierdzona; incydent: 3 wybory, XP 15–35) |
+| `POST /api/admin/packs/:day/:lang/:kind/regenerate` | Nowa wersja od Claude |
 | `GET /api/admin/branding` | Zapisany branding |
 | `PUT /api/admin/branding` | Zapis dowolnych pól `{name, shortName, tagline, description, theme, cards, colors}`; kolory scalają się pole po polu, `null` wraca do koloru motywu |
 | `PUT /api/admin/branding/images/:kind` | `kind` = `logo` albo `share`, body `{dataUrl}` (PNG/JPEG/WebP, do 3 MB) |
@@ -262,7 +278,25 @@ Model postaci jest zgodny z ARB (szkielet: [postacie.sql](postacie.sql); wdroże
 
 - **Edycja:** panel `/#/admin` → *Daily ops*. Zmiany działają od razu (pamięć podręczna tablicy jest czyszczona przy zapisie, a poza tym odświeża się co 5 minut).
 - **Rotacja:** dzień bez planu losuje 3 aktywne zadania i 1 glitch, deterministycznie po dacie, więc wszyscy agenci widzą to samo przez cały dzień. Dzień Biura liczy się według czasu warszawskiego.
-- **Postęp:** liczy przeglądarka gracza z jego spraw, tylko ze stron napisanych w danym dniu. XP nie jest jeszcze nigdzie zapisywane: to pierwszy krok pod przyszły pulpit agenta.
+- **Postęp:** dla zalogowanego agenta liczy serwer (`checkQuests` w `server/agents/xp.ts`, ta sama funkcja `questProgress` co w przeglądarce) z jego spraw, tylko ze stron napisanych w danym dniu, i od razu wypłaca `reward_xp` (raz na zadanie i dzień). Gościom na stronie głównej postęp liczy przeglądarka, bez XP.
 - **Glitch w grze:** prompt dostaje sekcję `# Glitch of the day`; serwer bierze glitch z pamięci podręcznej, więc strona nigdy nie czeka na bazę.
 - **Start:** `mysql t1000 < db/t1000/003_ignis_daily.sql`, potem `npm run -s t1000:daily | mysql t1000`.
 
+
+### Agenci, XP i formaty dnia (od 7.0.0)
+
+`db/t1000/004_ignis_agents.sql`; konto `ignis_book` ma tu SELECT/INSERT/UPDATE (dziennik XP: tylko SELECT/INSERT).
+
+| Tabela | Co zawiera |
+|---|---|
+| `ignis_agents` | Agent: `id`, `codename`, `tag` (#XXXX), `key_hash` (SHA-256 klucza; samego klucza serwer nie zna), `lang`, `xp`, `streak_days`, `last_active_day` |
+| `ignis_agent_xp` | Dziennik XP: `ref` (co zapłaciło, np. `ending:<story>:<page>`, `quest:<dzień>:<slug>`), `source`, `amount`, `label`. **UNIQUE(agent_id, ref)**, więc każda nagroda płaci raz; `xp` agenta rośnie w tej samej transakcji |
+| `ignis_agent_cases` | Indeks spraw agenta (sama historia dalej leży w `data/stories/`): baśń, format, liczba stron, zakończenie |
+| `ignis_agent_daily` | Quiz, incydent i przesłuchanie agenta w danym dniu: stan (odpowiedzi, wybór, transkrypt), XP, czas ukończenia |
+| `ignis_daily_packs` | Quiz i incydent dnia per język: JSON, źródło `claude` / `seed` / `edited` |
+
+- **Bez bazy** (`T1000_DATABASE_URL` puste) agenci i XP żyją w pamięci procesu (`memoryAgentStore`) i znikają po restarcie. Serwer ostrzega o tym w logu, a karta „Agents” w panelu pokazuje „(memory!)”.
+- **Quiz i incydent:** Claude (model z *Story engine*, effort `low`) pisze je przy pierwszym wejściu dnia, a w tle co 15 minut sprawdza, czy dzisiejsze już są. Błąd albo brak klucza → zapas z `server/dailyPackSeeds.ts`. Panel: *Daily ops* → *Quiz ABC & Incident* (podgląd, *Edit JSON* z walidacją, *Regenerate with Claude*).
+- **Przesłuchanie:** podejrzany dnia z `shared/suspects.ts` (wybór deterministyczny po dacie). Każde pytanie to jedno wywołanie Claude z całym transkryptem; licznik prawdy, maks. 6 pytań, przyznanie się kończy wcześniej.
+- **Szybkie sprawy:** baśnie z `format: 'quick'` w `shared/tales.ts` mają własny `maxDepth` (5) i `minDepth` (3); prompt dostaje sekcję `# Quick case`. Prompt głównych spraw jest bez zmian (pilnuje tego test `grimm-golden`).
+- **Start:** kopia bazy, `mysql t1000 < db/t1000/004_ignis_agents.sql`, restart.

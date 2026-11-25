@@ -111,6 +111,108 @@ export const TALES: Tale[] = [
     cast: ['Skuba (cobbler-pentester)', 'King Krak (non-technical founder)', 'The Princess (actually the best engineer)', 'The Wawel Dragon (rogue AI)'],
     art: 'Wawel castle on a snowy hill above the Vistula, a big goofy robot dragon with server-fan wings and a pixel-screen face, a woolly sheep stitched with glowing circuitry',
   },
+
+  // ---------- Quick cases: the same engine, a few pages each ----------
+  {
+    id: 'latency-race',
+    format: 'quick',
+    maxDepth: 5,
+    minDepth: 3,
+    tech: 'Latency',
+    hue: 95,
+    emoji: '🐢',
+    title: { en: 'The Latency Race', pl: 'Wyścig z Lagiem' },
+    tagline: {
+      en: 'The Hare has gigabit fibre. The Tortoise has a dial-up modem and a plan. Somebody set the finish line on a server in another continent.',
+      pl: 'Zając ma światłowód. Żółw ma modem i plan. Ktoś postawił metę na serwerze na innym kontynencie.',
+    },
+    twist:
+      'The race between the Tortoise and the Hare is an online race. The Hare has blazing bandwidth but terrible ping because he keeps hopping between Wi-Fi networks and stopping to stream himself. The Tortoise has a slow, steady, wired connection with tiny latency. The race judge is a sleepy Owl who only counts packets that arrive in order.',
+    beats: [
+      'The Hare boasts and challenges the Tortoise',
+      'The Hare dashes ahead, then stops to show off (and buffer)',
+      'The Tortoise keeps a steady, wired pace',
+      'The Tortoise crosses the finish line while the Hare is still reconnecting',
+    ],
+    cast: ['The Tortoise (wired and patient)', 'The Hare (fast but laggy streamer)', 'The Owl (race judge, counts packets)'],
+    art: 'a winding forest race track lit by lanterns, a calm tortoise trailing a long glowing network cable, a speedy hare with a headset and a spinning buffering wheel above his head',
+  },
+  {
+    id: 'false-positive',
+    format: 'quick',
+    maxDepth: 5,
+    minDepth: 3,
+    tech: 'False alarms',
+    hue: 40,
+    emoji: '🐑',
+    title: { en: 'False Positive', pl: 'Fałszywy Alarm' },
+    tagline: {
+      en: 'The shepherd boy’s alarm system cried “WOLF!” forty times today. Thirty-nine were a cloud shaped like a wolf.',
+      pl: 'System alarmowy pastuszka krzyknął dziś „WILK!” czterdzieści razy. Trzydzieści dziewięć razy był to obłok w kształcie wilka.',
+    },
+    twist:
+      'The Boy Who Cried Wolf is a junior security guard whose brand-new magic alarm sends an alert for everything: clouds, sheep sneezing, his own reflection. The villagers have muted the notifications. Now a real wolf is testing the fence, and nobody reads the alerts any more. The lesson is alert fatigue and tuning an alarm so it only rings for real danger.',
+    beats: [
+      'The alarm rings for silly reasons and the villagers grow tired of it',
+      'The villagers mute the alerts',
+      'A real wolf appears',
+      'Nobody comes, unless the alarm can be trusted again',
+    ],
+    cast: ['The Shepherd Boy (junior security guard)', 'The Villagers (notification-muters)', 'The Wolf (real, patient, polite)', 'The Sheep (dramatic)'],
+    art: 'a green hillside village with a flock of fluffy sheep, a shepherd boy beside a glowing magic alarm bell covered in blinking notification bubbles, a sly wolf peeking over a stone fence',
+  },
+  {
+    id: 'just-right-server',
+    format: 'quick',
+    maxDepth: 5,
+    minDepth: 3,
+    tech: 'Load balancing',
+    hue: 270,
+    emoji: '🥣',
+    title: { en: 'Just Right Server', pl: 'Serwer w Sam Raz' },
+    tagline: {
+      en: 'One server is too hot, one too cold, one just right. Goldilocks is routing the whole forest’s traffic through the last one.',
+      pl: 'Jeden serwer za gorący, drugi za zimny, trzeci w sam raz. Złotowłosa puszcza przez niego ruch całego lasu.',
+    },
+    twist:
+      'The Three Bears run a cottage data centre with three servers: Papa Bear’s is overheating, Mama Bear’s is idle and freezing, Baby Bear’s is just right. Goldilocks, a cheerful intern, sends every request to the “just right” one until it wobbles. The fix is load balancing: sharing the work so no server is too hot or too cold.',
+    beats: [
+      'Goldilocks finds the empty cottage data centre',
+      'She tries each server: too hot, too cold, just right',
+      'She overloads the just-right server',
+      'The Bears come home and find their servers in a state',
+    ],
+    cast: ['Goldilocks (enthusiastic intern)', 'Papa Bear (overheated server admin)', 'Mama Bear (cool-headed engineer)', 'Baby Bear (owner of the just-right server)'],
+    art: 'a cozy forest cottage turned into a tiny data centre, three server racks of different sizes like porridge bowls, one steaming, one frosted, one glowing happily, a golden-haired girl with a clipboard',
+  },
+  {
+    id: 'emperors-update',
+    format: 'quick',
+    maxDepth: 5,
+    minDepth: 3,
+    tech: 'Social engineering',
+    hue: 190,
+    emoji: '👑',
+    title: { en: 'The Emperor’s New Update', pl: 'Nowa Aktualizacja Cesarza' },
+    tagline: {
+      en: 'Two travelling coders sold the Emperor an update so advanced that only clever people can see it. The progress bar is also invisible.',
+      pl: 'Dwaj wędrowni programiści sprzedali Cesarzowi aktualizację tak nowoczesną, że widzą ją tylko mądrzy. Pasek postępu też jest niewidzialny.',
+    },
+    twist:
+      'Two swindlers sell the Emperor an "invisible premium update" that only clever people can see. Every courtier pretends to see it so they won’t look silly. The Emperor plans a grand launch parade for an update that does nothing. The lesson is social engineering: tricks that work on people instead of computers, and the courage to say "I don’t see it".',
+    beats: [
+      'The swindlers pitch the invisible update',
+      'Courtiers pretend they can see it',
+      'The Emperor shows it off at a grand launch parade',
+      'A child says out loud that there is nothing there',
+    ],
+    cast: ['The Emperor (loves shiny updates)', 'The Two Swindlers (travelling "coders")', 'The Courtiers (nodding experts)', 'The Child (honest beta tester)'],
+    art: 'a sunny fairy-tale city parade with banners, a proud emperor standing beside an empty glowing display stand, two sly travelling salesmen with briefcases of sparkles, a small child pointing',
+  },
 ];
 
 export const getTale = (id: string) => TALES.find((t) => t.id === id);
+export const formatOf = (t: Pick<Tale, 'format'>) => t.format ?? 'case';
+/** The 5 main case files (the long tales). */
+export const MAIN_TALES = TALES.filter((t) => formatOf(t) === 'case');
+export const QUICK_TALES = TALES.filter((t) => formatOf(t) === 'quick');

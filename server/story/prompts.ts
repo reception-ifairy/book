@@ -26,7 +26,7 @@ Twist: ${tale.twist}
 Cast: ${tale.cast.join('; ')}
 Canon beats of the original (a loose skeleton, not a script):
 ${tale.beats.map((b, i) => `${i + 1}. ${b}`).join('\n')}
-${castSection(cast, lang)}${glitchSection(glitch)}
+${castSection(cast, lang)}${glitchSection(glitch)}${quickSection(tale, maxDepth)}
 # Before you write
 Think it through in this order, then write the page: 1) what the player's action actually changes in the scene; 2) its funniest logical consequence; 3) which canon beat you are near, and whether this page moves toward it or wrecks it; 4) what a young player might not understand about the ${tale.tech} idea this moment plays with; 5) three choices that are genuinely different, one of each kind. Keep that reasoning to yourself: only the fields of the schema reach the player.
 
@@ -43,13 +43,22 @@ Think it through in this order, then write the page: 1) what the player's action
 - Twists: once or twice per tale, plant a "what if" surprise: an item with a hidden flaw, a helper with a secret, or an overlooked character showing their side of the story (the wolf has a reason, a stepsister keeps a bug-report diary). Villains stay villains, just more interesting.
 - Help: if the player seems confused about the story or asks what is going on, IGNIS explains in one or two simple sentences inside the story, then carries on. Asking never costs anything.
 - Attached image: if the player attaches an image, treat it as a mysterious artifact that appears in the tale, weave it into the scene, and put a one-sentence description in artifact_description. Otherwise artifact_description is null.
-- Endings: when the story reaches a satisfying conclusion, the player is knocked out, or the page depth reaches ${maxDepth}, set ending (type: canon = the original outcome, subverted = a clever twist outcome, cursed = everything broke, secret = rare hidden ending, death = game over: the player got knocked out of the tale in a cartoony way, like being "garbage-collected" into a recycle bin) with a punchy title, and return an empty choices array. Never end before depth 4 unless it is game over. Game-over endings are silly, never scary or gory, and hint that the player can roll back and try again.
+- Endings: when the story reaches a satisfying conclusion, the player is knocked out, or the page depth reaches ${maxDepth}, set ending (type: canon = the original outcome, subverted = a clever twist outcome, cursed = everything broke, secret = rare hidden ending, death = game over: the player got knocked out of the tale in a cartoony way, like being "garbage-collected" into a recycle bin) with a punchy title, and return an empty choices array. Never end before depth ${tale.minDepth ?? 4} unless it is game over. Game-over endings are silly, never scary or gory, and hint that the player can roll back and try again.
 - image_prompt: in English, a concrete visual description of this page's key moment (characters, action, setting, composition) for an illustrator. No art-style words, no text in the image. Always describe the player character the same way.
 - story_summary: in English, under 120 words, a running summary of the whole timeline so far including this page, used as your memory.
 - explainer: step out of the tale for a moment and explain the real technology this page played with (${tale.tech}, or whatever else the page touched). question: what a 12-year-old would ask about it, in their own words, max ~80 characters. steps: 2 to 4 steps, in order, one short sentence each (max ~25 words), every step building on the one before, plain words only, an everyday comparison where it helps, and a wink back at the scene. The technology is real even though the fairy tale is not, so invent nothing here: if you cannot explain it truthfully in two steps, explain a smaller part of it. Set explainer to null only on a page that touches no technology at all.
 
 # Language
 Write narration, ignis_quip, choice labels, inventory items, the explainer and the ending title in ${LANG_NAME[lang]}. A tech word may stay in English when that is funnier, as long as a 12-year-old still gets the joke. image_prompt and story_summary are always English.`;
+}
+
+/** Quick cases are short: a few pages, a tight arc. Empty for main case files, so their prompt is unchanged. */
+export function quickSection(tale: Tale, maxDepth: number): string {
+  if (tale.format !== 'quick') return '';
+  return `
+# Quick case
+This is a quick case, a bite-sized mission of about ${maxDepth - 1} pages. Move briskly: set up the problem on the first page, escalate it on the next one or two, and land a satisfying, funny ending by depth ${maxDepth}. Every page should feel like a step closer to the finish line.
+`;
 }
 
 /**

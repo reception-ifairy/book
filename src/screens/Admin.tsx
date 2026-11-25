@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, Brush, CalendarCheck, FlaskConical, Gauge, Image a
 import { ArtKitPanel } from './ArtKitPanel';
 import { DailyOpsPanel } from './DailyOpsPanel';
 import { BrandingPanel } from './BrandingPanel';
+import { PacksPanel } from './PacksPanel';
 import { adminApi, adminAuthApi, type AdminAuthStatus } from '../api';
 import { Badge, Button, Logo, SnowToggle, StatusDot, cx, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
@@ -91,6 +92,7 @@ export function Admin() {
   const [probes, setProbes] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
   const [section, setSection] = useState('keys');
+  const [agents, setAgents] = useState<Awaited<ReturnType<ReturnType<typeof adminApi>['agents']>> | null>(null);
 
   // Scroll-spy: the active section is the last one whose heading has passed just under the sticky header.
   useEffect(() => {
@@ -135,6 +137,7 @@ export function Admin() {
         setAuthError('');
         // Verify every configured key straight away so the status cards are live.
         for (const p of PROVIDERS) if (c.providers[p.id].source !== 'none') testProvider(p.id, undefined, true);
+        client.agents().then(setAgents).catch(() => {});
       })
       .catch((e) => {
         // A session that died with a server restart sends the panel back to the login screen.
@@ -236,6 +239,11 @@ export function Admin() {
 
   const overview = [
     {
+      label: 'Agents',
+      ok: agents ? agents.persistent : null,
+      value: agents ? `${agents.agents} enlisted · ${agents.activeToday} today${agents.persistent ? '' : ' (memory!)'}` : '…',
+    },
+    {
       label: 'Story engine',
       ok: ready('anthropic'),
       value: ready('anthropic') ? cfg.story.model : problem('anthropic'),
@@ -287,7 +295,7 @@ export function Admin() {
         <h1 className="toon-title text-4xl sm:text-5xl text-ink">Console</h1>
         <p className="text-muted mt-3">Wire up the models behind IGNIS. Claude writes the story; Gemini or OpenAI paint and speak.</p>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mt-6">
           {overview.map((o) => (
             <motion.div key={o.label} layout className="spotlight card p-4" style={{ ['--spot' as string]: o.ok === null ? 'var(--color-faint)' : o.ok ? 'var(--color-ok)' : 'var(--color-danger)' }}>
               <div className="flex items-center gap-2">
@@ -463,8 +471,9 @@ export function Admin() {
               />
             </Section>
 
-            <Section id="daily" title="Daily ops" desc="Quests and the glitch of the day for every agent. Plan a day by hand or let it rotate from the active pools.">
+            <Section id="daily" title="Daily ops" desc="Quests, the glitch of the day, and the daily Quiz ABC, Incident and interrogation suspect for every agent.">
               <DailyOpsPanel client={client} />
+              <PacksPanel client={client} suspect={agents?.suspect ?? null} />
             </Section>
 
             <Section id="limits" title="Limits" desc="Protect your API bill from enthusiastic timeline-breakers.">

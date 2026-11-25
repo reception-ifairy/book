@@ -1,17 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'motion/react';
-import { ArrowRight, ChevronRight, FileSearch, GitFork, Loader2, ScanSearch, Settings2, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { FileSearch, GitFork, ScanSearch, Settings2, Sparkles } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
-import { api, loadRuns, rememberRun, type TaleCard } from '../api';
-import { navigate } from '../App';
-import { Badge, Logo, Segmented, SnowToggle, StatusDot, useToast } from '../ui';
+import { api, type TaleCard } from '../api';
+import { Badge, Logo, SnowToggle, useToast } from '../ui';
 import { StringLights } from '../components/Effects';
 import { DailyOps } from '../components/DailyOps';
+import { TaleCover } from '../components/TaleCard';
+import { JoinCard } from '../components/agent/JoinCard';
+import { useAgent } from '../agent';
 import type { Lang, PublicConfig } from '../../shared/types';
-import { ago, coverStyle } from '../meta';
 import { useArt } from '../artkit';
 
-const prefs = {
+// The dashboard is what logged-in agents see at #/; visitors only download the landing page.
+const Dashboard = lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })));
+
+export const prefs = {
   get: (k: string, d: string) => {
     try {
       return localStorage.getItem(k) ?? d;
@@ -29,7 +33,7 @@ const prefs = {
 };
 
 /** IGNIS briefing the agent, one line every few seconds. */
-const QUIPS = [
+export const QUIPS = [
   'Agent! Five tales are throwing errors. I have colour-coded them. The colour is “panic”.',
   'Your assistant is fully charged. Well, 60%. Enough for one heroic decision and two silly ones.',
   'Briefing: every fairy tale is old code. Somebody enchanted it. We find out who.',
@@ -51,7 +55,7 @@ const COPY = {
   welcome: 'Welcome to the Arcane Rescue Bureau, where you step into familiar tales, investigate what went wrong and decide what happens next.',
   nameLabel: 'Agent codename',
   placeholder: 'e.g. Agent Pixel_Pip',
-  needName: 'The Bureau needs your codename first, Agent.',
+  needName: 'Join the Bureau first, Agent: one codename and you are in.',
   pick: 'Pick a case file below.',
   assistant: 'IGNIS · your field assistant',
   casesTitle: 'Open case files',
@@ -63,16 +67,30 @@ const COPY = {
   ],
 };
 
+/** #/ : the dashboard for a logged-in agent, the landing page for everyone else. */
 export function Home() {
+  const { key } = useAgent();
+  if (key) {
+    return (
+      <Suspense fallback={<div className="min-h-screen grid place-items-center"><span className="eyebrow animate-pulse">Opening your desk…</span></div>}>
+        <Dashboard />
+      </Suspense>
+    );
+  }
+  return <Landing />;
+}
+
+function Landing() {
   const toast = useToast();
   const [tales, setTales] = useState<TaleCard[]>([]);
   const [config, setConfig] = useState<PublicConfig | null>(null);
-  const [lang, setLang] = useState<Lang>(() => prefs.get('ignis.lang', 'en') as Lang);
-  const [hero, setHero] = useState(() => prefs.get('ignis.hero', ''));
-  const [booting, setBooting] = useState<string | null>(null);
+  const [lang, setLangState] = useState<Lang>(() => prefs.get('ignis.lang', 'en') as Lang);
   const [quip, setQuip] = useState(0);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const runs = loadRuns();
+  const [nudge, setNudge] = useState(0);
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    prefs.set('ignis.lang', l);
+  };
 
   useEffect(() => {
     api.tales().then(setTales).catch((e) => toast(e.message, 'error'));
@@ -84,25 +102,15 @@ export function Home() {
   const copy = COPY;
   const quips = QUIPS;
 
-  const start = async (id: string) => {
-    if (!hero.trim()) {
-      nameRef.current?.focus();
-      return toast(copy.needName, 'error');
-    }
-    setBooting(id);
-    prefs.set('ignis.lang', lang);
-    prefs.set('ignis.hero', hero.trim());
-    try {
-      const story = await api.start(id, lang, hero.trim());
-      rememberRun(story);
-      navigate(`story/${story.id}`);
-    } catch (e) {
-      toast((e as Error).message, 'error');
-      setBooting(null);
-    }
+  // Visitors join first; the case opens from their dashboard.
+  const start = () => {
+    document.getElementById('join')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setNudge((n) => n + 1);
+    toast(copy.needName, 'error');
   };
 
-  const taleById = (id: string) => tales.find((t) => t.id === id);
+  const mainTales = tales.filter((t) => t.format !== 'quick');
+  const booting = null;
   const art = useArt();
   const backdrop = art.src('scene-workshop');
   const heroArt = art.src('ignis-hero');
@@ -120,7 +128,7 @@ export function Home() {
           animate={{ opacity: 0.55, scale: 1 }}
           transition={{ duration: 1.6, ease: 'easeOut' }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,#2a1c15ee_0%,#2a1c15aa_45%,transparent_80%),linear-gradient(180deg,transparent_55%,#2a1c15_100%)]" />
+        <div className="backdrop-fade absolute inset-0" />
       </div>
     )}
     <StringLights count={28} className="h-10 z-10" />
@@ -189,30 +197,7 @@ export function Home() {
             </span>
           </div>
 
-          <motion.div initial={{ opacity: 0, y: 16, rotate: -1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ delay: 0.85, type: 'spring', stiffness: 200, damping: 16 }} className="snowcap spotlight card mt-9 p-4 sm:p-5 max-w-xl">
-            <label htmlFor="hero" className="eyebrow">{copy.nameLabel}</label>
-            <div className="mt-2 flex flex-col sm:flex-row gap-3">
-              <input
-                id="hero"
-                ref={nameRef}
-                value={hero}
-                onChange={(e) => setHero(e.target.value.slice(0, 24))}
-                placeholder={copy.placeholder}
-                className="field flex-1"
-                autoComplete="off"
-              />
-              <Segmented<Lang> label="Story language" value={lang} onChange={setLang} options={[{ value: 'en', label: 'English' }, { value: 'pl', label: 'Polski' }]} />
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-faint">
-              {config === null ? null : config.storyReady ? (
-                <Badge tone="ok"><StatusDot tone="ok" /> Story engine online</Badge>
-              ) : (
-                <Badge tone="danger"><StatusDot tone="danger" /> Story engine offline</Badge>
-              )}
-              {config && !config.storyReady && <a href="#/admin" className="underline hover:text-ink">Add an Anthropic key</a>}
-              {config?.storyReady && <span>{copy.pick}</span>}
-            </div>
-          </motion.div>
+          <JoinCard lang={lang} setLang={setLang} config={config} highlight={nudge} />
         </div>
 
         <div className="relative hidden sm:flex flex-col items-center">
@@ -261,116 +246,22 @@ export function Home() {
       <section className="pb-14">
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
           <h2 className="toon-title text-3xl sm:text-4xl text-ink">{copy.casesTitle}</h2>
-          <span className="eyebrow">{tales.length} cases open</span>
+          <span className="eyebrow">{mainTales.length} cases open · {tales.length - mainTales.length} quick cases inside</span>
         </div>
         <p className="text-muted font-semibold mb-5 max-w-2xl">{copy.casesNote}</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {tales.length === 0 && [0, 1, 2].map((i) => <div key={i} className="skeleton h-80" />)}
-          {tales.map((t, i) => (
-            <TaleCover key={t.id} tale={t} badge={t.tech} caseNo={`ARB-${String(i + 1).padStart(3, '0')}`} lang={lang} index={i} booting={booting} onStart={() => start(t.id)} />
+          {mainTales.map((t, i) => (
+            <TaleCover key={t.id} tale={t} badge={t.tech} caseNo={`ARB-${String(i + 1).padStart(3, '0')}`} lang={lang} index={i} booting={booting} onStart={start} cta="Join to open" />
           ))}
         </div>
       </section>
 
-      {runs.length > 0 && (
-        <section className="pb-14">
-          <h2 className="toon-title text-3xl mb-5 text-ink">Your active cases</h2>
-          <div className="card divide-y-2 divide-line overflow-hidden">
-            {runs.slice(0, 6).map((r) => {
-              const t = taleById(r.taleId);
-              return (
-                <a key={r.id} href={`#/story/${r.id}`} className="spotlight flex items-center gap-4 px-4 py-3 hover:bg-raised transition-colors group">
-                  <span className="grid place-items-center w-11 h-11 rounded-xl text-xl shrink-0 border-[2.5px] border-outline overflow-hidden bg-cover bg-center" style={t ? (art.src(`cover-${t.id}`) ? { backgroundImage: `url(${art.src(`cover-${t.id}`)})` } : coverStyle(t.hue)) : undefined}>{t && !art.src(`cover-${t.id}`) && t.emoji}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-serif font-semibold truncate">{t?.title[lang] ?? r.taleId}</span>
-                    <span className="block text-xs text-faint truncate">
-                      Agent {r.heroName} · {r.pages ?? 1} pages · {r.ending ? `closed: ${r.ending}` : 'under investigation'} · {ago(r.updatedAt)}
-                    </span>
-                  </span>
-                  <ChevronRight size={18} className="glow-icon text-faint group-hover:text-ember group-hover:translate-x-1 transition-all" />
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>ARB · The Arcane Rescue Bureau · Claude writes the story, Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // field assistant v6.8</span>
+        <span className="font-pixel">IGNIS // field assistant v7.0</span>
       </footer>
     </div>
     </>
-  );
-}
-
-/** A tale card that tilts toward the cursor, with a glowing rim and a floating emblem. */
-function TaleCover({ tale: t, badge, caseNo, cta = 'Open case', busyText = 'IGNIS is briefing you…', lang, index, booting, onStart }: { tale: TaleCard; badge: string; caseNo: string; cta?: string; busyText?: string; lang: Lang; index: number; booting: string | null; onStart: () => void }) {
-  const px = useMotionValue(0.5);
-  const py = useMotionValue(0.5);
-  const rotateX = useSpring(useTransform(py, [0, 1], [7, -7]), { stiffness: 200, damping: 20 });
-  const rotateY = useSpring(useTransform(px, [0, 1], [-9, 9]), { stiffness: 200, damping: 20 });
-  const emblemX = useSpring(useTransform(px, [0, 1], [-10, 10]), { stiffness: 150, damping: 15 });
-  const emblemY = useSpring(useTransform(py, [0, 1], [-8, 8]), { stiffness: 150, damping: 15 });
-  const color = `hsl(${t.hue} 85% 62%)`;
-  const art = useArt();
-  const cover = art.src(`cover-${t.id}`);
-  return (
-    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + index * 0.07, ease: [0.22, 1, 0.36, 1], duration: 0.6 }} style={{ perspective: 900 }}>
-      <motion.button
-        disabled={!!booting}
-        onClick={onStart}
-        onPointerMove={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          px.set((e.clientX - r.left) / r.width);
-          py.set((e.clientY - r.top) / r.height);
-        }}
-        onPointerLeave={() => {
-          px.set(0.5);
-          py.set(0.5);
-        }}
-        whileTap={{ scale: 0.98 }}
-        style={{ rotateX, rotateY, transformStyle: 'preserve-3d', ['--spot' as string]: color }}
-        className="spotlight group card snowcap w-full h-full text-left flex flex-col transition-shadow hover:shadow-[6px_9px_0_var(--color-outline),0_0_40px_-6px_var(--spot)] disabled:opacity-50"
-      >
-        <div className="relative h-40 flex items-center justify-center overflow-hidden rounded-t-[17px] border-b-[3px] border-outline" style={coverStyle(t.hue)}>
-          {cover && (
-            // Painted cover drifts against the tilt for a little depth.
-            <motion.img src={cover} alt={art.alt(`cover-${t.id}`)} className="absolute -inset-3 w-[calc(100%+24px)] h-[calc(100%+24px)] max-w-none object-cover transition-transform duration-500 group-hover:scale-105" style={{ x: emblemX, y: emblemY }} />
-          )}
-          {!cover && <motion.span className="inline-block" style={{ x: emblemX, y: emblemY }}>
-            <motion.span
-              className="inline-block text-7xl drop-shadow-[3px_4px_0_#241913] transition-[filter] duration-300 group-hover:drop-shadow-[0_0_24px_var(--spot)]"
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 4 + index * 0.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              {t.emoji}
-            </motion.span>
-          </motion.span>}
-          <span className="absolute top-3 left-3">
-            <Badge>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-              {badge}
-            </Badge>
-          </span>
-          <AnimatePresence>
-            {booting === t.id && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 grid place-items-center bg-black/60 backdrop-blur-sm text-sm">
-                <span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin text-ember" /> {busyText}</span>
-                <motion.span className="absolute bottom-0 left-0 h-0.5 bg-ember shadow-[0_0_10px_var(--color-ember)]" initial={{ width: '0%' }} animate={{ width: '92%' }} transition={{ duration: 12, ease: 'easeOut' }} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        <div className="p-5 flex-1 flex flex-col">
-          <span className="font-pixel text-[11px] text-faint">CASE FILE {caseNo}</span>
-          <h3 className="font-serif font-bold text-xl leading-tight mt-1">{t.title[lang]}</h3>
-          <p className="mt-2 text-[15px] text-muted flex-1">{t.tagline[lang]}</p>
-          <span className="mt-4 self-start inline-flex items-center gap-1.5 rounded-xl border-[2.5px] border-outline bg-gold px-3 h-9 text-sm font-serif font-semibold text-outline shadow-[0_3px_0_var(--color-outline)] transition-transform group-hover:-rotate-2 group-hover:scale-105">
-            {cta} <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </span>
-        </div>
-      </motion.button>
-    </motion.div>
   );
 }

@@ -2,6 +2,10 @@ import type { Page, PublicConfig, Story, Tale } from '../shared/types';
 import type { ArtKitState, ArtSlot } from '../shared/artkit';
 import type { DailyBoard, Glitch, Quest } from '../shared/daily';
 import type { BrandImageKind, Branding } from '../shared/branding';
+import type { Agent, AgentDashboard } from '../shared/agent';
+import type { IncidentState, Letter, QuizState } from '../shared/dailyPack';
+import type { XpUpdate } from '../shared/xp';
+import type { Lang } from '../shared/types';
 
 export interface ArtKitView {
   slots: ArtSlot[];
@@ -20,12 +24,25 @@ export interface DailyAdminView {
   tales: { id: string; title: string }[];
 }
 
-export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'>;
+export interface PacksView {
+  day: string;
+  today: string;
+  ready: boolean;
+  packs: { day: string; lang: 'en' | 'pl'; kind: 'quiz' | 'incident'; source: 'claude' | 'seed' | 'edited' | null; payload: any; createdAt: number | null }[];
+}
+
+export type TaleCard = Pick<Tale, 'id' | 'emoji' | 'tech' | 'hue' | 'title' | 'tagline'> & { format: 'case' | 'quick' };
+
+/** The logged-in agent's key, sent with every game request (set by src/agent.ts). */
+let agentKey: string | null = null;
+export const setAgentKey = (key: string | null) => {
+  agentKey = key;
+};
 
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const res = await fetch(url, {
     method,
-    headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers },
+    headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(agentKey && !url.startsWith('/api/admin') ? { Authorization: `Agent ${agentKey}` } : {}), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -40,10 +57,35 @@ export const api = {
   start: (taleId: string, lang: string, heroName: string) => call<Story>('POST', '/api/story', { taleId, lang, heroName }),
   story: (id: string) => call<Story>('GET', `/api/story/${id}`),
   act: (id: string, body: { pageId: string; choiceId?: string; custom?: string; image?: { mime: string; data: string } }) =>
-    call<{ page: Page; story: Story }>('POST', `/api/story/${id}/act`, body),
+    call<{ page: Page; story: Story; xp?: XpUpdate }>('POST', `/api/story/${id}/act`, body),
   goto: (id: string, pageId: string) => call<Story>('POST', `/api/story/${id}/goto`, { pageId }),
   image: (id: string, pageId: string) => call<{ url: string }>('POST', `/api/story/${id}/page/${pageId}/image`, {}),
   speech: (id: string, pageId: string) => call<{ url: string | null }>('POST', `/api/story/${id}/page/${pageId}/speech`, {}),
+};
+
+export type InterrogationView = {
+  lang: Lang;
+  suspect: { id: string; name: string; emoji: string; charge: string; taleId: string };
+  turns: { question: string; reply: string; note: string; delta: number; mood: string }[];
+  truth: number;
+  questionsLeft: number;
+  done: boolean;
+  verdict: { title: string; report: string } | null;
+  xp: number;
+};
+
+/** Agent endpoints; the key travels in the Authorization header set above. */
+export const agentApi = {
+  enlist: (codename: string, lang: Lang) => call<{ agent: Agent; key: string }>('POST', '/api/agent/enlist', { codename, lang }),
+  login: (key: string) => call<{ agent: Agent }>('POST', '/api/agent/login', { key }),
+  me: () => call<AgentDashboard>('GET', '/api/agent/me'),
+  claim: (storyIds: string[]) => call<{ claimed: number }>('POST', '/api/agent/claim', { storyIds }),
+  quiz: (lang: Lang) => call<QuizState & { lang: Lang }>('GET', `/api/agent/daily/quiz?lang=${lang}`),
+  answer: (q: number, letter: Letter, lang: Lang) => call<{ state: QuizState & { lang: Lang }; xp: XpUpdate }>('POST', '/api/agent/daily/quiz/answer', { q, letter, lang }),
+  incident: (lang: Lang) => call<IncidentState & { lang: Lang }>('GET', `/api/agent/daily/incident?lang=${lang}`),
+  decide: (choice: number, lang: Lang) => call<{ state: IncidentState & { lang: Lang }; xp: XpUpdate }>('POST', '/api/agent/daily/incident', { choice, lang }),
+  interrogation: (lang: Lang) => call<InterrogationView>('GET', `/api/agent/interrogation?lang=${lang}`),
+  ask: (question: string, lang: Lang) => call<{ state: InterrogationView; xp: XpUpdate }>('POST', '/api/agent/interrogation/ask', { question, lang }),
 };
 
 /** How the admin panel proves who it is: a session token from the t1000 login, or the legacy ADMIN_PASSWORD. */
@@ -81,6 +123,12 @@ export const adminApi = (creds: AdminCredentials) => {
       save: (patch: Partial<Branding>) => call<Branding>('PUT', '/api/admin/branding', patch, h),
       upload: (kind: BrandImageKind, dataUrl: string) => call<Branding>('PUT', `/api/admin/branding/images/${kind}`, { dataUrl }, h),
       removeImage: (kind: BrandImageKind) => call<Branding>('DELETE', `/api/admin/branding/images/${kind}`, undefined, h),
+    },
+    agents: () => call<{ agents: number; activeToday: number; persistent: boolean; day: string; suspect: { id: string; name: string; emoji: string; charge: string } }>('GET', '/api/admin/agents/stats', undefined, h),
+    packs: {
+      get: (day?: string) => call<PacksView>('GET', `/api/admin/packs${day ? `?day=${day}` : ''}`, undefined, h),
+      save: (day: string, lang: string, kind: string, payload: unknown) => call<{ ok: true }>('PUT', `/api/admin/packs/${day}/${lang}/${kind}`, { payload }, h),
+      regenerate: (day: string, lang: string, kind: string) => call<{ ok: true; payload: unknown }>('POST', `/api/admin/packs/${day}/${lang}/${kind}/regenerate`, {}, h),
     },
     artkit: {
       get: () => call<ArtKitView>('GET', '/api/admin/artkit', undefined, h),

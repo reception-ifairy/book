@@ -12,9 +12,11 @@ const DEFAULT_BRIEFING = 'Agent, today’s anomalies are on the board. I have pr
  * Today's board on the home page: IGNIS's briefing, the glitch of the day and the daily quests with progress
  * worked out from this browser's cases (only pages written today count). Hidden when the Bureau has no board.
  */
-export function DailyOps() {
+export function DailyOps({ serverProgress }: { serverProgress?: Record<string, QuestProgress & { claimed: boolean }> } = {}) {
   const [board, setBoard] = useState<DailyBoard | null>(null);
-  const [progress, setProgress] = useState<Record<string, QuestProgress>>({});
+  const [localProgress, setProgress] = useState<Record<string, QuestProgress>>({});
+  // A logged-in agent's progress comes from the server (and is paid out there); visitors see this browser's runs.
+  const progress: Record<string, QuestProgress & { claimed?: boolean }> = serverProgress ?? localProgress;
   const art = useArt();
   const briefingArt = art.src('ignis-briefing');
   const glitchIcon = art.src('icon-glitch');
@@ -25,6 +27,7 @@ export function DailyOps() {
       const b = await api.daily().catch(() => null);
       if (!alive || !b) return;
       setBoard(b);
+      if (serverProgress) return;
       // Only cases touched today can move today's quests; a handful is plenty.
       const runs = loadRuns().filter((r) => r.updatedAt >= b.startsAt).slice(0, 8);
       const stories = (await Promise.all(runs.map((r) => api.story(r.id).catch(() => null)))).filter((s): s is Story => !!s);
@@ -72,7 +75,7 @@ export function DailyOps() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-3">
                     <h3 className="font-serif font-bold">{q.title}</h3>
-                    <span className="font-pixel text-[11px] text-gold shrink-0">+{q.reward_xp} XP</span>
+                    <span className="font-pixel text-[11px] text-gold shrink-0">{p?.claimed ? `✓ +${q.reward_xp} XP earned` : `+${q.reward_xp} XP`}</span>
                   </div>
                   <p className="text-sm text-muted mt-0.5">{q.description}</p>
                   <div className="mt-2 flex items-center gap-2">
