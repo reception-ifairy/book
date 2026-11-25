@@ -4,6 +4,16 @@ Wszystkie zmiany od pierwotnej aplikacji z Google AI Studio do obecnej gry **ARB
 
 ---
 
+## 7.1.0 · Pulpit agenta na jednej stronie
+
+- **Jeden pulpit zamiast długiej strony:** cybermagiczny panel sterowania (ciemny ekran z liniami skanowania i siatką run). Na komputerze to panel z boku z mini-legitymacją agenta, na telefonie pasek zakładek na dole. Zakładki: **HQ**, **Case files**, **Daily ops**, **Endings vault**, **XP & ranks**, z licznikami (nowe misje dnia, otwarte sprawy). Quiz, Incydent, Przesłuchanie i klucz agenta otwierają się wewnątrz pulpitu, a zmiana zakładki nie przeładowuje strony.
+- **HQ na jednym ekranie:** legitymacja z rangą, paskiem XP i czterema skrótami, IGNIS z odprawą, trzy misje dnia, „Continue” (ostatnia sprawa albo „Random quick case”), skrót zadań dnia, pierścień postępu archiwum zakończeń, glitch dnia.
+- **Własne ikony SVG** w stylu domu, każda krzyżuje baśń z technologią: zamek z wieżą Wi-Fi (HQ), teczka z pieczęcią-błyskawicą (sprawy), klepsydra z pikselowym piaskiem (szybkie sprawy), kalendarz ze smoczym płomykiem (dzień), kryształowa kula ABC (quiz), syrena na dyni (incydent), lupa z pikselowym okiem (przesłuchanie), księga z zapięciem-dyskietką (archiwum), eliksir XP, świeca-bateria (seria), klucz-obwód, drzwi-portal (wylogowanie), żabi książę z glitchem. Działają w każdym motywie.
+- **XP & ranks:** drabina rang z żartem przy każdej („Has a badge. The badge is a sticker.”), dziennik XP i zasady.
+- Zakładka z dziennikiem jest pod `#/agent/log`, archiwum pod `#/agent/archive`; `#/` dla zalogowanego to HQ.
+
+---
+
 ## 7.0.0 · Pulpit agenta, XP i małe formaty
 
 - **Logowanie kluczem agenta:** gracz dołącza do Biura samym kryptonimem i dostaje klucz `ARB-XXXX-XXXX-XXXX-XXXX` (80 losowych bitów, serwer trzyma tylko jego SHA-256). Bez e-maila i hasła, czyli bez danych osobowych dzieci. Ekran klucza z kopiowaniem i pobraniem `.txt`, logowanie kluczem na innym urządzeniu. Sprawy rozegrane wcześniej w tej przeglądarce przechodzą na agenta.

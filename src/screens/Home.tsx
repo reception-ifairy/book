@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { FileSearch, GitFork, ScanSearch, Settings2, Sparkles } from 'lucide-react';
 import { SVGCharacter } from '../components/SVGCharacter';
@@ -8,12 +8,9 @@ import { StringLights } from '../components/Effects';
 import { DailyOps } from '../components/DailyOps';
 import { TaleCover } from '../components/TaleCard';
 import { JoinCard } from '../components/agent/JoinCard';
-import { useAgent } from '../agent';
 import type { Lang, PublicConfig } from '../../shared/types';
 import { useArt } from '../artkit';
 
-// The dashboard is what logged-in agents see at #/; visitors only download the landing page.
-const Dashboard = lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })));
 
 export const prefs = {
   get: (k: string, d: string) => {
@@ -67,16 +64,8 @@ const COPY = {
   ],
 };
 
-/** #/ : the dashboard for a logged-in agent, the landing page for everyone else. */
+/** The landing page for visitors (logged-in agents get their desk instead, see App). */
 export function Home() {
-  const { key } = useAgent();
-  if (key) {
-    return (
-      <Suspense fallback={<div className="min-h-screen grid place-items-center"><span className="eyebrow animate-pulse">Opening your desk…</span></div>}>
-        <Dashboard />
-      </Suspense>
-    );
-  }
   return <Landing />;
 }
 
@@ -259,7 +248,7 @@ function Landing() {
 
       <footer className="py-8 border-t-2 border-line text-xs font-semibold text-faint flex flex-wrap gap-x-6 gap-y-2 justify-between">
         <span>ARB · The Arcane Rescue Bureau · Claude writes the story, Gemini / OpenAI paint and speak</span>
-        <span className="font-pixel">IGNIS // field assistant v7.0</span>
+        <span className="font-pixel">IGNIS // field assistant v7.1</span>
       </footer>
     </div>
     </>
