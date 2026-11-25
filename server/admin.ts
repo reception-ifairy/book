@@ -13,6 +13,11 @@ import { adminAuth, dbLoginEnabled, requireAdminSession } from './adminAuth';
 import { characterStats } from './story/characters';
 import { dailyAdmin } from './daily';
 import { brandingAdmin } from './branding';
+import { packsAdmin } from './dailyPack';
+import { agentStore } from './agents/store';
+import { t1000Configured } from './db';
+import { suspectOfDay } from '../shared/suspects';
+import { bureauDay } from '../shared/daily';
 
 export const admin = Router();
 
@@ -40,6 +45,18 @@ admin.use(guard);
 admin.use('/artkit', artkitAdmin);
 admin.use('/daily', dailyAdmin);
 admin.use('/branding', brandingAdmin);
+admin.use('/packs', packsAdmin);
+
+/** How many agents the Bureau has, how many showed up today, and today's interrogation suspect. */
+admin.get('/agents/stats', async (_req, res) => {
+  const day = bureauDay();
+  const suspect = suspectOfDay(day);
+  try {
+    res.json({ ...(await agentStore().stats(day)), persistent: t1000Configured(), day, suspect: { id: suspect.id, name: suspect.name.en, emoji: suspect.emoji, charge: suspect.charge.en } });
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
 
 const PROVIDERS = ProviderId.options;
 

@@ -553,6 +553,13 @@
   100% { transform: translate(var(--dx), calc(var(--dy) + 40px)) rotate(var(--rot)) scale(1); opacity: 0; }
 }
 
+/* The home backdrop picture fades into the page background (whatever the theme). */
+.backdrop-fade {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--color-bg) 93%, transparent) 0%, color-mix(in srgb, var(--color-bg) 67%, transparent) 45%, transparent 80%),
+    linear-gradient(180deg, transparent 55%, var(--color-bg) 100%);
+}
+
 /* ======================================================================
  * Branding (admin → Branding). The server puts data-theme / data-cards on <html>.
  * ====================================================================== */

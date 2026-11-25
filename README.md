@@ -22,16 +22,26 @@ Obok agenta jest **IGNIS**, jego asystent terenowy: latający robocik z ekraniki
 6. [Baza t1000](#baza-t1000)
 7. [Skrypty, testy i CI](#skrypty-testy-i-ci)
 8. [Wdrożenie na produkcji](#wdrożenie-na-produkcji)
-9. [Struktura repozytorium](#struktura-repozytorium)
-10. [Bezpieczeństwo](#bezpieczeństwo)
-11. [Dokumentacja](#dokumentacja)
+9. [Jak dodać coś nowego](#jak-dodać-coś-nowego)
+10. [Struktura repozytorium](#struktura-repozytorium)
+11. [Bezpieczeństwo](#bezpieczeństwo)
+12. [Dokumentacja](#dokumentacja)
 
 ---
 
 ## Jak się gra
 
-1. Na stronie głównej agent wpisuje **kryptonim** i wybiera język opowieści (angielski albo polski).
-2. Wybiera **akta sprawy**, czyli jedną z pięciu baśni:
+1. **Dołączasz do Biura:** na stronie głównej wpisujesz **kryptonim** i język opowieści (angielski albo polski). Nie ma e-maila ani hasła: dostajesz **klucz agenta** (`ARB-XXXX-XXXX-XXXX-XXXX`), który jest twoim loginem na każdym urządzeniu. Zapisujesz go (kopiuj albo pobierz jako `.txt`). Wrócić możesz przez „I have an agent key”.
+2. **Pulpit agenta** (`#/` po zalogowaniu):
+   - **legitymacja agenta:** kryptonim, ranga, poziom, pasek XP, seria dni, XP dzisiaj, zamknięte sprawy, znalezione zakończenia;
+   - **Today at the Bureau:** trzy krótkie formaty dnia (niżej) i glitch dnia;
+   - **Daily ops:** zadania dnia, liczone i wypłacane przez serwer;
+   - **Main case files:** 5 długich spraw (8–12 stron);
+   - **Quick cases:** 4 szybkie sprawy (3–5 stron);
+   - **Open cases:** wznawianie rozpoczętych spraw;
+   - **Endings archive:** 9 baśni × 5 typów zakończeń;
+   - **XP log** i tabela „How to earn XP”.
+3. **Sprawy.** Główne akta to pięć baśni:
 
    | Sprawa | Co się zepsuło |
    |---|---|
@@ -41,13 +51,39 @@ Obok agenta jest **IGNIS**, jego asystent terenowy: latający robocik z ekraniki
    | **Cinderella: Session Expired** | O północy wygasa token sesji |
    | **The Wawel Dragon Exploit** | Szewczyk-pentester, owca-trojan i smok bez walidacji danych |
 
-3. **Każda strona** to narracja Ignisa, ilustracja (opcjonalnie), czytanie na głos (opcjonalnie) i wybory:
+   **Szybkie sprawy** to te same zasady w 3–5 stronach:
+
+   | Szybka sprawa | O czym |
+   |---|---|
+   | **The Latency Race** | Żółw i Zając jako wyścig z lagiem (opóźnienie, ping) |
+   | **False Positive** | Chłopiec, który wołał „wilk”, jako alarm, który krzyczy za często |
+   | **Just Right Server** | Złotowłosa i trzy serwery: równoważenie obciążenia |
+   | **The Emperor’s New Update** | Nowe szaty cesarza jako niewidzialna aktualizacja (socjotechnika) |
+
+4. **Każda strona** to narracja Ignisa, ilustracja (opcjonalnie), czytanie na głos (opcjonalnie) i wybory:
    - **Sane** (rozsądny), **Chaos** (szalony), **Dumb** (oczywiście głupi), **sudo** (łamanie zasad);
    - **własny ruch:** tekst, dyktowanie, a nawet dołączony obrazek, który Claude zobaczy. Zasada domu: **„jak wyjaśnisz, to zaistnieje”**, czyli ruch z uzasadnieniem działa mocniej.
-4. Wskaźniki (kanon, karma, mana itp.) zmieniają się z każdą decyzją. Historia kończy się jednym z zakończeń: **kanonicznym, przekręconym, przeklętym, sekretnym** albo *garbage collected*.
-5. Można cofnąć się do dowolnej strony. Następny ruch tworzy nową gałąź na **mapie linii czasu**.
-6. **Panel DEBUG** pod stroną (klawisz `D`): Ignis na chwilę wychodzi z baśni i wyjaśnia prawdziwą technologię, na której stoi ta scena.
-7. **Daily ops:** codziennie są nowe zadania z nagrodą XP i **glitch dnia**, który zmienia wszystkie opowieści (np. „pasek ładowania zawsze stoi na 99%”).
+5. Wskaźniki (kanon, karma, mana itp.) zmieniają się z każdą decyzją. Historia kończy się jednym z zakończeń: **kanonicznym, przekręconym, przeklętym, sekretnym** albo *garbage collected*.
+6. Można cofnąć się do dowolnej strony. Następny ruch tworzy nową gałąź na **mapie linii czasu**.
+7. **Panel DEBUG** pod stroną (klawisz `D`): Ignis na chwilę wychodzi z baśni i wyjaśnia prawdziwą technologię, na której stoi ta scena.
+
+### Formaty dnia (nowe co dzień, raz dziennie)
+
+| Format | Czas | Jak działa | XP |
+|---|---|---|---|
+| **Quiz ABC** | ~1 min | 3 absurdalne pytania, każda odpowiedź A/B/C kończy się puentą; jedna jest „zatwierdzona przez Biuro”. Na koniec werdykt: zabawny profil agenta | 5–15 za odpowiedź + 10 za ukończenie |
+| **Incydent dnia** | ~2 min | Raport z baśni w tarapatach, 3 sposoby reakcji, konsekwencja, odznaka i komentarz Ignisa | 15–35 |
+| **Przesłuchanie** | ~5 min | Podejrzany dnia z Domeny Publicznej (Wilk, Wielki Zły Wilk, Czarownica, Macocha, Smok). 6 pytań, Ignis ocenia każde, licznik prawdy rośnie za sprytne pytania | 20 + połowa prawdy |
+
+Quiz i incydent pisze **Claude raz dziennie** dla każdego języka (z glitchem dnia w tle). Admin może je poprawić albo wygenerować od nowa. Bez klucza wchodzi ręcznie napisany zapas.
+
+### XP i rangi
+
+Serwer liczy XP i każda nagroda płaci tylko raz (strona, zakończenie, zadanie, odpowiedź). Rangi:
+
+Rookie (0) → Junior Patcher (100) → Field Debugger (300) → Spell Auditor (700) → Senior Fixer (1300) → Chief of Glitches (2200) → Archmage of Patches (3500) → Legend of the Public Domain (5500).
+
+Pełna tabela nagród jest w `shared/xp.ts` i na pulpicie („How to earn XP”). Za awans gra pokazuje komiksową kartę „PROMOTED!”, a za każdą nagrodę wyskakuje „+XP”.
 
 Ton: jak w dobrym familijnym filmie animowanym. Absurd, kalambury, slapstick i proste żarty o grach i technice. Bez przemocy na serio, bez przekleństw i bez złośliwości wobec gracza.
 
@@ -91,10 +127,10 @@ Ton: jak w dobrym familijnym filmie animowanym. Absurd, kalambury, slapstick i p
 | **Voice** | Dostawca, model i głos czytania na głos |
 | **Branding** | Nazwa, skrót, tagline, opis, logo, karta do udostępniania, motyw, styl kart, kolory; podgląd na żywo przed zapisem |
 | **Art kit** | *Plan with Claude* → przegląd style bible → render wszystkich lub brakujących slotów → poprawki promptów → *Publish* (albo powrót do wbudowanego wyglądu) |
-| **Daily ops** | Pula zadań i glitchy, dzisiejsza tablica, ręczne planowanie dni |
+| **Daily ops** | Pula zadań i glitchy, dzisiejsza tablica, ręczne planowanie dni; quiz i incydent dnia (podgląd, edycja JSON, *Regenerate with Claude*) oraz podejrzany dnia |
 | **Limits** | Akcje na minutę na gracza i ilustracje dziennie dla wszystkich |
 
-Na górze panelu karty statusu pokazują stan kluczy i liczbę postaci załadowanych z t1000.
+Na górze panelu karty statusu pokazują stan kluczy, liczbę postaci załadowanych z t1000 i liczbę agentów (wszystkich i aktywnych dziś).
 
 **Zapomniane hasło:**
 1. `npm run admin:reset`
@@ -116,7 +152,7 @@ bun run dev              # http://localhost:3000
 2. Wklej klucz Anthropic, kliknij **Test**, potem **Save**.
 3. Opcjonalnie dodaj klucz Gemini lub OpenAI dla ilustracji i głosu.
 4. Opcjonalnie w sekcji **Art kit** kliknij *Plan with Claude* → *Render all* → *Publish* (potrzebny klucz OpenAI).
-5. Wróć na stronę główną, wpisz kryptonim i otwórz sprawę.
+5. Wróć na stronę główną, dołącz do Biura (kryptonim), zapisz klucz agenta i otwórz sprawę z pulpitu. Lokalnie, bez bazy, agenci żyją w pamięci serwera.
 
 **Build produkcyjny:** `bun run build && bun run start`. Serwer serwuje `dist/` i wpisuje branding do `index.html`.
 
@@ -149,6 +185,7 @@ MariaDB `t1000`, tabele z prefiksem `ignis_*`. Pliki SQL są w `db/t1000/`.
 | `001_ignis_storage.sql` | `ignis_admins` (superadmin, hasła scrypt), `ignis_api_keys` (klucze szyfrowane) |
 | `002_ignis_characters.sql` | `ignis_characters`, `_dna`, `_personas`, `_retellings`, `_relationships` (model zgodny z ARB) |
 | `003_ignis_daily.sql` | `ignis_quests`, `ignis_glitches`, `ignis_daily` (plan dni) |
+| `004_ignis_agents.sql` | `ignis_agents` (agenci: kryptonim, tag, hash klucza, XP, seria), `ignis_agent_xp` (dziennik XP, każda nagroda raz), `ignis_agent_cases` (indeks spraw agenta), `ignis_agent_daily` (quiz, incydent, przesłuchanie agenta), `ignis_daily_packs` (quiz i incydent dnia) |
 
 **Zasiewanie danych** (skrypty wypisują SQL, który przekazujesz do `mysql`):
 
@@ -159,7 +196,7 @@ npm run t1000:characters  | mysql t1000          # postacie z db/t1000/character
 npm run t1000:daily       | mysql t1000          # zadania i glitche z db/t1000/daily.seed.json
 ```
 
-Serwer odświeża postacie co 10 minut, a tablicę Daily ops co 5 minut. Bez bazy gra działa dalej, tylko bez postaci i Daily ops.
+Serwer odświeża postacie co 10 minut, a tablicę Daily ops co 5 minut. Quiz i incydent dnia pisze przy pierwszym wejściu albo kilka minut po północy. Bez bazy gra działa dalej, ale bez postaci i Daily ops, a agenci i XP żyją wtedy tylko w pamięci serwera (znikają po restarcie; to tryb do lokalnego developmentu).
 
 ---
 
@@ -205,6 +242,24 @@ pm2 restart demo-ifairy-book --update-env
 curl -s https://demo.ifairy.co.uk/api/health
 ```
 
+Gdy wydanie dodaje plik w `db/t1000/` (np. `004_ignis_agents.sql` w 7.0.0), przed restartem zrób kopię bazy (`mysqldump t1000 > …`) i wykonaj `mysql t1000 < db/t1000/<plik>.sql`. Pliki DDL tworzą tylko to, czego brakuje, więc można je puszczać ponownie.
+
+---
+
+## Jak dodać coś nowego
+
+Projekt jest przygotowany pod kolejne aktualizacje. Każdy rodzaj treści ma jedno miejsce:
+
+| Chcesz dodać | Gdzie | Uwagi |
+|---|---|---|
+| **Szybką sprawę** | `shared/tales.ts`, wpis z `format: 'quick'`, `maxDepth`, `minDepth` | Pojawia się sama na pulpicie i w archiwum zakończeń; XP za zakończenie liczy `XP.endingQuick` |
+| **Główną sprawę** | `shared/tales.ts` (bez `format`) | Dodaj obsadę w `db/t1000/characters.grimm.json` i slot okładki w `shared/artkit.ts` |
+| **Nowy format dnia** | wpis w `shared/activities.ts`, ekran w `src/screens/`, trasy obok `server/dailyPack.ts` | Kafelek na pulpicie powstaje z rejestru; XP wypłacaj przez `Gains.add(ref, …)` z unikalnym `ref` |
+| **Regułę XP** | `shared/xp.ts` (`XP`, `XP_RULES`) | Tabela „How to earn XP” czyta to samo |
+| **Rangę** | `RANKS` w `shared/xp.ts` | Progi rosnąco |
+| **Podejrzanego** | `SUSPECTS` w `shared/suspects.ts` | Głos bierze się z rejestru postaci (po `taleId` i `nameEn`) |
+| **Zapasowy quiz/incydent** | `server/dailyPackSeeds.ts` | Używane, gdy Claude jest niedostępny |
+
 ---
 
 ## Struktura repozytorium
@@ -213,7 +268,11 @@ curl -s https://demo.ifairy.co.uk/api/health
 server.ts               start: Vite (dev) albo dist/ z brandingiem w index.html (prod)
 server/
   app.ts                aplikacja Express (nagłówki, trasy, błędy JSON)
-  routes.ts             API gry: historie, ruchy, ilustracje, głos
+  routes.ts             API gry: historie, ruchy, ilustracje, głos (z właścicielem sprawy i XP)
+  agents/               agenci: magazyn (MariaDB / pamięć), klucz agenta i pulpit, naliczanie XP
+  dailyPack.ts          quiz i incydent dnia: generowanie przez Claude, zapas, API gracza i admina
+  dailyPackSeeds.ts     ręcznie napisany zapas quizów i incydentów (PL/EN)
+  interrogation.ts      przesłuchanie dnia
   admin.ts              API panelu (za logowaniem)
   adminAuth.ts          logowanie z t1000, sesje, jednorazowy kod konfiguracji
   branding.ts           branding: zapis, wgrywanie obrazów, index.html, favicon / og
@@ -224,10 +283,11 @@ server/
   story/                silnik opowieści: prompty, wywołania Claude'a, postacie, zapis historii
   artkit/               Art Kit: planer (Claude), generator (OpenAI), magazyn, trasy
   providers/            klienci Anthropic, Gemini, OpenAI
-shared/                 typy i dane wspólne: baśnie, Art Kit, branding, Daily ops
+shared/                 typy i dane wspólne: baśnie i szybkie sprawy, XP i rangi, agenci, aktywności, podejrzani, quiz/incydent, Art Kit, branding, Daily ops
 src/
-  screens/              Home, Story, Admin, ArtKitPanel, BrandingPanel, DailyOpsPanel
-  components/           SVGCharacter (Ignis), DailyOps, efekty, mapa linii czasu
+  agent.ts              zalogowany agent (klucz w przeglądarce), pulpit, wyskakujące „+XP”
+  screens/              Home (strona dla gości / pulpit), Dashboard, Quiz, Incident, Interrogation, AgentKey, Story, Admin i panele admina
+  components/           SVGCharacter (Ignis), TaleCard, DailyOps, agent/ (JoinCard, TopBar, XpPops, AgentScreen), efekty, mapa linii czasu
   ui.tsx                przyciski, odznaki, wskaźniki, toasty, logo
   index.css             motywy, karty, animacje
 db/t1000/               DDL i dane do zasiania bazy
@@ -241,6 +301,8 @@ docs/                   dokumentacja szczegółowa
 ## Bezpieczeństwo
 
 - Klucze API nigdy nie wracają do przeglądarki w całości. W bazie są szyfrowane (`IGNIS_T1000_SECRET`).
+- Agenci nie podają e-maila ani hasła. Serwer trzyma tylko hash SHA-256 klucza agenta (80 losowych bitów); zakładanie profili i logowanie kluczem mają limity prób.
+- Sprawę agenta może czytać każdy z linkiem, ale grać w nią (ruchy, cofanie, ilustracje, głos) tylko jej agent.
 - Hasła admina to hashe scrypt. Sesje trwają 12 godzin, logowanie ma limit prób, a porównania są odporne na ataki czasowe.
 - Konto bazy aplikacji ma dostęp tylko do tabel `ignis_*`; tabele postaci tylko do odczytu.
 - Wgrywane obrazy (logo, karta) muszą być PNG, JPEG lub WebP, sprawdzane po bajtach. SVG jest odrzucane.

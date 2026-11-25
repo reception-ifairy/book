@@ -136,6 +136,7 @@ async function callClaude(story: Story, parent: Page | null, action: PlayerActio
   const tale = getTale(story.taleId);
   if (!tale) throw new StoryError('Unknown tale.', 400);
   const cfg = getConfig().story;
+  const maxDepth = tale.maxDepth ?? cfg.maxDepth;
 
   let response;
   try {
@@ -144,8 +145,8 @@ async function callClaude(story: Story, parent: Page | null, action: PlayerActio
       max_tokens: 16000,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      system: [{ type: 'text', text: systemPrompt(tale, story.lang, cfg.maxDepth, charactersFor(tale.id), cachedGlitch()), cache_control: { type: 'ephemeral' } }],
-      messages: buildMessages(story, parent, action, cfg.maxDepth),
+      system: [{ type: 'text', text: systemPrompt(tale, story.lang, maxDepth, charactersFor(tale.id), cachedGlitch()), cache_control: { type: 'ephemeral' } }],
+      messages: buildMessages(story, parent, action, maxDepth),
       output_config: { effort: cfg.effort, format: betaZodOutputFormat(PageOutput) },
     });
   } catch (e) {
@@ -198,11 +199,12 @@ export function toPage(parent: Page | null, action: PlayerAction, out: PageOutpu
   };
 }
 
-export async function startStory(taleId: string, lang: Lang, heroName: string): Promise<Story> {
+export async function startStory(taleId: string, lang: Lang, heroName: string, agentId?: string): Promise<Story> {
   if (!getTale(taleId)) throw new StoryError('Unknown tale.', 400);
   const story: Story = {
     id: randomUUID(),
     taleId,
+    ...(agentId ? { agentId } : {}),
     lang,
     heroName,
     timeline: `G-${1812 + Math.floor(Math.random() * 9000)}`,

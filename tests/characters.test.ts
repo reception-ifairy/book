@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { TALES, getTale } from '../shared/tales';
+import { MAIN_TALES as TALES, getTale } from '../shared/tales';
 import { systemPrompt } from '../server/story/prompts';
 import { castFromRows, type TaleCast } from '../server/story/characters';
 import { buildSql, characterSystemPrompt } from '../scripts/t1000-characters.mjs';
@@ -101,7 +101,7 @@ describe('character content (db/t1000/characters.grimm.json)', () => {
     expect(new Set(data.retellings.map((r) => r.slug)).size).toBe(data.retellings.length);
   });
 
-  it('covers every tale with its cast and exactly one active retelling', () => {
+  it('covers every main case file with its cast and exactly one active retelling', () => {
     for (const tale of TALES) {
       const cast = data.characters.filter((c) => c.tale_id === tale.id);
       expect(cast.length, tale.id).toBe(tale.cast.length);

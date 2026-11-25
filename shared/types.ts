@@ -56,6 +56,8 @@ export interface Page {
 export interface Story {
   id: string;
   taleId: string;
+  /** The agent who owns this case (v7+). Older stories have none and stay open to anyone with the link. */
+  agentId?: string;
   lang: Lang;
   heroName: string;
   timeline: string;
@@ -66,8 +68,16 @@ export interface Story {
   updatedAt: number;
 }
 
+export type TaleFormat = 'case' | 'quick';
+
 export interface Tale {
   id: string;
+  /** 'case' = a main case file (long), 'quick' = a quick case of a few pages. Missing means 'case'. */
+  format?: TaleFormat;
+  /** Overrides the configured page limit (quick cases are short). */
+  maxDepth?: number;
+  /** Earliest depth a non-game-over ending may happen (default 4). */
+  minDepth?: number;
   emoji: string;
   /** The tech concept the tale is built on, shown as a tag. */
   tech: string;

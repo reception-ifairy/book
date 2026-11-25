@@ -4,6 +4,30 @@ Wszystkie zmiany od pierwotnej aplikacji z Google AI Studio do obecnej gry **ARB
 
 ---
 
+## 7.0.0 · Pulpit agenta, XP i małe formaty
+
+- **Logowanie kluczem agenta:** gracz dołącza do Biura samym kryptonimem i dostaje klucz `ARB-XXXX-XXXX-XXXX-XXXX` (80 losowych bitów, serwer trzyma tylko jego SHA-256). Bez e-maila i hasła, czyli bez danych osobowych dzieci. Ekran klucza z kopiowaniem i pobraniem `.txt`, logowanie kluczem na innym urządzeniu. Sprawy rozegrane wcześniej w tej przeglądarce przechodzą na agenta.
+- **Pulpit agenta** (`#/` po zalogowaniu):
+  - legitymacja z rangą, poziomem i paskiem XP, serią dni i XP dzisiaj;
+  - formaty dnia i glitch dnia;
+  - Daily ops z postępem liczonym i wypłacanym przez serwer;
+  - 5 głównych spraw z kropkami znalezionych zakończeń i 4 szybkie sprawy;
+  - otwarte sprawy, archiwum zakończeń (9 baśni × 5 typów);
+  - dziennik XP i tabela „How to earn XP”.
+- **XP i rangi:** strona, własny ruch, zakończenie (+ premia za typ), nowe zakończenie w danej baśni, zadanie dnia, quiz, incydent, przesłuchanie, seria dni. Każda nagroda ma `ref` i płaci tylko raz. 8 rang: od Rookie do Legend of the Public Domain. Komiksowe „+XP” i karta „PROMOTED!”.
+- **Szybkie sprawy** (3–5 stron, ten sam silnik): *The Latency Race*, *False Positive*, *Just Right Server*, *The Emperor’s New Update*. Prompt dostaje sekcję `# Quick case`; prompt głównych spraw bez zmian.
+- **Quiz ABC dnia:** 3 absurdalne pytania z puentą przy każdej odpowiedzi, jedna „zatwierdzona przez Biuro”, werdykt-profil agenta na końcu. Puenty serwer ujawnia dopiero po wyborze.
+- **Incydent dnia:** raport z baśni, 3 reakcje, konsekwencja, odznaka i podpis Ignisa.
+- **Przesłuchanie dnia:** 5 podejrzanych z Domeny Publicznej (głos z rejestru postaci), 6 pytań, Ignis ocenia każde, licznik prawdy decyduje o XP, przyznanie się kończy wcześniej.
+- **Quiz i incydent pisze Claude** raz dziennie per język (z glitchem dnia), z zapasem ręcznie napisanych zestawów PL/EN. Panel admina: podgląd, edycja JSON z walidacją, *Regenerate with Claude*, podejrzany dnia, karta „Agents”.
+- **Baza:** `db/t1000/004_ignis_agents.sql` (agenci, dziennik XP, sprawy agentów, formaty dnia agentów, zestawy dnia). Bez bazy agenci żyją w pamięci (tryb lokalny).
+- **Sprawa ma właściciela:** czytać może każdy z linkiem, grać tylko jej agent. Stare sprawy bez agenta działają jak dotąd.
+- **Pod kolejne aktualizacje:** rejestr aktywności (`shared/activities.ts`), reguły XP i rangi w jednym miejscu (`shared/xp.ts`), szybkie sprawy jako zwykłe wpisy w `shared/tales.ts`, sekcja „Jak dodać coś nowego” w README.
+- Poprawka: tło strony głównej przechodzi teraz w kolor motywu (wcześniej brązowy pas na motywie *Nebula*).
+- Testy: 80 (nowy `agents.test.ts`).
+
+---
+
 ## 6.8.1 · Arcane Rescue Bureau i nowe główne repozytorium
 
 - **Nowa nazwa:** ARB to teraz **Arcane Rescue Bureau** (wcześniej Arcane Retellings Bureau): w nagłówku i tytule strony, na stronie głównej, w prompcie Ignisa, u art-directora Art Kitu i w bazie postaci. Skrót ARB bez zmian.

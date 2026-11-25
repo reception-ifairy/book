@@ -8,6 +8,8 @@ import { initAdminAuth } from './server/adminAuth';
 import { startCharacterRefresh } from './server/story/characters';
 import { todayBoard } from './server/daily';
 import { indexHtml } from './server/branding';
+import { warmPacks } from './server/dailyPack';
+import { t1000Configured } from './server/db';
 
 const app = createApp();
 const PORT = Number(process.env.PORT) || 3000;
@@ -41,3 +43,7 @@ startCharacterRefresh();
 // Keep today's board (and its glitch for the story prompt) warm.
 void todayBoard();
 setInterval(() => void todayBoard(), 5 * 60 * 1000).unref();
+// Today's quiz and incident get written before the first agent asks (cheap when they already exist).
+void todayBoard().then(() => warmPacks());
+setInterval(() => void warmPacks(), 15 * 60 * 1000).unref();
+if (!t1000Configured()) console.warn('[agents] T1000_DATABASE_URL is not set: agents and XP live in memory and vanish on restart.');

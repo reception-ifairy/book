@@ -5,6 +5,9 @@ import { MEDIA_DIR } from './story/store';
 import { artkitPublic } from './artkit/routes';
 import { dailyPublic } from './daily';
 import { brandingPublic } from './branding';
+import { agentApi } from './agents/auth';
+import { dailyPackRoutes } from './dailyPack';
+import { interrogationRoutes } from './interrogation';
 
 /**
  * Builds the HTTP app without listening, so tests can drive it on an ephemeral port.
@@ -27,6 +30,8 @@ export function createApp() {
   app.use(brandingPublic);
   app.use(artkitPublic);
   app.use('/api/admin', admin);
+  // Agents: login by key, dashboard, and the daily formats (the agent is attached once, then shared).
+  app.use('/api/agent', agentApi, dailyPackRoutes, interrogationRoutes);
   app.use('/api', dailyPublic);
   app.use('/api', api);
   app.use('/media', express.static(MEDIA_DIR, { maxAge: '7d', fallthrough: false }));

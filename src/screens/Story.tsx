@@ -6,6 +6,7 @@ import { SVGCharacter } from '../components/SVGCharacter';
 import { TimelineMap } from '../components/TimelineMap';
 import { ComicBurst, Equalizer, RuneLoader, StringLights } from '../components/Effects';
 import { api, rememberRun, type TaleCard } from '../api';
+import { celebrate } from '../agent';
 import { coverStyle, ENDING, KIND } from '../meta';
 import { useArt } from '../artkit';
 import { Badge, Button, IconButton, Kbd, Meter, Sheet, SnowToggle, cx, useToast } from '../ui';
@@ -226,13 +227,15 @@ export function StoryScreen({ storyId }: { storyId: string }) {
     setBusy(true);
     setPicked(chosen);
     try {
-      const { story: next } = await api.act(story.id, {
+      const { story: next, xp } = await api.act(story.id, {
         pageId: page.id,
         ...input,
         image: input.custom !== undefined && attachment ? { mime: attachment.mime, data: attachment.data } : undefined,
       });
       setStory(next);
       rememberRun(next);
+      // Let the new page land first, then pop the XP it earned.
+      setTimeout(() => celebrate(xp), 450);
       setCustom('');
       setAttachment(null);
       setImageState('idle');
@@ -421,7 +424,7 @@ export function StoryScreen({ storyId }: { storyId: string }) {
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-[#3a2619] border-b-[3px] border-outline shadow-[0_6px_0_#00000033]">
         <div className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center gap-3">
-          <IconButton label="Back to tales" onClick={() => (location.hash = '/')}>
+          <IconButton label="Back to your desk" onClick={() => (location.hash = '/')}>
             <ArrowLeft size={18} />
           </IconButton>
           <span
