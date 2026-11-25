@@ -32,15 +32,14 @@ Obok agenta jest **IGNIS**, jego asystent terenowy: latający robocik z ekraniki
 ## Jak się gra
 
 1. **Dołączasz do Biura:** na stronie głównej wpisujesz **kryptonim** i język opowieści (angielski albo polski). Nie ma e-maila ani hasła: dostajesz **klucz agenta** (`ARB-XXXX-XXXX-XXXX-XXXX`), który jest twoim loginem na każdym urządzeniu. Zapisujesz go (kopiuj albo pobierz jako `.txt`). Wrócić możesz przez „I have an agent key”.
-2. **Pulpit agenta** (`#/` po zalogowaniu):
-   - **legitymacja agenta:** kryptonim, ranga, poziom, pasek XP, seria dni, XP dzisiaj, zamknięte sprawy, znalezione zakończenia;
-   - **Today at the Bureau:** trzy krótkie formaty dnia (niżej) i glitch dnia;
-   - **Daily ops:** zadania dnia, liczone i wypłacane przez serwer;
-   - **Main case files:** 5 długich spraw (8–12 stron);
-   - **Quick cases:** 4 szybkie sprawy (3–5 stron);
-   - **Open cases:** wznawianie rozpoczętych spraw;
-   - **Endings archive:** 9 baśni × 5 typów zakończeń;
-   - **XP log** i tabela „How to earn XP”.
+2. **Pulpit agenta** (`#/` po zalogowaniu) to jedna strona w cybermagicznym panelu sterowania: na komputerze panel z boku, na telefonie pasek zakładek na dole. Misje dnia otwierają się wewnątrz pulpitu, więc powrót to zawsze jedno kliknięcie. Zakładki:
+   - **HQ** (`#/`): wszystko na jednym ekranie: legitymacja z rangą i paskiem XP, IGNIS, trzy misje dnia, „Continue” (ostatnia otwarta sprawa albo losowa szybka sprawa), skrót zadań dnia, postęp archiwum zakończeń, glitch dnia;
+   - **Case files** (`#/agent/cases`): sprawy w toku, 5 głównych spraw i 4 szybkie;
+   - **Daily ops** (`#/agent/daily`): glitch dnia, Quiz ABC, Incydent, Przesłuchanie, zadania dnia;
+   - **Endings vault** (`#/agent/archive`): 9 baśni × 5 typów zakończeń;
+   - **XP & ranks** (`#/agent/log`): drabina rang z żartem przy każdej, dziennik XP, „jak zdobywać XP”.
+
+   Ikony pulpitu są narysowane w SVG (`src/components/agent/icons.tsx`) i każda łączy baśń z technologią: zamek z wieżą Wi-Fi, teczka z lakową pieczęcią-błyskawicą, klepsydra z pikselowym piaskiem, kryształowa kula od pytań ABC, syrena na dyni, lupa z pikselowym okiem, księga zaklęć zamykana dyskietką, eliksir XP, świeca-bateria, klucz z zębami jak ścieżki obwodu, żabi książę z glitchem.
 3. **Sprawy.** Główne akta to pięć baśni:
 
    | Sprawa | Co się zepsuło |
@@ -254,7 +253,8 @@ Projekt jest przygotowany pod kolejne aktualizacje. Każdy rodzaj treści ma jed
 |---|---|---|
 | **Szybką sprawę** | `shared/tales.ts`, wpis z `format: 'quick'`, `maxDepth`, `minDepth` | Pojawia się sama na pulpicie i w archiwum zakończeń; XP za zakończenie liczy `XP.endingQuick` |
 | **Główną sprawę** | `shared/tales.ts` (bez `format`) | Dodaj obsadę w `db/t1000/characters.grimm.json` i slot okładki w `shared/artkit.ts` |
-| **Nowy format dnia** | wpis w `shared/activities.ts`, ekran w `src/screens/`, trasy obok `server/dailyPack.ts` | Kafelek na pulpicie powstaje z rejestru; XP wypłacaj przez `Gains.add(ref, …)` z unikalnym `ref` |
+| **Nowy format dnia** | wpis w `shared/activities.ts` (z ikoną w `src/components/agent/icons.tsx`), ekran w `src/screens/` dopięty w `Dashboard.tsx`, trasy obok `server/dailyPack.ts` | Kafelek na HQ i w Daily ops powstaje z rejestru; XP wypłacaj przez `Gains.add(ref, …)` z unikalnym `ref` |
+| **Nową zakładkę pulpitu** | `DESK_TABS` w `src/components/agent/AgentShell.tsx` i widok w `src/screens/Dashboard.tsx` | Panel z boku i pasek na telefonie biorą zakładki z tej samej listy |
 | **Regułę XP** | `shared/xp.ts` (`XP`, `XP_RULES`) | Tabela „How to earn XP” czyta to samo |
 | **Rangę** | `RANKS` w `shared/xp.ts` | Progi rosnąco |
 | **Podejrzanego** | `SUSPECTS` w `shared/suspects.ts` | Głos bierze się z rejestru postaci (po `taleId` i `nameEn`) |
@@ -286,8 +286,9 @@ server/
 shared/                 typy i dane wspólne: baśnie i szybkie sprawy, XP i rangi, agenci, aktywności, podejrzani, quiz/incydent, Art Kit, branding, Daily ops
 src/
   agent.ts              zalogowany agent (klucz w przeglądarce), pulpit, wyskakujące „+XP”
-  screens/              Home (strona dla gości / pulpit), Dashboard, Quiz, Incident, Interrogation, AgentKey, Story, Admin i panele admina
-  components/           SVGCharacter (Ignis), TaleCard, DailyOps, agent/ (JoinCard, TopBar, XpPops, AgentScreen), efekty, mapa linii czasu
+  desk.ts               wspólne dane pulpitu (katalog baśni, tablica dnia), pobierane raz
+  screens/              Home (strona dla gości), Dashboard (pulpit: HQ, Case files, Daily ops, Endings vault, XP & ranks + misje), Quiz, Incident, Interrogation, AgentKey, Story, Admin i panele admina
+  components/           SVGCharacter (Ignis), TaleCard, DailyOps, agent/ (AgentShell, icons, JoinCard, XpPops, AgentScreen), efekty, mapa linii czasu
   ui.tsx                przyciski, odznaki, wskaźniki, toasty, logo
   index.css             motywy, karty, animacje
 db/t1000/               DDL i dane do zasiania bazy

@@ -553,6 +553,36 @@
   100% { transform: translate(var(--dx), calc(var(--dy) + 40px)) rotate(var(--rot)) scale(1); opacity: 0; }
 }
 
+/* ---------- Agent desk: the cyber-magic control panel ----------
+ * A dark pixel-screen console in a brass-ink frame, with scanlines and a faint rune grid.
+ * Used for the rail on wide screens and the tab bar on phones; it reads the same on every theme. */
+.desk-rail {
+  color: #e6f4ff;
+  border: 3px solid var(--color-outline);
+  border-radius: 22px;
+  background:
+    repeating-linear-gradient(180deg, #ffffff06 0 1px, transparent 1px 4px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-pixel) 6%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(0deg, color-mix(in srgb, var(--color-pixel) 6%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--color-chaos) 26%, transparent), transparent 60%),
+    radial-gradient(100% 50% at 100% 100%, color-mix(in srgb, var(--color-pixel) 14%, transparent), transparent 60%),
+    var(--color-screen);
+  box-shadow: 4px 5px 0 var(--color-outline), 0 0 30px -12px var(--color-pixel), inset 0 0 0 1px #ffffff10;
+}
+.desk-rail .eyebrow { color: #8ea3b8; }
+.desk-item { transition: background-color 0.15s; }
+.desk-item:hover:not(.is-active) { background: #ffffff0a; }
+.desk-tool {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  color: #9fb4c8;
+  transition: background-color 0.15s, transform 0.15s, color 0.15s;
+}
+.desk-tool:hover { background: #ffffff12; color: var(--color-gold); transform: rotate(-6deg) scale(1.08); }
+
 /* The home backdrop picture fades into the page background (whatever the theme). */
 .backdrop-fade {
   background:
